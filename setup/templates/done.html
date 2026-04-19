@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Setup Wizard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='wizard.css') }}">
+</head>
+<body>
+
+<header>
+    <h1>Setup Wizard</h1>
+    <nav class="wizard-steps" aria-label="Setup progress">
+        {% set steps = [
+            ('gmail', 'Gmail Setup'),
+            ('lmstudio', 'LM Studio'),
+            ('hosting', 'Hosting'),
+            ('inboxes', 'Inboxes'),
+            ('preview', 'Preview & Write'),
+        ] %}
+        {% for slug, label in steps %}
+        <span class="step {% if slug == active_step %}active{% endif %}" {% if slug == active_step %}aria-current="step"{% endif %}>{{ label }}</span>
+        {% endfor %}
+    </nav>
+</header>
+
+<main>
+
+    <!-- ── Success ───────────────────────────────────────────── -->
+    <section class="form-section" aria-labelledby="done-heading">
+        <h2 id="done-heading">Config files written successfully</h2>
+
+        <p>The following files have been written to your project:</p>
+        <ul>
+            <li><code>.env</code></li>
+            <li><code>workflow/config.yaml</code></li>
+        </ul>
+
+        <div class="success-next-action">
+            <p><strong>Next step:</strong> run the workflow script from your project root:</p>
+            <pre class="config-preview">./scripts/run-workflow.sh</pre>
+        </div>
+
+        <p class="help-text">
+            You can re-run this wizard at any time to update your config.
+        </p>
+    </section>
+
+</main>
+
+<footer>
+    <button id="exit-btn" class="btn-exit" type="button">Exit Setup</button>
+</footer>
+
+<script src="{{ url_for('static', filename='wizard.js') }}"></script>
+</body>
+</html>
