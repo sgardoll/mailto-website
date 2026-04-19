@@ -4,7 +4,7 @@ import json
 import yaml
 import pytest
 
-from setup.builder import validate, build
+from setup.builder import validate, build, validate_hosting, build_hosting, validate_inboxes, build_inboxes
 
 
 VALID_DATA = {
@@ -162,3 +162,113 @@ def test_validate_form_route_returns_errors_on_invalid_data():
     assert data['ok'] is False
     assert isinstance(data['errors'], list)
     assert len(data['errors']) > 0
+
+
+# -- Phase 3: validate_hosting / build_hosting tests --------------------------
+
+VALID_HOSTING_SITEGROUND = {
+    'hosting_provider': 'siteground',
+    'sg-host': 'ssh.example.com',
+    'sg-port': '18765',
+    'sg-username': 'u123-user',
+    'sg-ssh_key_path': '/home/user/.ssh/id_rsa',
+    'sg-password': '',
+    'sg-remote_base_path': '/home/user/public_html',
+}
+
+VALID_HOSTING_NETLIFY = {
+    'hosting_provider': 'netlify',
+    'netlify_api_token': 'tok123',
+    'netlify_site_id': 'abc-site',
+}
+
+VALID_HOSTING_VERCEL = {
+    'hosting_provider': 'vercel',
+    'vercel_api_token': 'vtok456',
+    'vercel_project_id': 'my-project',
+}
+
+VALID_HOSTING_GITHUB_PAGES = {
+    'hosting_provider': 'github_pages',
+    'gh_pages_branch': 'gh-pages',
+}
+
+
+def test_validate_hosting_passes_siteground():
+    assert validate_hosting(VALID_HOSTING_SITEGROUND) == []
+
+
+def test_validate_hosting_rejects_unknown_provider():
+    errors = validate_hosting({'hosting_provider': 'ftp'})
+    assert any(e['field'] == 'hosting_provider' for e in errors)
+
+
+def test_validate_hosting_requires_sg_host():
+    data = {**VALID_HOSTING_SITEGROUND, 'sg-host': ''}
+    errors = validate_hosting(data)
+    assert any(e['field'] == 'sg-host' and 'required' in e['message'].lower() for e in errors)
+
+
+def test_validate_hosting_sg_port_must_be_integer_in_range():
+    data = {**VALID_HOSTING_SITEGROUND, 'sg-port': '99999'}
+    errors = validate_hosting(data)
+    assert any(e['field'] == 'sg-port' for e in errors)
+
+
+def test_validate_hosting_ssh_at_least_one_credential():
+    data = {**VALID_HOSTING_SITEGROUND, 'sg-ssh_key_path': '', 'sg-password': ''}
+    errors = validate_hosting(data)
+    assert any(e['field'] == 'sg-ssh_key_path' and 'required' in e['message'].lower() for e in errors)
+
+
+def test_validate_hosting_ssh_password_alone_is_sufficient():
+    data = {**VALID_HOSTING_SITEGROUND, 'sg-ssh_key_path': '', 'sg-password': 'secret'}
+    assert validate_hosting(data) == []
+
+
+def test_validate_hosting_netlify_requires_token_and_site_id():
+    errors = validate_hosting({'hosting_provider': 'netlify', 'netlify_api_token': '', 'netlify_site_id': ''})
+    fields = [e['field'] for e in errors]
+    assert 'netlify_api_token' in fields
+    assert 'netlify_site_id' in fields
+
+
+def test_validate_hosting_vercel_passes():
+    assert validate_hosting(VALID_HOSTING_VERCEL) == []
+
+
+def test_validate_hosting_github_pages_passes():
+    assert validate_hosting(VALID_HOSTING_GITHUB_PAGES) == []
+
+
+def test_validate_hosting_does_not_validate_hidden_provider_fields():
+    """Only siteground fields should be validated when provider='siteground', not netlify fields."""
+    data = {**VALID_HOSTING_SITEGROUND}  # no netlify_api_token present
+    assert validate_hosting(data) == []
+
+
+def test_build_hosting_siteground_emits_correct_keys():
+    result = build_hosting(VALID_HOSTING_SITEGROUND)
+    assert 'siteground' in result
+    sg = result['siteground']
+    assert sg['host'] == 'ssh.example.com'
+    assert sg['port'] == 18765  # must be int
+    assert sg['user'] == 'u123-user'
+    assert sg['key_path'] == '/home/user/.ssh/id_rsa'
+    assert sg['base_remote_path'] == '/home/user/public_html'
+
+
+def test_build_hosting_stores_hosting_provider():
+    result = build_hosting(VALID_HOSTING_NETLIFY)
+    assert result.get('hosting_provider') == 'netlify'
+
+
+def test_build_hosting_netlify_keys():
+    result = build_hosting(VALID_HOSTING_NETLIFY)
+    assert result['netlify'] == {'api_token': 'tok123', 'site_id': 'abc-site'}
+
+
+def test_build_hosting_github_pages_uses_default_branch():
+    data = {'hosting_provider': 'github_pages', 'gh_pages_branch': ''}
+    result = build_hosting(data)
+    assert result['github_pages']['branch'] == 'gh-pages'
