@@ -480,6 +480,20 @@ def test_build_final_outputs_preserves_hidden_runtime_keys_when_present():
     assert config['dry_run'] is True
 
 
+def test_build_final_outputs_can_derive_provider_and_inboxes_from_wizard_fields():
+    state = {
+        **VALID_DATA,
+        **VALID_HOSTING_SITEGROUND,
+        **VALID_INBOXES_DATA,
+    }
+    env_str, yaml_str = build_final_outputs(state)
+    config = yaml.safe_load(yaml_str)
+    assert env_str == 'GMAIL_APP_PASSWORD=abcd efgh ijkl mnop\n'
+    assert config['siteground']['host'] == 'ssh.example.com'
+    assert config['inboxes'][0]['address'] == 'user+guitar@gmail.com'
+    assert config['inboxes'][0]['site_base'] == '/guitar/'
+
+
 def test_mask_for_preview_masks_env_secret_but_keeps_yaml_placeholder_literal():
     env_str, yaml_str = build_final_outputs(FINAL_WIZARD_STATE)
     masked_env, masked_yaml = mask_for_preview(env_str, yaml_str)
