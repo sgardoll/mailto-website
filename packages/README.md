@@ -1,4 +1,4 @@
-# framework/
+# packages/
 
 Shared scaffolding for the email-driven self-extending sites.
 

@@ -7,7 +7,7 @@ import pytest
 
 from unittest.mock import patch
 
-from setup.builder import (
+from apps.setup_wizard.builder import (
     validate, build, validate_hosting, build_hosting, validate_inboxes, build_inboxes,
     fetch_netlify_site_url, fetch_vercel_project_url, ProviderLookupError,
     build_final_outputs, mask_for_preview, hydrate_wizard_state,
@@ -138,8 +138,8 @@ def test_build_defaults_applied_when_optional_keys_absent():
 def test_validate_form_route_returns_ok():
     """When valid data is POSTed to /validate-form, the route returns 200 with ok=true."""
     from unittest.mock import patch
-    from setup.server import app
-    with patch('setup.server._wizard_state', {}):
+    from apps.setup_wizard.server import app
+    with patch('apps.setup_wizard.server._wizard_state', {}):
         with app.test_client() as client:
             response = client.post(
                 '/validate-form',
@@ -156,8 +156,8 @@ def test_validate_form_route_returns_ok():
 def test_validate_form_route_returns_errors_on_invalid_data():
     """When required fields are missing, /validate-form returns 400 with ok=false and errors list."""
     from unittest.mock import patch
-    from setup.server import app
-    with patch('setup.server._wizard_state', {}):
+    from apps.setup_wizard.server import app
+    with patch('apps.setup_wizard.server._wizard_state', {}):
         with app.test_client() as client:
             response = client.post(
                 '/validate-form',
@@ -288,7 +288,7 @@ def test_build_hosting_siteground_emits_correct_keys():
     assert sg['user'] == 'u123-user'
     # Pasted key → build_hosting emits the relative target path;
     # server./write-config resolves it to an absolute path and writes the key.
-    assert sg['key_path'] == 'workflow/state/siteground.key'
+    assert sg['key_path'] == 'runtime/state/siteground.key'
     assert sg['base_remote_path'] == '/home/user/public_html'
 
 
@@ -432,25 +432,25 @@ class _FakeHTTPResponse:
 
 def test_fetch_netlify_site_url_prefers_ssl_url():
     payload = {'ssl_url': 'https://site.netlify.app', 'url': 'http://site.netlify.app'}
-    with patch('setup.builder.urllib.request.urlopen', return_value=_FakeHTTPResponse(payload)):
+    with patch('apps.setup_wizard.builder.urllib.request.urlopen', return_value=_FakeHTTPResponse(payload)):
         assert fetch_netlify_site_url('tok', 'id') == 'https://site.netlify.app'
 
 
 def test_fetch_netlify_site_url_raises_on_missing_url():
-    with patch('setup.builder.urllib.request.urlopen', return_value=_FakeHTTPResponse({})):
+    with patch('apps.setup_wizard.builder.urllib.request.urlopen', return_value=_FakeHTTPResponse({})):
         with pytest.raises(ProviderLookupError):
             fetch_netlify_site_url('tok', 'id')
 
 
 def test_fetch_vercel_project_url_uses_production_alias():
     payload = {'targets': {'production': {'alias': ['my-proj.vercel.app']}}, 'name': 'my-proj'}
-    with patch('setup.builder.urllib.request.urlopen', return_value=_FakeHTTPResponse(payload)):
+    with patch('apps.setup_wizard.builder.urllib.request.urlopen', return_value=_FakeHTTPResponse(payload)):
         assert fetch_vercel_project_url('tok', 'proj') == 'https://my-proj.vercel.app'
 
 
 def test_fetch_vercel_project_url_falls_back_to_name():
     payload = {'name': 'my-proj'}
-    with patch('setup.builder.urllib.request.urlopen', return_value=_FakeHTTPResponse(payload)):
+    with patch('apps.setup_wizard.builder.urllib.request.urlopen', return_value=_FakeHTTPResponse(payload)):
         assert fetch_vercel_project_url('tok', 'proj') == 'https://my-proj.vercel.app'
 
 

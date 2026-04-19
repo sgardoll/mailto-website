@@ -15,6 +15,18 @@ Zero-friction first-time setup: clone → one command → working config → opt
 - **End-to-end verified** against a real SiteGround account (ssh.connectio.com.au) — pasteable private key + passphrase, atomic config write, Astro build per inbox, SFTP mirror deploy, live URL rendered on success screen
 - Timeline: 2026-04-19 → 2026-04-20 (~22 hours wall time, 80 commits)
 
+## Current Milestone: v1.1 Runtime/Setup Separation + Deploy Contract Alignment
+
+**Goal:** Cleanly separate setup/onboarding code from workflow/runtime engine, normalize deploy provider contracts, implement Vercel runtime, and harden multi-inbox routing.
+
+**Target features:**
+- Bounded context separation: `apps/setup-wizard`, `apps/workflow-engine`, `packages/config-contract`, `packages/site-template`, `runtime/sites`, `runtime/state`
+- Unified provider model (single enum/keys) between wizard and runtime
+- Runtime deploy adapter interface + SiteGround + Vercel implementations
+- Multi-inbox config semantics with startup diagnostics and per-inbox deploy reporting
+- Fix known provider key mismatches (`generic_ssh` vs `ssh_sftp`)
+- Implement stepper indicator UI from `.planning/sketches/001-stepper-indicator`
+
 ## Context
 
 The underlying project (`thoughts-to-platform-builder`) is an email-to-website pipeline that watches a Gmail inbox, processes incoming emails with a local LM Studio model, and publishes them as posts to per-inbox Astro sites. Before v1.0, onboarding required hand-editing a YAML file and understanding SSH/SFTP credential layouts — high friction for non-technical collaborators.
@@ -58,13 +70,20 @@ The wizard collapses all that setup into a browser-based flow with server-side v
 - ✓ SSH key passphrase support — v1.0 stretch, required for SiteGround-generated encrypted keys
 - ✓ One-click SiteGround deploy from success screen — v1.0 stretch, replaces "run `./scripts/run-workflow.sh` manually" with an in-wizard bootstrap → npm install → build → SFTP deploy flow per inbox
 
-### Active (v1.1 candidates)
+### Active (v1.1)
 
-- [ ] Deploy implementations for Netlify / Vercel / GitHub Pages / Generic SSH (wizard currently returns `not_implemented` for non-SiteGround; Phase 5 scope)
-- [ ] Provider dataclasses in `workflow/config.py` (only `SiteGroundConfig` today; other provider YAML blocks are silently ignored at runtime)
-- [ ] Live credential validation (IMAP/SMTP probe, SSH connectivity test) before write
-- [ ] Streaming npm/SFTP output in deploy panel (currently phase-level progress only)
-- [ ] Copy-to-clipboard on the preview output blocks
+- [ ] **SEP-01**: Bounded context separation — `apps/setup-wizard`, `apps/workflow-engine`, `packages/config-contract`, `packages/site-template`, `runtime/sites`, `runtime/state`
+- [ ] **SEP-02**: Replace implicit path coupling with contract-driven paths and explicit runtime root
+- [ ] **PROV-01**: Unified provider enum/keys between wizard and runtime (fix `generic_ssh` vs `ssh_sftp` mismatch)
+- [ ] **PROV-02**: Runtime deploy adapter interface with pluggable provider implementations
+- [ ] **PROV-03**: SiteGround runtime deploy implementation (migrate from current hardcoded logic)
+- [ ] **PROV-04**: Vercel runtime deploy implementation (first non-SiteGround provider)
+- [ ] **PROV-05**: Non-implemented providers fail fast with actionable messages
+- [ ] **INBOX-01**: Multi-inbox config with clear semantics (multiple inboxes in `config.yaml`)
+- [ ] **INBOX-02**: Startup diagnostics showing all inboxes loaded + route map
+- [ ] **INBOX-03**: Deploy/reporting per inbox (provider + target + result)
+- [ ] **UX-01**: Implement stepper indicator UI from `.planning/sketches/001-stepper-indicator`
+- [ ] **UAT-01**: End-to-end validation: SiteGround + 2 inboxes, Vercel + 2 inboxes
 
 ### Out of Scope
 
@@ -87,6 +106,25 @@ The wizard collapses all that setup into a browser-based flow with server-side v
 | Pasteable SSH key textarea (v1.0 stretch) | SiteGround hands you the key as text — asking for a path meant users had to save + chmod themselves | ✓ Good — key is written to `workflow/state/siteground.key` at 0600 on hosting submit |
 | One-click deploy from success screen (v1.0 stretch) | Success screen previously showed "run this shell command" — unfriendly for non-technical users | ✓ Good for SiteGround; other providers deferred to v1.1 |
 | `workflow/config.py` only parses `SiteGroundConfig` | Runtime deploy loop only supports SiteGround today | ⚠️ Revisit in v1.1 when adding Netlify/Vercel/GHP deploy |
+| Clean break migration (no shim layer) for v1.1 | Long shims accumulate debt; clean break forces honest boundaries | ✓ v1.1 decision — folder moves + contract extraction happen together |
+| Runtime deploy adapter interface pattern | Providers must be pluggable without touching core pipeline logic | ✓ v1.1 decision — adapter pattern for SiteGround + Vercel |
+
+## Evolution
+
+This document evolves at phase transitions and milestone boundaries.
+
+**After each phase transition** (via `/gsd-transition`):
+1. Requirements invalidated? → Move to Out of Scope with reason
+2. Requirements validated? → Move to Validated with phase reference
+3. New requirements emerged? → Add to Active
+4. Decisions to log? → Add to Key Decisions
+5. "What This Is" still accurate? → Update if drifted
+
+**After each milestone** (via `/gsd-complete-milestone`):
+1. Full review of all sections
+2. Core Value check — still the right priority?
+3. Audit Out of Scope — reasons still valid?
+4. Update Context with current state
 
 ## Constraints
 
@@ -96,4 +134,4 @@ The wizard collapses all that setup into a browser-based flow with server-side v
 - **Astro template in `framework/site-template/`** is the single source of truth for site structure; `workflow/site_bootstrap.ensure_site` copies it per inbox.
 
 ---
-*Last updated: 2026-04-20 after v1.0 milestone shipped*
+*Last updated: 2026-04-20 — v1.1 milestone initialized (Runtime/Setup Separation + Deploy Contract Alignment)*

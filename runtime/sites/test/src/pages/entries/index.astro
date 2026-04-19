@@ -1,0 +1,17 @@
+---
+import { getCollection } from 'astro:content';
+import Base from '../../layouts/Base.astro';
+const entries = (await getCollection('entries'))
+  .sort((a, b) => +new Date(b.data.receivedAt) - +new Date(a.data.receivedAt));
+---
+<Base title="Entries" description="All entries.">
+  <h1>All entries</h1>
+  {entries.length === 0 && <p class="meta">No entries yet.</p>}
+  {entries.map(e => (
+    <article class="entry-card">
+      <h3><a href={`/entries/${e.slug}`}>{e.data.title}</a></h3>
+      <p>{e.data.summary}</p>
+      <p class="meta">{new Date(e.data.receivedAt).toLocaleDateString()}</p>
+    </article>
+  ))}
+</Base>

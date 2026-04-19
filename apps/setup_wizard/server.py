@@ -20,7 +20,7 @@ except ImportError:
             pass
         return result
 
-import setup.builder as builder
+import apps.setup_wizard.builder as builder
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
@@ -43,14 +43,14 @@ _deploy_state: dict = {
 
 
 def _try_prefill() -> None:
-    """Read existing .env and workflow/config.yaml once at launch and hydrate _wizard_state."""
+    """Read existing .env and apps/workflow_engine/config.yaml once at launch and hydrate _wizard_state."""
     global _prefilled
     if _prefilled:
         return
     _prefilled = True
 
     env_path = REPO_ROOT / '.env'
-    config_path = REPO_ROOT / 'workflow' / 'config.yaml'
+    config_path = REPO_ROOT / 'apps' / 'workflow_engine' / 'config.yaml'
 
     env_values: dict = {}
     if env_path.exists():
@@ -164,7 +164,7 @@ def step_preview():
     env_preview, yaml_preview = builder.mask_for_preview(env_str, yaml_str)
 
     env_path = REPO_ROOT / '.env'
-    config_path = REPO_ROOT / 'workflow' / 'config.yaml'
+    config_path = REPO_ROOT / 'apps' / 'workflow_engine' / 'config.yaml'
     has_existing_config = env_path.exists() or config_path.exists()
 
     return render_template(
@@ -230,9 +230,9 @@ def _update_inbox_progress(slug: str, phase: str, detail: str) -> None:
 def _deploy_worker() -> None:
     """Run the deploy loop on a background thread. Captures final state."""
     try:
-        from workflow import config as wf_config
-        from workflow import deploy_once
-        cfg = wf_config.load(REPO_ROOT / 'workflow' / 'config.yaml')
+        from apps.workflow_engine import config as wf_config
+        from apps.workflow_engine import deploy_once
+        cfg = wf_config.load(REPO_ROOT / 'apps' / 'workflow_engine' / 'config.yaml')
         results = deploy_once.deploy_all(cfg, on_progress=_update_inbox_progress)
         with _deploy_lock:
             for row, r in zip(_deploy_state["inboxes"], results):
@@ -384,7 +384,7 @@ def write_config():
         return jsonify({"ok": False, "error": "confirmation required"}), 400
 
     env_path = REPO_ROOT / '.env'
-    config_path = REPO_ROOT / 'workflow' / 'config.yaml'
+    config_path = REPO_ROOT / 'apps' / 'workflow_engine' / 'config.yaml'
     has_existing = env_path.exists() or config_path.exists()
 
     if has_existing and not data.get('overwrite_confirmed'):

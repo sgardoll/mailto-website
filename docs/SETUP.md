@@ -8,9 +8,9 @@ and refines as more emails arrive.
 ## What lives where
 
 ```
-framework/site-template/   the Astro template (copied per inbox on first email)
-sites/<slug>/              the actual evolving site for one inbox
-workflow/                  Python: IMAP listener, dispatcher, orchestrator,
+packages/site-template/   the Astro template (copied per inbox on first email)
+runtime/runtime/sites/<slug>/              the actual evolving site for one inbox
+apps/workflow_engine/                  Python: IMAP listener, dispatcher, orchestrator,
                            LM Studio client, content writer, build+deploy
 scripts/                   foreground runner + install systemd / launchd agents
 ```
@@ -32,10 +32,10 @@ scripts/                   foreground runner + install systemd / launchd agents
 
 ```bash
 cd /path/to/thoughts-to-platform-builder
-cp workflow/config.example.yaml workflow/config.yaml
+cp apps/workflow_engine/config.example.yaml apps/workflow_engine/config.yaml
 cp .env.example .env
 # Edit .env: set GMAIL_APP_PASSWORD
-# Edit workflow/config.yaml: set imap user, smtp user, siteground.*, inboxes
+# Edit apps/workflow_engine/config.yaml: set imap user, smtp user, siteground.*, inboxes
 ```
 
 ## Pick your email-routing scheme
@@ -70,11 +70,11 @@ Same dispatcher works.
 1. **Listener** picks up the unread message via IMAP IDLE.
 2. **Dispatcher** routes it to an inbox by matching `To:` against the
    addresses in `inboxes:`.
-3. **Site bootstrap** copies `framework/site-template/` to
-   `sites/<slug>/` if this is the inbox's first email.
+3. **Site bootstrap** copies `packages/site-template/` to
+   `runtime/runtime/sites/<slug>/` if this is the inbox's first email.
 4. **Site index** summarises every existing thread + entry on this site so
    the model knows what already exists.
-5. **Topic curator** asks Gemma to refine `sites/<slug>/topic.md` based on
+5. **Topic curator** asks Gemma to refine `runtime/runtime/sites/<slug>/topic.md` based on
    the new email + the site's history.
 6. **Synthesiser** asks Gemma for a JSON plan of `create`/`edit` ops on
    `src/content/entries/` and `src/content/threads/`. The system prompt
@@ -93,7 +93,7 @@ Same dispatcher works.
 
 ## End-to-end test
 
-1. `npm --prefix framework/site-template install && npm --prefix framework/site-template run build`
+1. `npm --prefix packages/site-template install && npm --prefix packages/site-template run build`
    — proves the template builds.
 2. Start LM Studio, load Gemma, confirm `curl localhost:1234/v1/models`
    lists the model id from your config.
@@ -122,7 +122,7 @@ Same dispatcher works.
 
 - **Sender allowlist** is mandatory — unmatched senders are rejected and
   recorded.
-- The model can only write inside `sites/<slug>/src/content/`; paths are
+- The model can only write inside `runtime/runtime/sites/<slug>/src/content/`; paths are
   validated server-side.
 - Schema validation in `apply_changes.py` plus Astro's content collection
   schema double-check the model's output. Schema violation = nothing
@@ -139,4 +139,4 @@ Same dispatcher works.
 - **SiteGround SFTP `Auth failed`**: SiteGround uses a non-22 port; check
   Site Tools → Devs → SSH Keys Manager for the exact port and confirm the
   key you registered matches `siteground.key_path`.
-- **Build hangs at `astro sync`**: delete `sites/<slug>/.astro/` and retry.
+- **Build hangs at `astro sync`**: delete `runtime/runtime/sites/<slug>/.astro/` and retry.

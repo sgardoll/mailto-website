@@ -18,11 +18,11 @@ cat >"$PLIST" <<EOF
     </array>
   <key>RunAtLoad</key><true/>
   <key>KeepAlive</key><true/>
-  <key>StandardOutPath</key><string>$REPO_ROOT/workflow/state/launchd.out.log</string>
-  <key>StandardErrorPath</key><string>$REPO_ROOT/workflow/state/launchd.err.log</string>
+  <key>StandardOutPath</key><string>$REPO_ROOT/runtime/state/launchd.out.log</string>
+  <key>StandardErrorPath</key><string>$REPO_ROOT/runtime/state/launchd.err.log</string>
 </dict></plist>
 EOF
 launchctl unload "$PLIST" 2>/dev/null || true
 launchctl load -w "$PLIST"
 echo "Loaded $LABEL"
-echo "Tail logs with: tail -f $REPO_ROOT/workflow/state/launchd.err.log"
+echo "Tail logs with: tail -f $REPO_ROOT/runtime/state/launchd.err.log"

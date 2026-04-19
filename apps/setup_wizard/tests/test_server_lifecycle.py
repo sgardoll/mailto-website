@@ -9,7 +9,7 @@ from unittest.mock import patch, MagicMock
 
 import pytest
 
-from setup.server import find_free_port, check_write_permission
+from apps.setup_wizard.server import find_free_port, check_write_permission
 
 
 def test_find_free_port_returns_preferred():
@@ -61,7 +61,7 @@ def test_check_write_permission_false():
 
 def test_shutdown_sends_sigint():
     """_shutdown_server() must call os.kill(os.getpid(), signal.SIGINT)."""
-    from setup.server import _shutdown_server
+    from apps.setup_wizard.server import _shutdown_server
     with patch('os.getpid', return_value=9999), \
          patch('os.kill') as mock_kill:
         _shutdown_server()
@@ -70,8 +70,8 @@ def test_shutdown_sends_sigint():
 
 def test_exit_route_returns_ok():
     """POST /exit returns 200 with {"ok": true}. Thread fires but process does not exit."""
-    from setup.server import app
-    with patch('setup.server._shutdown_server'):
+    from apps.setup_wizard.server import app
+    with patch('apps.setup_wizard.server._shutdown_server'):
         with app.test_client() as client:
             response = client.post('/exit')
     assert response.status_code == 200

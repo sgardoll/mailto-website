@@ -8,11 +8,11 @@ from typing import Any
 import yaml
 
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
-WORKFLOW_DIR = REPO_ROOT / "workflow"
-SITES_DIR = REPO_ROOT / "sites"
-TEMPLATE_DIR = REPO_ROOT / "framework" / "site-template"
-STATE_DIR = WORKFLOW_DIR / "state"
+REPO_ROOT = Path(__file__).resolve().parent.parent.parent
+WORKFLOW_DIR = REPO_ROOT / "apps" / "workflow_engine"
+SITES_DIR = REPO_ROOT / "runtime" / "sites"
+TEMPLATE_DIR = REPO_ROOT / "packages" / "site-template"
+STATE_DIR = REPO_ROOT / "runtime" / "state"
 
 
 @dataclass

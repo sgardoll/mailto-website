@@ -7,14 +7,14 @@ workflow/state/*
 !workflow/state/.gitkeep
 
 # Per-inbox site build artefacts
-sites/*/node_modules/
-sites/*/dist/
-sites/*/.astro/
+runtime/runtime/sites/*/node_modules/
+runtime/runtime/sites/*/dist/
+runtime/runtime/sites/*/.astro/
 
 # Template build artefacts
-framework/site-template/node_modules/
-framework/site-template/dist/
-framework/site-template/.astro/
+packages/site-template/node_modules/
+packages/site-template/dist/
+packages/site-template/.astro/
 
 # Python
 __pycache__/
@@ -28,3 +28,5 @@ venv/
 .vscode/
 /.planning
 CLAUDE.md
+/packages/site-template/node_modules
+/runtime/sites/test/node_modules

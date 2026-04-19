@@ -12,11 +12,11 @@ site is rebuilt and redeployed — automatically.
  One Gmail account, many plus-aliases (you+guitar@..., you+parenting@...)
         │  IMAP IDLE (push)
         ▼
- workflow/listener.py  ─►  dispatcher  ─►  orchestrator(inbox=guitar)
+ apps/workflow_engine/listener.py  ─►  dispatcher  ─►  orchestrator(inbox=guitar)
                                         ─►  orchestrator(inbox=parenting)
                                         ─►  ...
                                                 │
-                    per-inbox site at sites/<slug>/ (Astro)
+                    per-inbox site at runtime/runtime/sites/<slug>/ (Astro)
                                                 │
           topic curator (Gemma) → synthesiser (Gemma) →
           schema-validated writes → astro build →
@@ -35,10 +35,10 @@ Two prime directives for the model:
 ## Project layout
 
 ```
-framework/site-template/   Astro 5 template. Copied to sites/<slug>/ on an
+packages/site-template/   Astro 5 template. Copied to runtime/runtime/sites/<slug>/ on an
                            inbox's first email. Inbox-owned thereafter.
-sites/<slug>/              One evolving site per inbox.
-workflow/                  Python pipeline. Imports into a single venv.
+runtime/runtime/sites/<slug>/              One evolving site per inbox.
+apps/workflow_engine/                  Python pipeline. Imports into a single venv.
 scripts/                   Foreground runner, systemd / launchd installers.
 docs/SETUP.md              Full wiring guide. Read this first.
 ```
@@ -46,10 +46,10 @@ docs/SETUP.md              Full wiring guide. Read this first.
 ## Quick start
 
 ```bash
-cp workflow/config.example.yaml workflow/config.yaml
+cp apps/workflow_engine/config.example.yaml apps/workflow_engine/config.yaml
 cp .env.example .env
 # Edit .env: set GMAIL_APP_PASSWORD
-# Edit workflow/config.yaml: imap user, smtp user, siteground.*, inboxes
+# Edit apps/workflow_engine/config.yaml: imap user, smtp user, siteground.*, inboxes
 
 ./scripts/run-workflow-dry.sh        # safe smoke test
 ./scripts/run-workflow.sh            # foreground, persistent IMAP IDLE
@@ -70,7 +70,7 @@ Full setup + troubleshooting in [docs/SETUP.md](docs/SETUP.md).
 ## Safety
 
 - Sender allowlist is mandatory.
-- Model's file writes are path-restricted to `sites/<slug>/src/content/`.
+- Model's file writes are path-restricted to `runtime/runtime/sites/<slug>/src/content/`.
 - Astro content-collection Zod schema + a second validator in
   `apply_changes.py` double-check every op.
 - Build failure triggers a `git restore` rollback so the live site never breaks.

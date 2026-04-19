@@ -13,7 +13,7 @@ fi
 if [[ ! -d .venv ]]; then
   python3 -m venv .venv
   ./.venv/bin/pip install --upgrade pip
-  ./.venv/bin/pip install -r workflow/requirements.txt
+  ./.venv/bin/pip install -r apps/workflow_engine/requirements.txt
 fi
 
-exec ./.venv/bin/python -m workflow.listener "$@"
+exec ./.venv/bin/python -m apps.workflow_engine.listener "$@"

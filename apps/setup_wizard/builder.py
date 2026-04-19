@@ -85,7 +85,7 @@ _SSH_PREFIX = {'siteground': 'sg-', 'ssh_sftp': 'ssh-'}
 
 # Where the wizard writes pasted SSH keys. Relative to the repo root;
 # the server resolves this against the actual project root.
-SITEGROUND_KEY_RELPATH = 'workflow/state/siteground.key'
+SITEGROUND_KEY_RELPATH = 'runtime/state/siteground.key'
 
 
 def _looks_like_private_key(text: str) -> bool:
@@ -411,7 +411,7 @@ def _normalize_inboxes_for_output(wizard_state: dict) -> list[dict]:
 
 
 def build_final_outputs(wizard_state: dict) -> tuple[str, str]:
-    """Return the authoritative final .env and workflow/config.yaml content."""
+    """Return the authoritative final .env and apps/workflow_engine/config.yaml content."""
     env_str = f"GMAIL_APP_PASSWORD={wizard_state.get('gmail_app_password', '').strip()}\n"
     config = {
         'git_branch': _normalized_runtime_value(wizard_state, 'git_branch'),
@@ -506,7 +506,7 @@ def _derive_site_base_url(inboxes: list[dict]) -> str:
 
 
 def hydrate_wizard_state(env_values: dict, config_values: dict) -> dict:
-    """Normalize parsed .env and workflow/config.yaml data into wizard-state shape."""
+    """Normalize parsed .env and apps/workflow_engine/config.yaml data into wizard-state shape."""
     config = config_values or {}
     imap = config.get('imap') or {}
     smtp = config.get('smtp') or {}

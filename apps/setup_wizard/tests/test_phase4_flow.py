@@ -8,8 +8,8 @@ from unittest.mock import patch
 import pytest
 import yaml
 
-import setup.server as server_module
-from setup.server import app, _write_config_pair
+import apps.setup_wizard.server as server_module
+from apps.setup_wizard.server import app, _write_config_pair
 
 
 # ---------------------------------------------------------------------------
@@ -79,7 +79,7 @@ def reset_server_state():
 # ---------------------------------------------------------------------------
 
 def test_prefill_populates_wizard_state_from_existing_files():
-    """When .env and workflow/config.yaml exist, _try_prefill() hydrates _wizard_state."""
+    """When .env and apps/workflow_engine/config.yaml exist, _try_prefill() hydrates _wizard_state."""
     env_content = 'GMAIL_APP_PASSWORD=testpassword1234\n'
     config_content = yaml.dump({
         'git_branch': 'main',
@@ -118,8 +118,8 @@ def test_prefill_populates_wizard_state_from_existing_files():
     with tempfile.TemporaryDirectory() as tmpdir:
         tmp = Path(tmpdir)
         env_path = tmp / '.env'
-        config_dir = tmp / 'workflow'
-        config_dir.mkdir()
+        config_dir = tmp / 'apps' / 'workflow_engine'
+        config_dir.mkdir(parents=True)
         config_path = config_dir / 'config.yaml'
 
         env_path.write_text(env_content)
@@ -265,13 +265,13 @@ def test_write_config_requires_overwrite_confirmation_when_files_exist(client):
 # ---------------------------------------------------------------------------
 
 def test_write_config_writes_both_files(client):
-    """POST /write-config writes .env and workflow/config.yaml when confirmed."""
+    """POST /write-config writes .env and apps/workflow_engine/config.yaml when confirmed."""
     server_module._wizard_state.update(MINIMAL_STATE)
     server_module._prefilled = True
 
     with tempfile.TemporaryDirectory() as tmpdir:
         tmp = Path(tmpdir)
-        (tmp / 'workflow').mkdir()
+        (tmp / 'apps' / 'workflow_engine').mkdir(parents=True)
 
         with patch.object(server_module, 'REPO_ROOT', tmp):
             resp = client.post('/write-config', json={'confirmed': True})
@@ -282,7 +282,7 @@ def test_write_config_writes_both_files(client):
         assert data['next_step'] == '/step/done'
 
         assert (tmp / '.env').exists()
-        assert (tmp / 'workflow' / 'config.yaml').exists()
+        assert (tmp / 'apps' / 'workflow_engine' / 'config.yaml').exists()
 
 
 def test_write_config_env_content_correct(client):
@@ -292,7 +292,7 @@ def test_write_config_env_content_correct(client):
 
     with tempfile.TemporaryDirectory() as tmpdir:
         tmp = Path(tmpdir)
-        (tmp / 'workflow').mkdir()
+        (tmp / 'apps' / 'workflow_engine').mkdir(parents=True)
 
         with patch.object(server_module, 'REPO_ROOT', tmp):
             client.post('/write-config', json={'confirmed': True})
@@ -308,9 +308,9 @@ def test_write_config_overwrites_when_confirmed(client):
 
     with tempfile.TemporaryDirectory() as tmpdir:
         tmp = Path(tmpdir)
-        (tmp / 'workflow').mkdir()
+        (tmp / 'apps' / 'workflow_engine').mkdir(parents=True)
         (tmp / '.env').write_text('GMAIL_APP_PASSWORD=old\n')
-        (tmp / 'workflow' / 'config.yaml').write_text('git_branch: old\n')
+        (tmp / 'apps' / 'workflow_engine' / 'config.yaml').write_text('git_branch: old\n')
 
         with patch.object(server_module, 'REPO_ROOT', tmp):
             resp = client.post('/write-config', json={
@@ -332,8 +332,8 @@ def test_pair_write_rollback_restores_env_on_second_replace_failure():
     with tempfile.TemporaryDirectory() as tmpdir:
         tmp = Path(tmpdir)
         env_path = tmp / '.env'
-        config_dir = tmp / 'workflow'
-        config_dir.mkdir()
+        config_dir = tmp / 'apps' / 'workflow_engine'
+        config_dir.mkdir(parents=True)
         config_path = config_dir / 'config.yaml'
 
         # Write original content
@@ -366,8 +366,8 @@ def test_pair_write_no_partial_files_on_success():
     with tempfile.TemporaryDirectory() as tmpdir:
         tmp = Path(tmpdir)
         env_path = tmp / '.env'
-        config_dir = tmp / 'workflow'
-        config_dir.mkdir()
+        config_dir = tmp / 'apps' / 'workflow_engine'
+        config_dir.mkdir(parents=True)
         config_path = config_dir / 'config.yaml'
 
         _write_config_pair(env_path, 'GMAIL_APP_PASSWORD=newval\n', config_path, 'git_branch: main\n')
@@ -402,7 +402,7 @@ def _seed_siteground_state():
 
 def test_hosting_submit_persists_siteground_key_to_disk(client, tmp_path, monkeypatch):
     """POST /validate-form step=hosting with a pasted SiteGround key writes the
-    key to workflow/state/siteground.key at 0600 and stores the absolute path
+    key to runtime/state/siteground.key at 0600 and stores the absolute path
     in wizard state so deploy can read it later.
     """
     monkeypatch.setattr(server_module, 'REPO_ROOT', tmp_path)
@@ -426,8 +426,8 @@ def test_hosting_submit_persists_siteground_key_to_disk(client, tmp_path, monkey
     assert resp.status_code == 200
     assert resp.get_json()['ok'] is True
 
-    # Key written to workflow/state/siteground.key with 0600 perms
-    written = tmp_path / 'workflow' / 'state' / 'siteground.key'
+    # Key written to runtime/state/siteground.key with 0600 perms
+    written = tmp_path / 'runtime' / 'state' / 'siteground.key'
     assert written.exists()
     assert written.read_text() == key_text
     mode = oct(written.stat().st_mode & 0o777)
