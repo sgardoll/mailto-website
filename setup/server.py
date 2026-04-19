@@ -1,6 +1,6 @@
-import atexit, os, socket, subprocess, sys, threading, time, webbrowser
+import atexit, os, signal, socket, subprocess, sys, threading, time, webbrowser
 from pathlib import Path
-from flask import Flask, render_template
+from flask import Flask, jsonify, render_template
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
@@ -61,12 +61,26 @@ def open_browser_after_ready(url: str, port: int) -> None:
     t.start()
 
 
+def _shutdown_server() -> None:
+    # Brief delay lets the /exit response flush before SIGINT fires.
+    # Do NOT call server.shutdown() from inside a request handler — that deadlocks Werkzeug.
+    time.sleep(0.3)
+    os.kill(os.getpid(), signal.SIGINT)
+
+
+def _cleanup() -> None:
+    print("\nSetup wizard exited cleanly.", flush=True)
+
+
 @app.route('/')
 def index():
     return render_template('index.html', port=_port)
 
 
-# TODO: Plan 03 will add a POST /exit route to shut the server down cleanly.
+@app.route('/exit', methods=['POST'])
+def exit_wizard():
+    threading.Thread(target=_shutdown_server, daemon=True).start()
+    return jsonify({"ok": True})
 
 
 def main():
@@ -82,8 +96,11 @@ def main():
 
     _port = find_free_port()
     url = f"http://127.0.0.1:{_port}/"
+    atexit.register(_cleanup)
+    signal.signal(signal.SIGTERM, lambda s, f: _shutdown_server())
     open_browser_after_ready(url, _port)
-    app.run(host='127.0.0.1', port=_port, debug=False, use_reloader=False)
+    # threaded=False: single-user local wizard; avoids block_on_close keep-alive delay on SIGINT
+    app.run(host='127.0.0.1', port=_port, debug=False, use_reloader=False, threaded=False)
 
 
 if __name__ == '__main__':

@@ -25,5 +25,21 @@
     <p>Server running on port {{ port }}</p>
     <p id="status">Loading...</p>
     <button id="exit-btn">Exit Setup</button>
+    <script>
+        document.getElementById('exit-btn').addEventListener('click', function() {
+            this.disabled = true;
+            this.textContent = 'Exiting...';
+            fetch('/exit', {method: 'POST', headers: {'Content-Type': 'application/json'}})
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    if (data.ok) {
+                        document.getElementById('status').textContent = 'Wizard shut down. You can close this tab.';
+                    }
+                })
+                .catch(function() {
+                    document.getElementById('status').textContent = 'Wizard exiting...';
+                });
+        });
+    </script>
 </body>
 </html>

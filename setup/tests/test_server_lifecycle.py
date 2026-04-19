@@ -1,7 +1,8 @@
 """
 Unit tests for setup.server lifecycle functions.
-Tests: find_free_port, check_write_permission
+Tests: find_free_port, check_write_permission, _shutdown_server, exit_wizard
 """
+import signal
 import socket
 from pathlib import Path
 from unittest.mock import patch, MagicMock
@@ -56,3 +57,22 @@ def test_check_write_permission_false():
     with patch('os.access', return_value=False):
         result = check_write_permission(Path('/any'))
     assert result is False
+
+
+def test_shutdown_sends_sigint():
+    """_shutdown_server() must call os.kill(os.getpid(), signal.SIGINT)."""
+    from setup.server import _shutdown_server
+    with patch('os.getpid', return_value=9999), \
+         patch('os.kill') as mock_kill:
+        _shutdown_server()
+    mock_kill.assert_called_once_with(9999, signal.SIGINT)
+
+
+def test_exit_route_returns_ok():
+    """POST /exit returns 200 with {"ok": true}. Thread fires but process does not exit."""
+    from setup.server import app
+    with patch('setup.server._shutdown_server'):
+        with app.test_client() as client:
+            response = client.post('/exit')
+    assert response.status_code == 200
+    assert response.get_json() == {"ok": True}
