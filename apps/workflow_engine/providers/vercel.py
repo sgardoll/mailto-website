@@ -32,7 +32,7 @@ class VercelProvider:
 
     name = "vercel"
 
-    def build(self, site_dir: Path, site_url: str, site_name: str) -> BuildResult:
+    def build(self, site_dir: Path, site_url: str, site_name: str, site_base: str = "/") -> BuildResult:
         npm = shutil.which("npm")
         if not npm:
             raise BuildFailed("npm not on PATH")
@@ -43,7 +43,7 @@ class VercelProvider:
         env = {
             **os.environ,
             "SITE_URL": site_url or "https://example.com",
-            "SITE_BASE": "/",
+            "SITE_BASE": site_base or "/",
             "SITE_NAME": site_name,
         }
         log.info("Building %s ...", site_dir)

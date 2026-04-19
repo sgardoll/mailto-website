@@ -31,8 +31,11 @@ class DeployProvider(Protocol):
         """Provider identifier (e.g. 'siteground', 'vercel')."""
         ...
 
-    def build(self, site_dir: Path, site_url: str, site_name: str) -> "BuildResult":
+    def build(self, site_dir: Path, site_url: str, site_name: str, site_base: str = "/") -> "BuildResult":
         """Install deps (npm install) and build the Astro site.
+
+        site_base is the URL path prefix the site is served under (e.g. "/it/" for
+        subpath deploys). Must start and end with "/". Defaults to "/".
 
         Returns a BuildResult with paths to the built dist directory.
         Raises BuildFailed on npm/build errors.

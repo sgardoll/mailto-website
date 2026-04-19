@@ -8,6 +8,7 @@ export async function getStaticPaths() {
 }
 const { entry } = Astro.props;
 const { Content } = await entry.render();
+const base = import.meta.env.BASE_URL;
 ---
 <Base title={entry.data.title} description={entry.data.summary}>
   <p class="meta">Received {new Date(entry.data.receivedAt).toLocaleString()}</p>
@@ -17,12 +18,12 @@ const { Content } = await entry.render();
   <p class="connections">
     Threads:
     {entry.data.threads.map((t, i) => (
-      <>{i > 0 && ', '}<a href={`/threads/${t.slug}`}>{t.slug}</a></>
+      <>{i > 0 && ', '}<a href={`${base}threads/${t.slug}`}>{t.slug}</a></>
     ))}
   </p>
   {entry.data.tags.length > 0 && (
     <ul class="tag-list">
-      {entry.data.tags.map(tag => <li><a href={`/tags/${tag}`}>{tag}</a></li>)}
+      {entry.data.tags.map(tag => <li><a href={`${base}tags/${tag}`}>{tag}</a></li>)}
     </ul>
   )}
 </Base>

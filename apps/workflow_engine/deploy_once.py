@@ -45,6 +45,7 @@ def deploy_inbox(cfg: Config, inbox: InboxConfig, on_progress: ProgressCb = _noo
             site_dir,
             site_url=inbox.site_url or "https://example.com",
             site_name=inbox.site_name or inbox.slug,
+            site_base=inbox.site_base or "/",
         )
         on_progress(inbox.slug, "build", f"built dist at {build_result.dist_dir}")
 

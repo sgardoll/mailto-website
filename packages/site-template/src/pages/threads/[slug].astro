@@ -15,6 +15,7 @@ const inThread = allEntries
 const related = await Promise.all(
   thread.data.relatedThreads.map(r => getEntry('threads', r.slug))
 );
+const base = import.meta.env.BASE_URL;
 ---
 <Base title={thread.data.title} description={thread.data.summary}>
   <p class="meta">Updated {new Date(thread.data.updatedAt).toLocaleString()} · {thread.data.status}</p>
@@ -26,7 +27,7 @@ const related = await Promise.all(
   {inThread.length === 0 && <p class="meta">None yet.</p>}
   {inThread.map(e => (
     <article class="entry-card">
-      <h3><a href={`/entries/${e.slug}`}>{e.data.title}</a></h3>
+      <h3><a href={`${base}entries/${e.slug}`}>{e.data.title}</a></h3>
       <p>{e.data.summary}</p>
       <p class="meta">{new Date(e.data.receivedAt).toLocaleDateString()}</p>
     </article>
@@ -37,7 +38,7 @@ const related = await Promise.all(
       <h2>Related threads</h2>
       {related.filter(Boolean).map(r => (
         <article class="thread-card">
-          <h3><a href={`/threads/${r!.slug}`}>{r!.data.title}</a></h3>
+          <h3><a href={`${base}threads/${r!.slug}`}>{r!.data.title}</a></h3>
           <p>{r!.data.summary}</p>
         </article>
       ))}
