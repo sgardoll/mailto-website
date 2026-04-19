@@ -151,6 +151,7 @@
     var addSenderBtn = document.getElementById('add-sender');
 
     function updateRemoveButtons() {
+        if (!sendersList) return;
         var rows = sendersList.querySelectorAll('.sender-row');
         var onlyOne = rows.length === 1;
         rows.forEach(function(row) {
@@ -201,7 +202,7 @@
     }
 
     // Wire validation on initial sender row
-    var firstSenderInput = sendersList.querySelector('.sender-input');
+    var firstSenderInput = sendersList ? sendersList.querySelector('.sender-input') : null;
     if (firstSenderInput) {
         attachSenderValidation(firstSenderInput);
     }
