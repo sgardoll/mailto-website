@@ -618,3 +618,334 @@
     initHostingStep();
 
 })();
+
+
+// ── Phase 3: Inboxes step ────────────────────────────────────────────────────
+
+(function() {
+    'use strict';
+
+    // -- Helpers (scoped to inboxes IIFE) ------------------------------------
+
+    function showErrSpan(span, input, message) {
+        if (span) { span.textContent = message; span.hidden = false; }
+        if (input) { input.setAttribute('aria-invalid', 'true'); }
+    }
+
+    function clearErrSpan(span, input) {
+        if (span) { span.textContent = ''; span.hidden = true; }
+        if (input) { input.setAttribute('aria-invalid', 'false'); }
+    }
+
+    // -- Inboxes step --------------------------------------------------------
+
+    function initInboxesStep() {
+        var inboxesList = document.getElementById('inboxes-list');
+        var addInboxBtn = document.getElementById('add-inbox');
+        if (!inboxesList && !addInboxBtn) return;
+
+        var inboxCounter = 1; // First row already rendered with index 1
+
+        function updateRemoveButtons() {
+            var rows = inboxesList.querySelectorAll('.inbox-row');
+            var removeButtons = inboxesList.querySelectorAll('.remove-inbox');
+            var onlyOne = rows.length === 1;
+            removeButtons.forEach(function(btn, i) {
+                btn.disabled = onlyOne;
+            });
+        }
+
+        // -- Slug uniqueness -------------------------------------------------
+
+        function validateAllSlugs() {
+            var slugInputs = Array.from(inboxesList.querySelectorAll('.inbox-slug'));
+            var values = slugInputs.map(function(i) { return i.value.trim().toLowerCase(); });
+            var counts = {};
+            values.forEach(function(v) { counts[v] = (counts[v] || 0) + 1; });
+
+            slugInputs.forEach(function(input) {
+                var span = input.closest('.field-group').querySelector('.error');
+                var val = input.value.trim().toLowerCase();
+                // Only override with uniqueness error if field has no other active error
+                var currentErr = span ? span.textContent : '';
+                var isDupErr = currentErr === 'Slug must be unique across all inboxes';
+                if (counts[val] > 1 && val !== '') {
+                    showErrSpan(span, input, 'Slug must be unique across all inboxes');
+                } else if (isDupErr) {
+                    clearErrSpan(span, input);
+                }
+            });
+        }
+
+        // -- Per-field validation rules --------------------------------------
+
+        var SLUG_RE = /^[a-z0-9-]+$/;
+
+        function validateSlugInput(input) {
+            var span = input.closest('.field-group').querySelector('.error');
+            var val = input.value.trim();
+            if (!val) {
+                showErrSpan(span, input, 'Slug is required');
+                return false;
+            }
+            if (!SLUG_RE.test(val)) {
+                showErrSpan(span, input, 'Slug may only contain lowercase letters, numbers, and hyphens');
+                return false;
+            }
+            clearErrSpan(span, input);
+            return true;
+        }
+
+        function validateEmailInput(input) {
+            var span = input.closest('.field-group').querySelector('.error');
+            var val = input.value.trim();
+            if (!val || input.validity.typeMismatch || !val.includes('@')) {
+                showErrSpan(span, input, 'Enter a valid email address');
+                return false;
+            }
+            clearErrSpan(span, input);
+            return true;
+        }
+
+        function validateSiteNameInput(input) {
+            var span = input.closest('.field-group').querySelector('.error');
+            if (!input.value.trim()) {
+                showErrSpan(span, input, 'Site name is required');
+                return false;
+            }
+            clearErrSpan(span, input);
+            return true;
+        }
+
+        function validateSiteUrlInput(input) {
+            var span = input.closest('.field-group').querySelector('.error');
+            var val = input.value.trim();
+            var valid = false;
+            try { new URL(val); valid = true; } catch(e) {}
+            if (!valid) {
+                showErrSpan(span, input, 'Enter a valid URL (e.g. https://example.com)');
+                return false;
+            }
+            clearErrSpan(span, input);
+            return true;
+        }
+
+        function validateBasePathInput(input) {
+            var span = input.closest('.field-group').querySelector('.error');
+            var val = input.value.trim();
+            if (!val || val[0] !== '/') {
+                showErrSpan(span, input, 'Base path must start with /');
+                return false;
+            }
+            clearErrSpan(span, input);
+            return true;
+        }
+
+        // -- Attach validation to a row's inputs ----------------------------
+
+        function attachRowValidation(row) {
+            var slugInput = row.querySelector('.inbox-slug');
+            var emailInput = row.querySelector('.inbox-email');
+            var siteNameInput = row.querySelector('.inbox-site-name');
+            var siteUrlInput = row.querySelector('.inbox-site-url');
+            var basePathInput = row.querySelector('.inbox-base-path');
+
+            function makeTouched(input, validator) {
+                var touched = false;
+                input.addEventListener('blur', function() {
+                    touched = true;
+                    validator(input);
+                    if (input.classList.contains('inbox-slug')) validateAllSlugs();
+                });
+                input.addEventListener('input', function() {
+                    if (touched) {
+                        validator(input);
+                        if (input.classList.contains('inbox-slug')) validateAllSlugs();
+                    }
+                });
+            }
+
+            if (slugInput) makeTouched(slugInput, validateSlugInput);
+            if (emailInput) makeTouched(emailInput, validateEmailInput);
+            if (siteNameInput) makeTouched(siteNameInput, validateSiteNameInput);
+            if (siteUrlInput) makeTouched(siteUrlInput, validateSiteUrlInput);
+            if (basePathInput) makeTouched(basePathInput, validateBasePathInput);
+        }
+
+        // -- Clone and add new row ------------------------------------------
+
+        function addInboxRow() {
+            var tmpl = document.getElementById('inbox-row-template');
+            if (!tmpl) return;
+            inboxCounter++;
+            var n = inboxCounter;
+            var clone = tmpl.content.cloneNode(true);
+            var row = clone.querySelector('.inbox-row');
+
+            // Update label
+            var label = row.querySelector('.inbox-row-label');
+            if (label) label.textContent = 'Inbox ' + n;
+
+            // Update remove button aria-label
+            var removeBtn = row.querySelector('.remove-inbox');
+            if (removeBtn) removeBtn.setAttribute('aria-label', 'Remove inbox ' + n);
+
+            // Assign IDs and aria-describedby to each input
+            var fields = [
+                {cls: 'inbox-slug', base: 'inbox-slug-' + n},
+                {cls: 'inbox-email', base: 'inbox-email-' + n},
+                {cls: 'inbox-site-name', base: 'inbox-site-name-' + n},
+                {cls: 'inbox-site-url', base: 'inbox-site-url-' + n},
+                {cls: 'inbox-base-path', base: 'inbox-base-path-' + n},
+            ];
+            fields.forEach(function(f) {
+                var input = row.querySelector('.' + f.cls);
+                var span = input ? input.closest('.field-group').querySelector('.error') : null;
+                var helpSpan = input ? input.closest('.field-group').querySelector('.help-text') : null;
+                if (input) {
+                    input.id = f.base;
+                    var describedby = '';
+                    if (helpSpan) { helpSpan.id = f.base + '-help'; describedby += f.base + '-help '; }
+                    if (span) { span.id = f.base + '-error'; describedby += f.base + '-error'; }
+                    input.setAttribute('aria-describedby', describedby.trim());
+                }
+                // Update label for= if label exists
+                var lbl = input ? input.closest('.field-group').querySelector('label') : null;
+                if (lbl) lbl.setAttribute('for', f.base);
+            });
+
+            inboxesList.appendChild(row);
+            attachRowValidation(inboxesList.lastElementChild);
+            updateRemoveButtons();
+            var firstInput = inboxesList.lastElementChild.querySelector('.inbox-slug');
+            if (firstInput) firstInput.focus();
+        }
+
+        // Init: attach validation to pre-rendered first row
+        var firstRow = inboxesList.querySelector('.inbox-row');
+        if (firstRow) attachRowValidation(firstRow);
+        updateRemoveButtons();
+
+        // Add inbox button
+        if (addInboxBtn) {
+            addInboxBtn.addEventListener('click', addInboxRow);
+        }
+
+        // Remove delegation
+        inboxesList.addEventListener('click', function(e) {
+            if (e.target.classList.contains('remove-inbox') && !e.target.disabled) {
+                var row = e.target.closest('.inbox-row');
+                if (row) {
+                    row.remove();
+                    updateRemoveButtons();
+                    validateAllSlugs();
+                }
+            }
+        });
+
+        // -- Form submit --------------------------------------------------
+
+        function validateAllRows() {
+            var ok = true;
+            inboxesList.querySelectorAll('.inbox-row').forEach(function(row) {
+                var s = validateSlugInput(row.querySelector('.inbox-slug'));
+                var e = validateEmailInput(row.querySelector('.inbox-email'));
+                var n = validateSiteNameInput(row.querySelector('.inbox-site-name'));
+                var u = validateSiteUrlInput(row.querySelector('.inbox-site-url'));
+                var b = validateBasePathInput(row.querySelector('.inbox-base-path'));
+                if (!s || !e || !n || !u || !b) ok = false;
+            });
+            validateAllSlugs();
+            // Check if any slug still has error after uniqueness check
+            if (inboxesList.querySelectorAll('.inbox-slug[aria-invalid="true"]').length > 0) ok = false;
+            return ok;
+        }
+
+        function buildInboxesPayload() {
+            var inboxes = [];
+            inboxesList.querySelectorAll('.inbox-row').forEach(function(row) {
+                inboxes.push({
+                    slug: row.querySelector('.inbox-slug').value.trim(),
+                    email: row.querySelector('.inbox-email').value.trim(),
+                    site_name: row.querySelector('.inbox-site-name').value.trim(),
+                    site_url: row.querySelector('.inbox-site-url').value.trim(),
+                    base_path: row.querySelector('.inbox-base-path').value.trim(),
+                });
+            });
+            return {step: 'inboxes', inboxes: inboxes};
+        }
+
+        var form = document.getElementById('wizard-form');
+        if (form) {
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+                var formSummary = document.getElementById('form-error-summary');
+                if (!validateAllRows()) {
+                    if (formSummary) { formSummary.textContent = 'Fix the highlighted fields before continuing.'; formSummary.hidden = false; }
+                    return;
+                }
+                if (formSummary) { formSummary.textContent = ''; formSummary.hidden = true; }
+
+                var payload = buildInboxesPayload();
+                fetch('/validate-form', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(payload)
+                })
+                .then(function(r) { return r.json().then(function(d) { return {status: r.status, data: d}; }); })
+                .then(function(result) {
+                    if (result.data.ok) {
+                        window.location.href = result.data.next_step;
+                    } else {
+                        if (result.data.errors) {
+                            // Map server errors to row fields by index
+                            result.data.errors.forEach(function(err) {
+                                if (typeof err.index === 'number') {
+                                    var rows = inboxesList.querySelectorAll('.inbox-row');
+                                    var row = rows[err.index];
+                                    if (row) {
+                                        var clsMap = {
+                                            inbox_slug: '.inbox-slug',
+                                            inbox_email: '.inbox-email',
+                                            inbox_site_name: '.inbox-site-name',
+                                            inbox_site_url: '.inbox-site-url',
+                                            inbox_base_path: '.inbox-base-path',
+                                        };
+                                        var cls = clsMap[err.field];
+                                        if (cls) {
+                                            var input = row.querySelector(cls);
+                                            var span = input ? input.closest('.field-group').querySelector('.error') : null;
+                                            if (input) showErrSpan(span, input, err.message);
+                                        }
+                                    }
+                                }
+                            });
+                        }
+                        if (formSummary) { formSummary.textContent = 'Fix the highlighted fields before continuing.'; formSummary.hidden = false; }
+                    }
+                })
+                .catch(function() {
+                    if (formSummary) { formSummary.textContent = 'Network error. Check your connection and try again.'; formSummary.hidden = false; }
+                });
+            });
+        }
+
+        // Exit button
+        var exitBtn = document.getElementById('exit-btn');
+        if (exitBtn) {
+            exitBtn.addEventListener('click', function() {
+                exitBtn.disabled = true;
+                exitBtn.textContent = 'Exiting...';
+                fetch('/exit', {method: 'POST', headers: {'Content-Type': 'application/json'}})
+                    .then(function(r) { return r.json(); })
+                    .then(function(data) {
+                        if (data.ok) { document.body.textContent = ''; var msg = document.createElement('p'); msg.textContent = 'Wizard shut down. You can close this tab.'; document.body.appendChild(msg); }
+                    })
+                    .catch(function() { document.body.textContent = ''; var msg = document.createElement('p'); msg.textContent = 'Wizard exiting...'; document.body.appendChild(msg); });
+            });
+        }
+    }
+
+    initInboxesStep();
+
+})();
