@@ -189,6 +189,7 @@ def step_done():
             'slug': ib.get('slug', ''),
             'site_url': ib.get('site_url', ''),
             'site_name': ib.get('site_name') or ib.get('slug', ''),
+            'address': ib.get('address', ''),
         }
         for ib in inboxes if ib.get('slug')
     ]
@@ -248,6 +249,41 @@ def _deploy_worker() -> None:
         with _deploy_lock:
             _deploy_state["status"] = "failed"
             _deploy_state["error"] = f"{type(e).__name__}: {e}"
+
+
+_VCARD_SLUG_RE = __import__('re').compile(r'^[a-z0-9][a-z0-9\-]{0,80}$')
+
+
+@app.route('/contact-vcard/<slug>')
+def contact_vcard(slug: str):
+    """Download a vCard for the inbox so the user can import it into
+    Google Contacts (or any contacts app). Avoids OAuth: the user
+    double-clicks the file → Contacts opens with fields prefilled.
+    """
+    if not _VCARD_SLUG_RE.match(slug or ''):
+        return ('Invalid slug', 400)
+    inbox = next((ib for ib in (_wizard_state.get('inboxes') or [])
+                  if ib.get('slug') == slug), None)
+    if not inbox or not inbox.get('address'):
+        return ('Inbox not found', 404)
+    name = inbox.get('site_name') or slug
+    addr = inbox['address']
+    # Minimal vCard 3.0 (most widely supported by Contacts apps + Google import)
+    vcard = (
+        "BEGIN:VCARD\r\n"
+        "VERSION:3.0\r\n"
+        f"FN:{name}\r\n"
+        f"N:{name};;;;\r\n"
+        f"EMAIL;TYPE=INTERNET:{addr}\r\n"
+        f"NOTE:Inbox alias for {name} on the thoughts-to-platform builder.\r\n"
+        "END:VCARD\r\n"
+    )
+    from flask import Response
+    return Response(
+        vcard,
+        mimetype='text/vcard',
+        headers={'Content-Disposition': f'attachment; filename="{slug}.vcf"'},
+    )
 
 
 @app.route('/deploy', methods=['POST'])

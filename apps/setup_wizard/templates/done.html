@@ -44,6 +44,17 @@
                         <strong class="deploy-row-name">{{ inbox.site_name }}</strong>
                         <span class="deploy-phase-badge" data-phase="pending">pending</span>
                     </div>
+                    {% if inbox.address %}
+                    <div class="deploy-row-meta">
+                        <code class="deploy-row-address">{{ inbox.address }}</code>
+                        <a class="btn-inline"
+                           href="{{ url_for('contact_vcard', slug=inbox.slug) }}"
+                           download="{{ inbox.slug }}.vcf"
+                           title="Download a vCard you can import into Google Contacts or your system address book">
+                            Add to Contacts
+                        </a>
+                    </div>
+                    {% endif %}
                     <div class="deploy-row-detail"></div>
                     <a class="deploy-row-link" href="{{ inbox.site_url }}" target="_blank" rel="noopener noreferrer" hidden>{{ inbox.site_url }}</a>
                 </li>
