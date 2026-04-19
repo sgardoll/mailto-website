@@ -58,6 +58,8 @@ class SiteGroundConfig:
     user: str = ""
     # Path to private key on disk. Password is also accepted but discouraged.
     key_path: str = ""
+    # Passphrase for the private key. Empty if the key is not encrypted.
+    key_passphrase: str = ""
     password: str = ""
     # Base remote path; per inbox, deploy goes to {base_remote_path}/{slug}/
     base_remote_path: str = "/home/USER/public_html"

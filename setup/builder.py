@@ -211,7 +211,7 @@ def build_hosting(form_data: dict) -> dict:
                 key_path = existing
         else:
             key_path = form_data.get(f'{prefix}ssh_key_path', '').strip()
-        result[section_key] = {
+        section = {
             'host': form_data.get(f'{prefix}host', '').strip(),
             'port': int(form_data.get(f'{prefix}port', 22)),
             'user': form_data.get(f'{prefix}username', '').strip(),
@@ -219,6 +219,9 @@ def build_hosting(form_data: dict) -> dict:
             'password': form_data.get(f'{prefix}password', '').strip(),
             'base_remote_path': form_data.get(f'{prefix}remote_base_path', '').strip(),
         }
+        if provider == 'siteground':
+            section['key_passphrase'] = form_data.get('sg-key_passphrase', '')
+        result[section_key] = section
     elif provider == 'netlify':
         result['netlify'] = {
             'api_token': form_data.get('netlify_api_token', '').strip(),
@@ -455,7 +458,7 @@ def mask_for_preview(env_str: str, yaml_str: str) -> tuple[str, str]:
 
     config = yaml.safe_load(yaml_str) or {}
     for section_key, field_names in {
-        'siteground': ('password',),
+        'siteground': ('password', 'key_passphrase'),
         'ssh_sftp': ('password',),
         'netlify': ('api_token',),
         'vercel': ('api_token',),
@@ -558,6 +561,7 @@ def hydrate_wizard_state(env_values: dict, config_values: dict) -> dict:
             'sg-ssh_private_key': '',
             'sg-existing_key_path': provider_section.get('key_path', ''),
             'sg-password': provider_section.get('password', ''),
+            'sg-key_passphrase': provider_section.get('key_passphrase', ''),
             'sg-remote_base_path': provider_section.get('base_remote_path', ''),
         })
     elif provider == 'ssh_sftp':

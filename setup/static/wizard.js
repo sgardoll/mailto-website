@@ -627,6 +627,7 @@
                     payload['sg-ssh_private_key'] = (document.getElementById('sg-ssh_private_key') || {}).value || '';
                     var sgExisting = document.getElementById('sg-existing_key_path');
                     if (sgExisting) payload['sg-existing_key_path'] = sgExisting.value || '';
+                    payload['sg-key_passphrase'] = (document.getElementById('sg-key_passphrase') || {}).value || '';
                 } else {
                     payload[prefix + 'ssh_key_path'] = document.getElementById(prefix + 'ssh_key_path').value.trim();
                 }

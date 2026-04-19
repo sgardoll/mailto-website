@@ -68,11 +68,24 @@ def _open_sftp(sg: SiteGroundConfig) -> tuple[paramiko.SSHClient, paramiko.SFTPC
     kw: dict = {"hostname": sg.host, "port": sg.port, "username": sg.user, "timeout": 30}
     if sg.key_path:
         kw["key_filename"] = os.path.expanduser(sg.key_path)
+        if sg.key_passphrase:
+            kw["passphrase"] = sg.key_passphrase
     elif sg.password:
         kw["password"] = sg.password
     else:
         raise DeployFailed("siteground requires key_path or password")
-    client.connect(**kw)
+    try:
+        client.connect(**kw)
+    except paramiko.PasswordRequiredException as e:
+        raise DeployFailed(
+            "SSH private key is passphrase-protected but no passphrase was provided. "
+            "Re-run the setup wizard and fill in the 'Key passphrase' field."
+        ) from e
+    except paramiko.AuthenticationException as e:
+        hint = ""
+        if sg.key_path and not sg.key_passphrase:
+            hint = " (if your key has a passphrase, add it in the wizard)"
+        raise DeployFailed(f"SSH authentication failed{hint}: {e}") from e
     return client, client.open_sftp()
 
 

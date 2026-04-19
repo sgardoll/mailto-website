@@ -93,6 +93,18 @@
             </div>
 
             <div class="field-group">
+                <label for="sg-key_passphrase">Key passphrase</label>
+                <div class="field-row">
+                    <input id="sg-key_passphrase" name="sg-key_passphrase" type="password" autocomplete="off"
+                           aria-describedby="sg-key_passphrase-help sg-key_passphrase-error" />
+                    <button type="button" class="toggle-visibility" data-target="sg-key_passphrase"
+                            aria-label="Show passphrase" aria-pressed="false">Show</button>
+                </div>
+                <small id="sg-key_passphrase-help" class="help-text">Passphrase for the private key above. Leave blank if the key has no passphrase.</small>
+                <span id="sg-key_passphrase-error" class="error" hidden aria-live="polite"></span>
+            </div>
+
+            <div class="field-group">
                 <label for="sg-password">Password</label>
                 <div class="field-row">
                     <input id="sg-password" name="sg-password" type="password" autocomplete="off"
