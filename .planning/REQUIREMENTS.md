@@ -32,20 +32,20 @@
 
 ### Hosting Provider (HOST)
 
-- [ ] **HOST-01**: User can select their hosting provider from: SiteGround, Generic SSH/SFTP, Netlify, Vercel, GitHub Pages
-- [ ] **HOST-02**: When SiteGround or Generic SSH/SFTP is selected, user sees SSH/SFTP fields: host, port, username, SSH key path or password, remote base path
-- [ ] **HOST-03**: When Netlify is selected, user sees: API token, site ID
-- [ ] **HOST-04**: When Vercel is selected, user sees: API token, project name/ID
-- [ ] **HOST-05**: When GitHub Pages is selected, user sees: target branch (default: `gh-pages`)
-- [ ] **HOST-06**: Only the fields for the selected provider are visible; other provider fields are hidden
-- [ ] **HOST-07**: Site base URL is collected on the hosting step for SiteGround/SSH-SFTP/GitHub Pages; for Netlify and Vercel it is fetched via their respective APIs using the token and site/project identifier
+- [x] **HOST-01**: User can select their hosting provider from: SiteGround, Generic SSH/SFTP, Netlify, Vercel, GitHub Pages
+- [x] **HOST-02**: When SiteGround or Generic SSH/SFTP is selected, user sees SSH/SFTP fields: host, port, username, SSH key path or password, remote base path
+- [x] **HOST-03**: When Netlify is selected, user sees: API token, site ID
+- [x] **HOST-04**: When Vercel is selected, user sees: API token, project name/ID
+- [x] **HOST-05**: When GitHub Pages is selected, user sees: target branch (default: `gh-pages`)
+- [x] **HOST-06**: Only the fields for the selected provider are visible; other provider fields are hidden
+- [x] **HOST-07**: Site base URL is collected on the hosting step for SiteGround/SSH-SFTP/GitHub Pages; for Netlify and Vercel it is fetched via their respective APIs using the token and site/project identifier
 
 ### Inbox Manager (INBOX)
 
-- [ ] **INBOX-01**: User can define at least one inbox with slug + site name. Monitoring address (`gmail_local+slug@gmail.com`), site URL (`<site_base_url>/<slug>`), and site base path (`/<slug>/`) are derived from prior-step inputs, not re-entered.
-- [ ] **INBOX-02**: User can add additional inbox cards in the same session
-- [ ] **INBOX-03**: User can remove any inbox card except when only one remains
-- [ ] **INBOX-04**: Inbox slugs are validated for uniqueness across all defined inboxes on blur
+- [x] **INBOX-01**: User can define at least one inbox with slug + site name. Monitoring address (`gmail_local+slug@gmail.com`), site URL (`<site_base_url>/<slug>`), and site base path (`/<slug>/`) are derived from prior-step inputs, not re-entered.
+- [x] **INBOX-02**: User can add additional inbox cards in the same session
+- [x] **INBOX-03**: User can remove any inbox card except when only one remains
+- [x] **INBOX-04**: Inbox slugs are validated for uniqueness across all defined inboxes on blur
 
 ### Output & File Writing (OUT)
 
@@ -98,16 +98,17 @@
 | LMS-02 | Phase 2 | Pending |
 | LMS-03 | Phase 2 | Pending |
 | LMS-04 | Phase 2 | Pending |
-| HOST-01 | Phase 3 | Pending |
-| HOST-02 | Phase 3 | Pending |
-| HOST-03 | Phase 3 | Pending |
-| HOST-04 | Phase 3 | Pending |
-| HOST-05 | Phase 3 | Pending |
-| HOST-06 | Phase 3 | Pending |
-| INBOX-01 | Phase 3 | Pending |
-| INBOX-02 | Phase 3 | Pending |
-| INBOX-03 | Phase 3 | Pending |
-| INBOX-04 | Phase 3 | Pending |
+| HOST-01 | Phase 3 | Validated |
+| HOST-02 | Phase 3 | Validated |
+| HOST-03 | Phase 3 | Validated |
+| HOST-04 | Phase 3 | Validated |
+| HOST-05 | Phase 3 | Validated |
+| HOST-06 | Phase 3 | Validated |
+| HOST-07 | Phase 3 | Validated |
+| INBOX-01 | Phase 3 | Validated |
+| INBOX-02 | Phase 3 | Validated |
+| INBOX-03 | Phase 3 | Validated |
+| INBOX-04 | Phase 3 | Validated |
 | OUT-01 | Phase 4 | Pending |
 | OUT-02 | Phase 4 | Pending |
 | OUT-03 | Phase 4 | Pending |
