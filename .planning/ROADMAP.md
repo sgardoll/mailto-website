@@ -88,7 +88,12 @@ Plans:
   3. A crash or Ctrl-C during the write does not leave a partial or zero-byte config on disk
   4. When existing `.env` or `config.yaml` are present on launch, all form fields are pre-filled from those values and the "Write Config Files" button is disabled until the user checks the "Overwrite existing config" checkbox
   5. After a successful write, the user sees a success screen displaying the exact command to run the workflow (`./scripts/run-workflow.sh`)
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [x] 04-01-PLAN.md — Pure builder contract: build_final_outputs(), mask_for_preview(), hydrate_wizard_state() in setup/builder.py with test coverage (2026-04-19)
+- [x] 04-02-PLAN.md — Backend flow: prefill hydration, GET /step/preview, POST /write-config (atomic pair-write + rollback), GET /step/done; preview.html, done.html, test_phase4_flow.py (2026-04-19)
+- [ ] 04-03-PLAN.md — Frontend wiring: wizard.js preview/write interaction, wizard.css preview/success styles, human verification checkpoint
 
 ## Progress
 
@@ -100,4 +105,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 | 1. Server Foundation | 3/3 | Complete | 2026-04-19 |
 | 2. Core Form & Config Engine | 6/6 | Complete | 2026-04-19 |
 | 3. Hosting Provider & Inbox Manager | 7/7 | Complete | 2026-04-19 |
-| 4. Preview, Write & Completion | 0/TBD | Not started | - |
+| 4. Preview, Write & Completion | 2/3 | In Progress | - |
