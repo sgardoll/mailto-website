@@ -453,20 +453,32 @@
             };
         }
 
-        // SiteGround validations
+        // SiteGround validations — key is a pasteable textarea
         attachFieldValidation('sg-host', ruleRequired('Host is required'));
         attachFieldValidation('sg-port', rulePort);
         attachFieldValidation('sg-username', ruleRequired('Username is required'));
-        attachFieldValidation('sg-ssh_key_path', ruleAtLeastOne('sg-ssh_key_path', 'sg-password'));
+        function ruleSiteGroundCredential(input) {
+            var key = (document.getElementById('sg-ssh_private_key') || {}).value || '';
+            var pw = (document.getElementById('sg-password') || {}).value || '';
+            var existing = (document.getElementById('sg-existing_key_path') || {}).value || '';
+            if (!key.trim() && !pw.trim() && !existing.trim()) {
+                return 'Paste an SSH private key or enter a password';
+            }
+            if (key.trim() && key.indexOf('-----BEGIN') === -1) {
+                return 'Paste the full key including -----BEGIN ... -----END lines';
+            }
+            return '';
+        }
+        attachFieldValidation('sg-ssh_private_key', ruleSiteGroundCredential);
         attachFieldValidation('sg-remote_base_path', ruleRequired('Remote base path is required'));
-        // Also recheck key_path error when password changes
+        // Also recheck the credential error when password changes
         var sgPassword = document.getElementById('sg-password');
         if (sgPassword) {
             sgPassword.addEventListener('blur', function() {
-                var keyPathInput = document.getElementById('sg-ssh_key_path');
-                if (keyPathInput) {
-                    var msg = ruleAtLeastOne('sg-ssh_key_path', 'sg-password')(keyPathInput);
-                    if (msg) { showFieldError('sg-ssh_key_path', msg); } else { clearFieldError('sg-ssh_key_path'); }
+                var keyInput = document.getElementById('sg-ssh_private_key');
+                if (keyInput) {
+                    var msg = ruleSiteGroundCredential(keyInput);
+                    if (msg) { showFieldError('sg-ssh_private_key', msg); } else { clearFieldError('sg-ssh_private_key'); }
                 }
             });
         }
@@ -528,12 +540,25 @@
                     showFieldError(prefix + 'username', 'Username is required'); errors.push(1);
                 } else { clearFieldError(prefix + 'username'); }
 
-                var kp = document.getElementById(prefix + 'ssh_key_path').value.trim();
-                var pw = document.getElementById(prefix + 'password').value.trim();
-                if (!kp && !pw) {
-                    showFieldError(prefix + 'ssh_key_path', 'Enter an SSH key path or a password — at least one is required');
-                    errors.push(1);
-                } else { clearFieldError(prefix + 'ssh_key_path'); }
+                if (prefix === 'sg-') {
+                    var key = (document.getElementById('sg-ssh_private_key') || {}).value || '';
+                    var pw = (document.getElementById('sg-password') || {}).value || '';
+                    var existing = (document.getElementById('sg-existing_key_path') || {}).value || '';
+                    if (!key.trim() && !pw.trim() && !existing.trim()) {
+                        showFieldError('sg-ssh_private_key', 'Paste an SSH private key or enter a password');
+                        errors.push(1);
+                    } else if (key.trim() && key.indexOf('-----BEGIN') === -1) {
+                        showFieldError('sg-ssh_private_key', 'Paste the full key including -----BEGIN ... -----END lines');
+                        errors.push(1);
+                    } else { clearFieldError('sg-ssh_private_key'); }
+                } else {
+                    var kp = document.getElementById(prefix + 'ssh_key_path').value.trim();
+                    var pw = document.getElementById(prefix + 'password').value.trim();
+                    if (!kp && !pw) {
+                        showFieldError(prefix + 'ssh_key_path', 'Enter an SSH key path or a password — at least one is required');
+                        errors.push(1);
+                    } else { clearFieldError(prefix + 'ssh_key_path'); }
+                }
 
                 if (!document.getElementById(prefix + 'remote_base_path').value.trim()) {
                     showFieldError(prefix + 'remote_base_path', 'Remote base path is required'); errors.push(1);
@@ -597,7 +622,14 @@
                 payload[prefix + 'host'] = document.getElementById(prefix + 'host').value.trim();
                 payload[prefix + 'port'] = document.getElementById(prefix + 'port').value.trim();
                 payload[prefix + 'username'] = document.getElementById(prefix + 'username').value.trim();
-                payload[prefix + 'ssh_key_path'] = document.getElementById(prefix + 'ssh_key_path').value.trim();
+                if (prefix === 'sg-') {
+                    // SiteGround: pasteable private key textarea + hidden existing-key path from hydration
+                    payload['sg-ssh_private_key'] = (document.getElementById('sg-ssh_private_key') || {}).value || '';
+                    var sgExisting = document.getElementById('sg-existing_key_path');
+                    if (sgExisting) payload['sg-existing_key_path'] = sgExisting.value || '';
+                } else {
+                    payload[prefix + 'ssh_key_path'] = document.getElementById(prefix + 'ssh_key_path').value.trim();
+                }
                 payload[prefix + 'password'] = document.getElementById(prefix + 'password').value;
                 payload[prefix + 'remote_base_path'] = document.getElementById(prefix + 'remote_base_path').value.trim();
             } else if (provider === 'netlify') {
