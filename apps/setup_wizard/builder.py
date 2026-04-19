@@ -79,7 +79,8 @@ def build(form_data: dict) -> tuple[str, str]:
     return env_str, yaml_str
 
 
-_VALID_PROVIDERS = {'siteground', 'ssh_sftp', 'netlify', 'vercel', 'github_pages'}
+from packages.config_contract import DeployProvider, normalize_provider, normalize_provider
+_VALID_PROVIDERS = {p.value for p in DeployProvider}
 _SSH_PROVIDERS = {'siteground', 'ssh_sftp'}
 _SSH_PREFIX = {'siteground': 'sg-', 'ssh_sftp': 'ssh-'}
 
