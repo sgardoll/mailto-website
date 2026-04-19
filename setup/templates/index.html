@@ -4,42 +4,218 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Setup Wizard</title>
-    <style>
-        body {
-            font-family: sans-serif;
-            max-width: 600px;
-            margin: 4rem auto;
-            padding: 0 1rem;
-        }
-        h1 { margin-bottom: 1rem; }
-        #status { color: #666; }
-        button {
-            margin-top: 2rem;
-            padding: 0.5rem 1.5rem;
-            cursor: pointer;
-        }
-    </style>
+    <link rel="stylesheet" href="{{ url_for('static', filename='wizard.css') }}">
 </head>
 <body>
+
+<header>
     <h1>Setup Wizard</h1>
-    <p>Server running on port {{ port }}</p>
-    <p id="status">Loading...</p>
-    <button id="exit-btn">Exit Setup</button>
-    <script>
-        document.getElementById('exit-btn').addEventListener('click', function() {
-            this.disabled = true;
-            this.textContent = 'Exiting...';
-            fetch('/exit', {method: 'POST', headers: {'Content-Type': 'application/json'}})
-                .then(function(r) { return r.json(); })
-                .then(function(data) {
-                    if (data.ok) {
-                        document.getElementById('status').textContent = 'Wizard shut down. You can close this tab.';
-                    }
-                })
-                .catch(function() {
-                    document.getElementById('status').textContent = 'Wizard exiting...';
-                });
-        });
-    </script>
+    <nav class="wizard-steps" aria-label="Setup progress">
+        {% set steps = [
+            ('gmail', 'Gmail Setup'),
+            ('lmstudio', 'LM Studio'),
+            ('hosting', 'Hosting'),
+            ('inboxes', 'Inboxes'),
+            ('preview', 'Preview & Write'),
+        ] %}
+        {% for slug, label in steps %}
+        <span class="step {% if slug == active_step %}active{% endif %}" {% if slug == active_step %}aria-current="step"{% endif %}>{{ label }}</span>
+        {% endfor %}
+    </nav>
+</header>
+
+<main>
+<form id="wizard-form" novalidate>
+
+    <!-- ── Gmail Setup ───────────────────────────────────────── -->
+    <section class="form-section" aria-labelledby="gmail-heading">
+        <h2 id="gmail-heading">Gmail Setup</h2>
+
+        <!-- Gmail Address -->
+        <div class="field-group">
+            <label for="gmail-address">Gmail address</label>
+            <div class="field-row">
+                <input id="gmail-address" name="gmail_address" type="email"
+                       autocomplete="email" aria-describedby="gmail-address-help gmail-address-error" />
+            </div>
+            <small id="gmail-address-help" class="help-text">
+                Your Gmail address. Used for IMAP polling and outgoing mail. —
+                <a href="https://support.google.com/accounts/answer/185833" target="_blank" rel="noopener">Gmail app password help</a>
+            </small>
+            <span id="gmail-address-error" class="error" hidden aria-live="polite"></span>
+        </div>
+
+        <!-- Fan-out display -->
+        <p class="derived-values">
+            This address will be set as your IMAP user (<code id="imap-user-preview"></code>),
+            SMTP user (<code id="smtp-user-preview"></code>), and sender address.
+        </p>
+
+        <!-- Gmail App Password -->
+        <div class="field-group">
+            <label for="gmail-app-password">Gmail app password</label>
+            <div class="field-row">
+                <input id="gmail-app-password" name="gmail_app_password" type="password"
+                       autocomplete="off" aria-describedby="gmail-app-password-help gmail-app-password-error" />
+                <button type="button" class="toggle-visibility" data-target="gmail-app-password"
+                        aria-label="Show Gmail app password" aria-pressed="false">Show</button>
+            </div>
+            <small id="gmail-app-password-help" class="help-text">
+                A 16-character app password from your Google account (not your login password). —
+                <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noopener">Create an app password</a>
+            </small>
+            <span id="gmail-app-password-error" class="error" hidden aria-live="polite"></span>
+        </div>
+
+        <!-- Gmail Folder -->
+        <div class="field-group">
+            <label for="gmail-folder">Gmail folder</label>
+            <div class="field-row">
+                <input id="gmail-folder" name="gmail_folder" type="text"
+                       value="INBOX" aria-describedby="gmail-folder-help gmail-folder-error" />
+            </div>
+            <small id="gmail-folder-help" class="help-text">
+                The Gmail folder the wizard will poll for new emails. Default: INBOX.
+            </small>
+            <span id="gmail-folder-error" class="error" hidden aria-live="polite"></span>
+        </div>
+
+        <!-- Allowed Senders -->
+        <div class="field-group">
+            <label>Allowed senders</label>
+            <div id="senders-list" aria-describedby="allowed-senders-help allowed-senders-error">
+                <div class="sender-row">
+                    <input type="email" class="sender-input"
+                           placeholder="sender@example.com" autocomplete="off" />
+                    <button type="button" class="remove-sender" aria-label="Remove sender" disabled>Remove</button>
+                </div>
+            </div>
+            <button type="button" id="add-sender">Add sender</button>
+            <small id="allowed-senders-help" class="help-text">
+                Only emails from these addresses will be processed. Add at least one.
+            </small>
+            <span id="allowed-senders-error" class="error" hidden aria-live="polite"></span>
+        </div>
+
+    </section>
+
+    <!-- ── LM Studio Settings ─────────────────────────────────── -->
+    <section class="form-section" aria-labelledby="lms-heading">
+        <h2 id="lms-heading">LM Studio Settings</h2>
+
+        <!-- Base URL -->
+        <div class="field-group">
+            <label for="lms-base-url">LM Studio base URL</label>
+            <div class="field-row">
+                <input id="lms-base-url" name="lms_base_url" type="url"
+                       value="http://localhost:1234/v1"
+                       aria-describedby="lms-base-url-help lms-base-url-error" />
+            </div>
+            <small id="lms-base-url-help" class="help-text">
+                The local LM Studio API base URL. Leave as default unless you changed the port. —
+                <a href="https://lmstudio.ai/docs" target="_blank" rel="noopener">LM Studio docs</a>
+            </small>
+            <span id="lms-base-url-error" class="error" hidden aria-live="polite"></span>
+        </div>
+
+        <!-- Model Tag -->
+        <div class="field-group">
+            <label for="lms-model">Model tag</label>
+            <div class="field-row">
+                <input id="lms-model" name="lms_model" type="text"
+                       value="google/gemma-4-26b-a4b"
+                       aria-describedby="lms-model-help lms-model-error" />
+            </div>
+            <small id="lms-model-help" class="help-text">
+                The model tag loaded in LM Studio. Must match the identifier shown in LM Studio.
+            </small>
+            <span id="lms-model-error" class="error" hidden aria-live="polite"></span>
+        </div>
+
+        <!-- Temperature + Max Tokens (split row) -->
+        <div class="field-row-split">
+            <div class="field-group">
+                <label for="lms-temperature">Temperature</label>
+                <div class="field-row">
+                    <input id="lms-temperature" name="lms_temperature" type="number"
+                           min="0" max="2" step="0.01" value="0.4"
+                           aria-describedby="lms-temperature-help lms-temperature-error" />
+                </div>
+                <small id="lms-temperature-help" class="help-text">
+                    Controls response randomness. 0.0 = deterministic, 2.0 = very random. Default: 0.4.
+                </small>
+                <span id="lms-temperature-error" class="error" hidden aria-live="polite"></span>
+            </div>
+            <div class="field-group">
+                <label for="lms-max-tokens">Max tokens</label>
+                <div class="field-row">
+                    <input id="lms-max-tokens" name="lms_max_tokens" type="number"
+                           min="1" step="1" value="4096"
+                           aria-describedby="lms-max-tokens-help lms-max-tokens-error" />
+                </div>
+                <small id="lms-max-tokens-help" class="help-text">
+                    Maximum tokens the model will generate per response. Default: 4096.
+                </small>
+                <span id="lms-max-tokens-error" class="error" hidden aria-live="polite"></span>
+            </div>
+        </div>
+
+        <!-- CLI Path -->
+        <div class="field-group">
+            <label for="lms-cli-path">lms CLI path</label>
+            <div class="field-row">
+                <input id="lms-cli-path" name="lms_cli_path" type="text"
+                       value="lms"
+                       aria-describedby="lms-cli-path-help lms-cli-path-error" />
+            </div>
+            <small id="lms-cli-path-help" class="help-text">
+                Path to the lms CLI binary. Use 'lms' if it is on your PATH.
+            </small>
+            <span id="lms-cli-path-error" class="error" hidden aria-live="polite"></span>
+        </div>
+
+        <!-- Advanced (collapsible) -->
+        <details class="advanced-section">
+            <summary>Advanced</summary>
+
+            <div class="field-group">
+                <div class="field-row">
+                    <input id="lms-autostart" name="autostart" type="checkbox" checked
+                           aria-describedby="lms-autostart-help" />
+                    <label for="lms-autostart">Autostart LM Studio</label>
+                </div>
+                <small id="lms-autostart-help" class="help-text">Automatically start LM Studio before running the workflow.</small>
+            </div>
+
+            <div class="field-group">
+                <label for="lms-request-timeout">Request timeout (seconds)</label>
+                <div class="field-row">
+                    <input id="lms-request-timeout" name="request_timeout_s" type="number"
+                           min="1" step="1" value="600"
+                           aria-describedby="lms-request-timeout-help lms-request-timeout-error" />
+                </div>
+                <small id="lms-request-timeout-help" class="help-text">
+                    Seconds to wait for a model response before timing out. Default: 600.
+                </small>
+                <span id="lms-request-timeout-error" class="error" hidden aria-live="polite"></span>
+            </div>
+        </details>
+
+    </section>
+
+    <!-- ── Actions ───────────────────────────────────────────── -->
+    <div class="form-actions">
+        <p id="form-error-summary" class="error" hidden aria-live="polite">Fix the highlighted fields before continuing.</p>
+        <button type="submit" class="btn-primary">Save &amp; Continue</button>
+    </div>
+
+</form>
+</main>
+
+<footer>
+    <button id="exit-btn" class="btn-exit" type="button">Exit Setup</button>
+</footer>
+
+<script src="{{ url_for('static', filename='wizard.js') }}"></script>
 </body>
 </html>

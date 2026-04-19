@@ -74,7 +74,7 @@ def _cleanup() -> None:
 
 @app.route('/')
 def index():
-    return render_template('index.html', port=_port)
+    return render_template('index.html', port=_port, active_step='gmail')
 
 
 @app.route('/exit', methods=['POST'])
