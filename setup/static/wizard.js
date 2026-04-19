@@ -950,3 +950,83 @@
     initInboxesStep();
 
 })();
+
+
+// ── Phase 4: Preview step ────────────────────────────────────────────────────
+
+(function() {
+    'use strict';
+
+    function initPreviewStep() {
+        var writeBtn = document.getElementById('write-btn');
+        if (!writeBtn) return;  // Not on the preview page
+
+        var overwriteCheckbox = document.getElementById('overwrite-confirm');
+        var writeError = document.getElementById('write-error');
+        var hasExisting = writeBtn.dataset.hasExisting === 'true';
+
+        // If existing config detected, keep the button disabled until checkbox is checked.
+        if (hasExisting && overwriteCheckbox) {
+            writeBtn.disabled = true;
+            overwriteCheckbox.addEventListener('change', function() {
+                writeBtn.disabled = !this.checked;
+            });
+        }
+
+        writeBtn.addEventListener('click', function() {
+            writeBtn.disabled = true;
+            if (writeError) { writeError.textContent = ''; writeError.hidden = true; }
+
+            var payload = { confirmed: true };
+            if (hasExisting && overwriteCheckbox) {
+                payload.overwrite_confirmed = overwriteCheckbox.checked;
+            }
+
+            fetch('/write-config', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(payload)
+            })
+            .then(function(r) { return r.json().then(function(d) { return {status: r.status, data: d}; }); })
+            .then(function(result) {
+                if (result.data.ok) {
+                    window.location.href = result.data.next_step || '/step/done';
+                } else {
+                    var msg = result.data.error || 'Write failed. Please try again.';
+                    if (writeError) { writeError.textContent = msg; writeError.hidden = false; }
+                    // Re-enable the button (respecting the overwrite gate)
+                    if (!hasExisting || (overwriteCheckbox && overwriteCheckbox.checked)) {
+                        writeBtn.disabled = false;
+                    }
+                }
+            })
+            .catch(function() {
+                if (writeError) {
+                    writeError.textContent = 'Network error. Check your connection and try again.';
+                    writeError.hidden = false;
+                }
+                if (!hasExisting || (overwriteCheckbox && overwriteCheckbox.checked)) {
+                    writeBtn.disabled = false;
+                }
+            });
+        });
+
+        // Exit button (preview page has its own footer exit button)
+        var exitBtn = document.getElementById('exit-btn');
+        if (exitBtn) {
+            exitBtn.addEventListener('click', function() {
+                exitBtn.disabled = true;
+                exitBtn.textContent = 'Exiting...';
+                fetch('/exit', {method: 'POST', headers: {'Content-Type': 'application/json'}})
+                    .then(function(r) { return r.json(); })
+                    .then(function(data) {
+                        if (data.ok) { document.body.textContent = ''; var msg = document.createElement('p'); msg.textContent = 'Wizard shut down. You can close this tab.'; document.body.appendChild(msg); }
+                    })
+                    .catch(function() { document.body.textContent = ''; var msg = document.createElement('p'); msg.textContent = 'Wizard exiting...'; document.body.appendChild(msg); });
+            });
+        }
+    }
+
+    initPreviewStep();
+
+})();
