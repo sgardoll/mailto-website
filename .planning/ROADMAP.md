@@ -12,7 +12,7 @@ Four phases deliver the wizard from bare server skeleton to a fully functioning,
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Server Foundation** - Flask server skeleton with port probing, browser auto-open, pre-flight checks, and clean shutdown
+- [x] **Phase 1: Server Foundation** - Flask server skeleton with port probing, browser auto-open, pre-flight checks, and clean shutdown (2026-04-19)
 - [ ] **Phase 2: Core Form & Config Engine** - Gmail and LM Studio form sections, UX framework (progress indicator, blur validation, show/hide, help text), and pure builder/validator logic
 - [ ] **Phase 3: Hosting Provider & Inbox Manager** - Conditional hosting-provider fields for all 5 providers and the multi-inbox card manager
 - [ ] **Phase 4: Preview, Write & Completion** - Preview screen with masking, atomic file writes, overwrite detection, and success screen
@@ -33,7 +33,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 Plans:
 - [x] 01-01-PLAN.md — Flask server core: package init, port probe (prefer 7331, avoid 5000/8080), write-permission pre-flight, socket-probe browser auto-open, placeholder index.html (2026-04-19)
 - [x] 01-02-PLAN.md — Entry point wiring: setup/requirements.txt (flask, python-dotenv), scripts/setup.sh (venv activation + pip install + python -m setup.server) (2026-04-19)
-- [ ] 01-03-PLAN.md — Shutdown lifecycle: POST /exit with threading dispatch (not direct shutdown — deadlock risk), atexit cleanup, SIGINT handler, Exit Setup button wired in index.html
+- [x] 01-03-PLAN.md — Shutdown lifecycle: POST /exit with threading dispatch (not direct shutdown — deadlock risk), atexit cleanup, SIGINT handler, Exit Setup button wired in index.html (2026-04-19)
 
 ### Phase 2: Core Form & Config Engine
 **Goal**: Users can fill in Gmail credentials and LM Studio settings through a polished, validated form, and the underlying builder/validator logic produces correct `.env` and `config.yaml` output strings
