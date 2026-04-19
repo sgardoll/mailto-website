@@ -15,7 +15,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 1: Server Foundation** - Flask server skeleton with port probing, browser auto-open, pre-flight checks, and clean shutdown (2026-04-19)
 - [x] **Phase 2: Core Form & Config Engine** - Gmail and LM Studio form sections, UX framework (progress indicator, blur validation, show/hide, help text), and pure builder/validator logic (2026-04-19)
 - [x] **Phase 3: Hosting Provider & Inbox Manager** - Conditional hosting-provider fields for all 5 providers and the multi-inbox card manager (2026-04-19)
-- [ ] **Phase 4: Preview, Write & Completion** - Preview screen with masking, atomic file writes, overwrite detection, and success screen
+- [x] **Phase 4: Preview, Write & Completion** - Preview screen with masking, atomic file writes, overwrite detection, and success screen with in-wizard workflow launcher (2026-04-19)
 
 ## Phase Details
 
@@ -93,7 +93,7 @@ Plans:
 Plans:
 - [x] 04-01-PLAN.md — Pure builder contract: build_final_outputs(), mask_for_preview(), hydrate_wizard_state() in setup/builder.py with test coverage (2026-04-19)
 - [x] 04-02-PLAN.md — Backend flow: prefill hydration, GET /step/preview, POST /write-config (atomic pair-write + rollback), GET /step/done; preview.html, done.html, test_phase4_flow.py (2026-04-19)
-- [ ] 04-03-PLAN.md — Frontend wiring: wizard.js preview/write interaction, wizard.css preview/success styles, human verification checkpoint
+- [x] 04-03-PLAN.md — Frontend wiring: wizard.js preview/write interaction, wizard.css preview/success styles, in-wizard workflow launcher, human verification checkpoint (2026-04-19)
 
 ## Progress
 
@@ -105,4 +105,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 | 1. Server Foundation | 3/3 | Complete | 2026-04-19 |
 | 2. Core Form & Config Engine | 6/6 | Complete | 2026-04-19 |
 | 3. Hosting Provider & Inbox Manager | 7/7 | Complete | 2026-04-19 |
-| 4. Preview, Write & Completion | 2/3 | In Progress | - |
+| 4. Preview, Write & Completion | 3/3 | Complete | 2026-04-19 |

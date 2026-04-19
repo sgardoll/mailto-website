@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: executing
-stopped_at: Phase 04 Plan 02 complete
-last_updated: "2026-04-19T13:27:00Z"
-last_activity: 2026-04-19 -- Phase 04 Plan 02 complete (server.py owns prefill/preview/write/done lifecycle; preview.html, done.html, and test_phase4_flow.py added)
+status: complete
+stopped_at: Phase 04 complete — milestone v1.0 shipped
+last_updated: "2026-04-19T23:45:00Z"
+last_activity: 2026-04-19 -- Phase 04 complete (backend preview/write + frontend wiring + in-wizard workflow launcher; 83 tests passing)
 progress:
   total_phases: 4
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 19
-  completed_plans: 18
-  percent: 92
+  completed_plans: 19
+  percent: 100
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-19)
 
 **Core value:** Zero-friction first-time setup — clone the repo, run one command, get a working config without hand-editing YAML
-**Current focus:** Phase 04 — preview-write-completion
+**Current focus:** Milestone v1.0 shipped — all phases complete
 
 ## Current Position
 
-Phase: 04 (preview-write-completion) — IN PROGRESS
-Plan: 3 of 3 (Plans 01-02 complete)
-Status: Phase 04 Plan 02 complete; ready for Plan 03
-Last activity: 2026-04-19 -- Phase 04 Plan 02 complete (server.py owns prefill/preview/write/done; preview.html, done.html, test_phase4_flow.py added; 15 tests pass)
+Phase: 04 (preview-write-completion) — COMPLETE
+Plan: 3 of 3 (all complete)
+Status: Milestone v1.0 shipped. Setup wizard delivers full prefill → preview → atomic write → in-wizard workflow launcher flow.
+Last activity: 2026-04-19 -- Phase 04 complete (Plan 03 added workflow launcher beyond original scope after human verification feedback)
 
-Progress: [█████████▌] 92% (Phases 1-3 complete, Phase 4 plans 1-2 done)
+Progress: [██████████] 100% (All 4 phases complete, 19/19 plans)
 
 ## Performance Metrics
 
