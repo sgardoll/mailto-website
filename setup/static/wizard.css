@@ -262,3 +262,82 @@ input[type="checkbox"] {
     margin-bottom: 0;
     font-weight: 400;
 }
+
+/* ── Phase 3 additions ────────────────────────────────────────────────────── */
+
+/* Provider dropdown — matches input appearance */
+select {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 16px;
+    font-family: inherit;
+    background-color: #ffffff;
+    color: #111827;
+    cursor: pointer;
+}
+select:focus {
+    outline: 2px solid #2563eb;
+    outline-offset: 2px;
+    border-color: #2563eb;
+}
+
+/* Conditional provider field groups */
+.provider-fields[hidden] { display: none; }
+
+/* Three-column split row (inbox row 2: site name + URL + base path) */
+.field-row-thirds {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 16px;
+}
+
+/* Inbox row container */
+.inbox-row {
+    background-color: #f3f4f6;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 16px;
+}
+
+/* Inbox row header (label + remove button) */
+.inbox-row-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+.inbox-row-label {
+    font-size: 14px;
+    font-weight: 600;
+    color: #374151;
+}
+
+/* Remove inbox button — matches remove-sender */
+.remove-inbox {
+    min-height: 44px;
+    padding: 0 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    background-color: #ffffff;
+    color: #dc2626;
+    font-size: 14px;
+    cursor: pointer;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+.remove-inbox:disabled { color: #d1d5db; cursor: not-allowed; }
+
+/* Add inbox button — matches add-sender */
+#add-inbox {
+    font-size: 14px;
+    color: #2563eb;
+    background: none;
+    border: none;
+    padding: 4px 0;
+    cursor: pointer;
+    text-decoration: underline;
+    margin-bottom: 16px;
+}
