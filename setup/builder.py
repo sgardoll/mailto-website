@@ -1,3 +1,4 @@
+# pyright: basic
 import json
 import re
 import urllib.error
@@ -16,6 +17,12 @@ DEFAULTS = {
     'request_timeout_s': 600,
 }
 
+RUNTIME_DEFAULTS = {
+    'git_branch': 'main',
+    'git_push': True,
+    'dry_run': False,
+}
+
 
 def validate(form_data: dict) -> list[dict]:
     """Return list of {field, message} dicts. Empty list means valid."""
@@ -30,10 +37,9 @@ def validate(form_data: dict) -> list[dict]:
     return errors
 
 
-def build(form_data: dict) -> tuple[str, str]:
-    """Return (env_str, yaml_str). Assumes validate() returned empty list."""
+def _build_base_config(form_data: dict) -> dict:
     email = form_data['gmail_address'].strip()
-    config = {
+    return {
         'global_allowed_senders': form_data['allowed_senders'],
         'imap': {
             'host': 'imap.gmail.com',
@@ -62,6 +68,11 @@ def build(form_data: dict) -> tuple[str, str]:
             'request_timeout_s': int(form_data.get('request_timeout_s', DEFAULTS['request_timeout_s'])),
         },
     }
+
+
+def build(form_data: dict) -> tuple[str, str]:
+    """Return (env_str, yaml_str). Assumes validate() returned empty list."""
+    config = _build_base_config(form_data)
     env_str = f"GMAIL_APP_PASSWORD={form_data['gmail_app_password'].strip()}\n"
     yaml_str = yaml.dump(config, default_flow_style=False, sort_keys=False, allow_unicode=True)
     return env_str, yaml_str
@@ -285,3 +296,122 @@ def build_inboxes(form_data: dict, gmail_address: str, site_base_url: str) -> di
             'allowed_senders': [],
         })
     return {'inboxes': inboxes}
+
+
+_PROVIDER_SECTION_KEYS = {
+    'siteground': 'siteground',
+    'ssh_sftp': 'ssh_sftp',
+    'netlify': 'netlify',
+    'vercel': 'vercel',
+    'github_pages': 'github_pages',
+}
+
+
+def _provider_section_key(provider: str) -> str | None:
+    return _PROVIDER_SECTION_KEYS.get((provider or '').strip())
+
+
+def _normalized_runtime_value(state: dict, key: str):
+    value = state.get(key)
+    if value is None or value == '':
+        return RUNTIME_DEFAULTS[key]
+    return value
+
+
+def _provider_section_from_state(wizard_state: dict) -> tuple[str | None, dict | None]:
+    provider = (wizard_state.get('hosting_provider') or '').strip()
+    section_key = _provider_section_key(provider)
+    if not section_key:
+        return None, None
+
+    section = wizard_state.get(section_key)
+    if isinstance(section, dict):
+        return section_key, dict(section)
+
+    built = build_hosting(wizard_state)
+    section = built.get(section_key)
+    if isinstance(section, dict):
+        return section_key, dict(section)
+    return section_key, None
+
+
+def _normalize_inboxes_for_output(wizard_state: dict) -> list[dict]:
+    inboxes = wizard_state.get('inboxes') or []
+    if not inboxes:
+        return []
+
+    first = inboxes[0] if isinstance(inboxes[0], dict) else {}
+    if first.get('address') and first.get('site_url') and first.get('site_base'):
+        return [dict(inbox) for inbox in inboxes]
+
+    built = build_inboxes(
+        {'inboxes': inboxes},
+        wizard_state.get('gmail_address', '').strip(),
+        wizard_state.get('site_base_url', '').strip(),
+    )
+    return built['inboxes']
+
+
+def build_final_outputs(wizard_state: dict) -> tuple[str, str]:
+    """Return the authoritative final .env and workflow/config.yaml content."""
+    env_str = f"GMAIL_APP_PASSWORD={wizard_state.get('gmail_app_password', '').strip()}\n"
+    config = {
+        'git_branch': _normalized_runtime_value(wizard_state, 'git_branch'),
+        'git_push': _normalized_runtime_value(wizard_state, 'git_push'),
+        'dry_run': _normalized_runtime_value(wizard_state, 'dry_run'),
+    }
+    config.update(_build_base_config(wizard_state))
+
+    section_key, section = _provider_section_from_state(wizard_state)
+    if section_key and section is not None:
+        config[section_key] = section
+
+    config['inboxes'] = _normalize_inboxes_for_output(wizard_state)
+    yaml_str = yaml.dump(config, default_flow_style=False, sort_keys=False, allow_unicode=True)
+    return env_str, yaml_str
+
+
+def _mask_secret(value: object) -> str:
+    if value is None:
+        return ''
+    text = str(value)
+    if not text:
+        return ''
+    if len(text) <= 4:
+        return '*' * len(text)
+    return f"{'*' * (len(text) - 4)}{text[-4:]}"
+
+
+def mask_for_preview(env_str: str, yaml_str: str) -> tuple[str, str]:
+    """Return masked preview strings without mutating the final outputs."""
+    env_lines = []
+    for line in env_str.splitlines():
+        if '=' not in line:
+            env_lines.append(line)
+            continue
+        key, value = line.split('=', 1)
+        if key == 'GMAIL_APP_PASSWORD':
+            env_lines.append(f'{key}={_mask_secret(value)}')
+        else:
+            env_lines.append(line)
+    env_preview = '\n'.join(env_lines)
+    if env_str.endswith('\n'):
+        env_preview += '\n'
+
+    config = yaml.safe_load(yaml_str) or {}
+    for section_key, field_names in {
+        'siteground': ('password',),
+        'ssh_sftp': ('password',),
+        'netlify': ('api_token',),
+        'vercel': ('api_token',),
+    }.items():
+        section = config.get(section_key)
+        if not isinstance(section, dict):
+            continue
+        for field_name in field_names:
+            value = section.get(field_name)
+            if value:
+                section[field_name] = _mask_secret(value)
+
+    yaml_preview = yaml.dump(config, default_flow_style=False, sort_keys=False, allow_unicode=True)
+    return env_preview, yaml_preview

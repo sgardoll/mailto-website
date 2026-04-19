@@ -1,3 +1,4 @@
+# pyright: basic
 """Unit tests for setup.builder validate() and build() functions."""
 import json
 
@@ -9,6 +10,7 @@ from unittest.mock import patch
 from setup.builder import (
     validate, build, validate_hosting, build_hosting, validate_inboxes, build_inboxes,
     fetch_netlify_site_url, fetch_vercel_project_url, ProviderLookupError,
+    build_final_outputs, mask_for_preview,
 )
 
 
@@ -417,3 +419,86 @@ def test_fetch_vercel_project_url_falls_back_to_name():
     payload = {'name': 'my-proj'}
     with patch('setup.builder.urllib.request.urlopen', return_value=_FakeHTTPResponse(payload)):
         assert fetch_vercel_project_url('tok', 'proj') == 'https://my-proj.vercel.app'
+
+
+# -- Phase 4: final assembly / preview masking / hydration --------------------
+
+FINAL_WIZARD_STATE = {
+    **VALID_DATA,
+    'hosting_provider': 'siteground',
+    'siteground': {
+        'host': 'ssh.example.com',
+        'port': 18765,
+        'user': 'u123-user',
+        'key_path': '/home/user/.ssh/id_rsa',
+        'password': 'super-secret-password',
+        'base_remote_path': '/home/user/public_html',
+    },
+    'site_base_url': 'https://example.com',
+    'inboxes': [
+        {
+            'slug': 'guitar',
+            'address': 'user+guitar@gmail.com',
+            'site_name': 'Guitar Notes',
+            'site_url': 'https://example.com/guitar',
+            'site_base': '/guitar/',
+            'allowed_senders': [],
+        },
+    ],
+}
+
+
+def test_build_final_outputs_includes_runtime_defaults_provider_and_inboxes():
+    env_str, yaml_str = build_final_outputs(FINAL_WIZARD_STATE)
+    config = yaml.safe_load(yaml_str)
+
+    assert env_str == 'GMAIL_APP_PASSWORD=abcd efgh ijkl mnop\n'
+    assert list(config.keys()) == [
+        'git_branch', 'git_push', 'dry_run', 'global_allowed_senders',
+        'imap', 'smtp', 'lm_studio', 'siteground', 'inboxes',
+    ]
+    assert config['git_branch'] == 'main'
+    assert config['git_push'] is True
+    assert config['dry_run'] is False
+    assert config['siteground']['host'] == 'ssh.example.com'
+    assert config['inboxes'][0]['site_url'] == 'https://example.com/guitar'
+    for forbidden in ('netlify', 'vercel', 'github_pages', 'ssh_sftp', 'hosting_provider', 'site_base_url'):
+        assert forbidden not in config
+
+
+def test_build_final_outputs_preserves_hidden_runtime_keys_when_present():
+    state = {
+        **FINAL_WIZARD_STATE,
+        'git_branch': 'release',
+        'git_push': False,
+        'dry_run': True,
+    }
+    _, yaml_str = build_final_outputs(state)
+    config = yaml.safe_load(yaml_str)
+    assert config['git_branch'] == 'release'
+    assert config['git_push'] is False
+    assert config['dry_run'] is True
+
+
+def test_mask_for_preview_masks_env_secret_but_keeps_yaml_placeholder_literal():
+    env_str, yaml_str = build_final_outputs(FINAL_WIZARD_STATE)
+    masked_env, masked_yaml = mask_for_preview(env_str, yaml_str)
+
+    assert 'abcd efgh ijkl mnop' not in masked_env
+    assert masked_env == 'GMAIL_APP_PASSWORD=***************mnop\n'
+    assert '${GMAIL_APP_PASSWORD}' in masked_yaml
+    assert 'abcd efgh ijkl mnop' not in masked_yaml
+
+
+def test_mask_for_preview_masks_provider_secrets_to_last_four_only():
+    env_str, yaml_str = build_final_outputs({
+        **FINAL_WIZARD_STATE,
+        'hosting_provider': 'netlify',
+        'netlify': {'api_token': 'netlify-secret-token', 'site_id': 'site-123'},
+    })
+    _, masked_yaml = mask_for_preview(env_str, yaml_str)
+    config = yaml.safe_load(masked_yaml)
+
+    assert config['netlify']['api_token'].endswith('oken')
+    assert config['netlify']['api_token'] != 'netlify-secret-token'
+    assert 'netlify-secret-token' not in masked_yaml
