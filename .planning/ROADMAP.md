@@ -14,7 +14,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Server Foundation** - Flask server skeleton with port probing, browser auto-open, pre-flight checks, and clean shutdown (2026-04-19)
 - [x] **Phase 2: Core Form & Config Engine** - Gmail and LM Studio form sections, UX framework (progress indicator, blur validation, show/hide, help text), and pure builder/validator logic (2026-04-19)
-- [ ] **Phase 3: Hosting Provider & Inbox Manager** - Conditional hosting-provider fields for all 5 providers and the multi-inbox card manager
+- [x] **Phase 3: Hosting Provider & Inbox Manager** - Conditional hosting-provider fields for all 5 providers and the multi-inbox card manager (2026-04-19)
 - [ ] **Phase 4: Preview, Write & Completion** - Preview screen with masking, atomic file writes, overwrite detection, and success screen
 
 ## Phase Details
@@ -76,7 +76,7 @@ Plans:
 - [x] 03-04-PLAN.md — Wave 1 (parallel): Create inboxes.html — inbox-row-template, pre-rendered first row, add-inbox button (2026-04-19)
 - [x] 03-05-PLAN.md — Wave 2 (parallel): Extend server.py — GET routes for lmstudio/hosting/inboxes; /validate-form step dispatch with next_step (2026-04-19)
 - [x] 03-06-PLAN.md — Wave 2 (parallel): Append Phase 3 CSS to wizard.css — select, .provider-fields[hidden], .field-row-thirds, .inbox-row, .remove-inbox, #add-inbox (2026-04-19)
-- [ ] 03-07-PLAN.md — Wave 2 (parallel): Append Phase 3 JS to wizard.js — initHostingStep() and initInboxesStep() in separate IIFEs
+- [x] 03-07-PLAN.md — Wave 2 (parallel): Append Phase 3 JS to wizard.js — initHostingStep() and initInboxesStep() in separate IIFEs (2026-04-19)
 
 ### Phase 4: Preview, Write & Completion
 **Goal**: Users see exactly what will be written before committing, the write is atomic, existing configs are detected and protected behind an explicit overwrite checkbox, and a success screen tells the user what to run next
