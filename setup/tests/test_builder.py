@@ -10,7 +10,7 @@ from unittest.mock import patch
 from setup.builder import (
     validate, build, validate_hosting, build_hosting, validate_inboxes, build_inboxes,
     fetch_netlify_site_url, fetch_vercel_project_url, ProviderLookupError,
-    build_final_outputs, mask_for_preview,
+    build_final_outputs, mask_for_preview, hydrate_wizard_state,
 )
 
 
@@ -502,3 +502,109 @@ def test_mask_for_preview_masks_provider_secrets_to_last_four_only():
     assert config['netlify']['api_token'].endswith('oken')
     assert config['netlify']['api_token'] != 'netlify-secret-token'
     assert 'netlify-secret-token' not in masked_yaml
+
+
+def test_hydrate_wizard_state_reconstructs_visible_values_and_hidden_runtime_keys():
+    env_values = {'GMAIL_APP_PASSWORD': 'abcd efgh ijkl mnop'}
+    config_values = {
+        'git_branch': 'release',
+        'git_push': False,
+        'dry_run': True,
+        'global_allowed_senders': ['sender@example.com'],
+        'imap': {
+            'user': 'user@gmail.com',
+            'folder': 'Ideas',
+        },
+        'smtp': {'user': 'user@gmail.com'},
+        'lm_studio': {
+            'base_url': 'http://localhost:2233/v1',
+            'model': 'custom-model',
+            'temperature': 0.8,
+            'max_tokens': 1234,
+            'lms_cli_path': '/usr/local/bin/lms',
+            'autostart': False,
+            'request_timeout_s': 321,
+        },
+        'siteground': {
+            'host': 'ssh.example.com',
+            'port': 18765,
+            'user': 'u123-user',
+            'key_path': '/home/user/.ssh/id_rsa',
+            'password': 'existing-password',
+            'base_remote_path': '/home/user/public_html',
+        },
+        'inboxes': [
+            {
+                'slug': 'guitar',
+                'site_name': 'Guitar Notes',
+                'site_url': 'https://example.com/guitar',
+            },
+            {
+                'slug': 'cooking',
+                'site_name': 'Cooking Notes',
+                'site_url': 'https://example.com/cooking',
+            },
+        ],
+    }
+
+    state = hydrate_wizard_state(env_values, config_values)
+
+    assert state['gmail_address'] == 'user@gmail.com'
+    assert state['gmail_app_password'] == 'abcd efgh ijkl mnop'
+    assert state['gmail_folder'] == 'Ideas'
+    assert state['allowed_senders'] == ['sender@example.com']
+    assert state['hosting_provider'] == 'siteground'
+    assert state['site_base_url'] == 'https://example.com'
+    assert state['sg-host'] == 'ssh.example.com'
+    assert state['sg-port'] == 18765
+    assert state['sg-password'] == 'existing-password'
+    assert state['inboxes'] == [
+        {'slug': 'guitar', 'site_name': 'Guitar Notes'},
+        {'slug': 'cooking', 'site_name': 'Cooking Notes'},
+    ]
+    assert state['git_branch'] == 'release'
+    assert state['git_push'] is False
+    assert state['dry_run'] is True
+
+
+def test_hydrate_wizard_state_uses_runtime_defaults_when_absent():
+    state = hydrate_wizard_state(
+        {'GMAIL_APP_PASSWORD': 'secret'},
+        {
+            'imap': {'user': 'user@gmail.com'},
+            'smtp': {'user': 'user@gmail.com'},
+            'lm_studio': {},
+            'inboxes': [],
+        },
+    )
+
+    assert state['git_branch'] == 'main'
+    assert state['git_push'] is True
+    assert state['dry_run'] is False
+
+
+def test_hydrate_wizard_state_leaves_site_base_url_empty_when_inbox_urls_are_ambiguous():
+    state = hydrate_wizard_state(
+        {'GMAIL_APP_PASSWORD': 'secret'},
+        {
+            'imap': {'user': 'user@gmail.com'},
+            'smtp': {'user': 'user@gmail.com'},
+            'lm_studio': {},
+            'github_pages': {'branch': 'gh-pages'},
+            'inboxes': [
+                {
+                    'slug': 'guitar',
+                    'site_name': 'Guitar Notes',
+                    'site_url': 'https://example.com/guitar',
+                },
+                {
+                    'slug': 'cooking',
+                    'site_name': 'Cooking Notes',
+                    'site_url': 'https://other.example.com/cooking',
+                },
+            ],
+        },
+    )
+
+    assert state['hosting_provider'] == 'github_pages'
+    assert state['site_base_url'] == ''

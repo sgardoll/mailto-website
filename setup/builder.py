@@ -2,6 +2,7 @@
 import json
 import re
 import urllib.error
+import urllib.parse
 import urllib.request
 
 import yaml
@@ -415,3 +416,115 @@ def mask_for_preview(env_str: str, yaml_str: str) -> tuple[str, str]:
 
     yaml_preview = yaml.dump(config, default_flow_style=False, sort_keys=False, allow_unicode=True)
     return env_preview, yaml_preview
+
+
+def _derive_site_base_url(inboxes: list[dict]) -> str:
+    candidates = []
+    for inbox in inboxes or []:
+        if not isinstance(inbox, dict):
+            return ''
+        slug = (inbox.get('slug') or '').strip()
+        site_url = (inbox.get('site_url') or '').strip().rstrip('/')
+        if not slug or not site_url:
+            return ''
+
+        parsed = urllib.parse.urlsplit(site_url)
+        if not parsed.scheme or not parsed.netloc:
+            return ''
+
+        slug_suffix = f'/{slug}'
+        if parsed.path == slug_suffix:
+            base_path = ''
+        elif parsed.path.endswith(slug_suffix):
+            base_path = parsed.path[:-len(slug_suffix)].rstrip('/')
+        else:
+            return ''
+
+        candidates.append(urllib.parse.urlunsplit((parsed.scheme, parsed.netloc, base_path, '', '')).rstrip('/'))
+
+    if not candidates:
+        return ''
+    first = candidates[0]
+    return first if all(candidate == first for candidate in candidates[1:]) else ''
+
+
+def hydrate_wizard_state(env_values: dict, config_values: dict) -> dict:
+    """Normalize parsed .env and workflow/config.yaml data into wizard-state shape."""
+    config = config_values or {}
+    imap = config.get('imap') or {}
+    smtp = config.get('smtp') or {}
+    lm_studio = config.get('lm_studio') or {}
+    inboxes = config.get('inboxes') or []
+
+    provider = ''
+    provider_section = {}
+    for candidate in _PROVIDER_SECTION_KEYS:
+        section = config.get(candidate)
+        if isinstance(section, dict):
+            provider = candidate
+            provider_section = section
+            break
+
+    site_base_url = config.get('site_base_url') or _derive_site_base_url(inboxes)
+
+    state = {
+        'gmail_address': (imap.get('user') or smtp.get('user') or '').strip(),
+        'gmail_app_password': (env_values or {}).get('GMAIL_APP_PASSWORD', ''),
+        'gmail_folder': imap.get('folder', DEFAULTS['gmail_folder']),
+        'allowed_senders': list(config.get('global_allowed_senders') or []),
+        'lms_base_url': lm_studio.get('base_url', DEFAULTS['lms_base_url']),
+        'lms_model': lm_studio.get('model', DEFAULTS['lms_model']),
+        'lms_temperature': lm_studio.get('temperature', DEFAULTS['lms_temperature']),
+        'lms_max_tokens': lm_studio.get('max_tokens', DEFAULTS['lms_max_tokens']),
+        'lms_cli_path': lm_studio.get('lms_cli_path', DEFAULTS['lms_cli_path']),
+        'autostart': lm_studio.get('autostart', DEFAULTS['autostart']),
+        'request_timeout_s': lm_studio.get('request_timeout_s', DEFAULTS['request_timeout_s']),
+        'hosting_provider': provider,
+        'site_base_url': site_base_url,
+        'inboxes': [
+            {
+                'slug': (inbox.get('slug') or '').strip(),
+                'site_name': (inbox.get('site_name') or '').strip(),
+            }
+            for inbox in inboxes
+            if isinstance(inbox, dict)
+        ],
+        'git_branch': config.get('git_branch', RUNTIME_DEFAULTS['git_branch']),
+        'git_push': config.get('git_push', RUNTIME_DEFAULTS['git_push']),
+        'dry_run': config.get('dry_run', RUNTIME_DEFAULTS['dry_run']),
+    }
+
+    if provider == 'siteground':
+        state.update({
+            'sg-host': provider_section.get('host', ''),
+            'sg-port': provider_section.get('port', 18765),
+            'sg-username': provider_section.get('user', ''),
+            'sg-ssh_key_path': provider_section.get('key_path', ''),
+            'sg-password': provider_section.get('password', ''),
+            'sg-remote_base_path': provider_section.get('base_remote_path', ''),
+        })
+    elif provider == 'ssh_sftp':
+        state.update({
+            'ssh-host': provider_section.get('host', ''),
+            'ssh-port': provider_section.get('port', 22),
+            'ssh-username': provider_section.get('user', ''),
+            'ssh-ssh_key_path': provider_section.get('key_path', ''),
+            'ssh-password': provider_section.get('password', ''),
+            'ssh-remote_base_path': provider_section.get('base_remote_path', ''),
+        })
+    elif provider == 'netlify':
+        state.update({
+            'netlify_api_token': provider_section.get('api_token', ''),
+            'netlify_site_id': provider_section.get('site_id', ''),
+        })
+    elif provider == 'vercel':
+        state.update({
+            'vercel_api_token': provider_section.get('api_token', ''),
+            'vercel_project_id': provider_section.get('project_id', ''),
+        })
+    elif provider == 'github_pages':
+        state.update({
+            'gh_pages_branch': provider_section.get('branch', 'gh-pages'),
+        })
+
+    return state
