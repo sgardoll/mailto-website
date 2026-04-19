@@ -36,10 +36,21 @@
             <li><code>workflow/config.yaml</code></li>
         </ul>
 
-        <div class="success-next-action">
-            <p><strong>Next step:</strong> run the workflow script from your project root:</p>
-            <pre class="config-preview">./scripts/run-workflow.sh</pre>
+        <div id="workflow-launch" class="success-next-action">
+            <p><strong>Next step:</strong> start the email listener using your new config.</p>
+            <button id="start-workflow-btn" class="btn-primary" type="button">Start Workflow</button>
+            <p class="help-text">
+                Runs <code>./scripts/run-workflow.sh</code> in the background. You can close this tab once it's running.
+            </p>
         </div>
+
+        <section id="workflow-status-panel" class="workflow-status" hidden aria-live="polite">
+            <h3>Workflow status: <span id="workflow-status-label">starting…</span></h3>
+            <pre id="workflow-log" class="config-preview workflow-log"></pre>
+            <p class="help-text">
+                If anything looks wrong, you can run <code>./scripts/run-workflow.sh</code> manually from your project root.
+            </p>
+        </section>
 
         <p class="help-text">
             You can re-run this wizard at any time to update your config.

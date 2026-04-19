@@ -1029,4 +1029,62 @@
 
     initPreviewStep();
 
+    // ──────────────────────────────────────────────────────────
+    //  Done step — workflow launcher
+    // ──────────────────────────────────────────────────────────
+    function initDoneStep() {
+        var startBtn = document.getElementById('start-workflow-btn');
+        if (!startBtn) return;
+
+        var launchPanel = document.getElementById('workflow-launch');
+        var statusPanel = document.getElementById('workflow-status-panel');
+        var label = document.getElementById('workflow-status-label');
+        var logEl = document.getElementById('workflow-log');
+
+        function pollStatus() {
+            fetch('/workflow-status')
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    if (label) label.textContent = data.status || 'unknown';
+                    if (logEl && data.log && data.log.length) {
+                        logEl.textContent = data.log.join('\n');
+                        logEl.scrollTop = logEl.scrollHeight;
+                    }
+                    if (data.status === 'running') {
+                        setTimeout(pollStatus, 2000);
+                    }
+                })
+                .catch(function() { setTimeout(pollStatus, 5000); });
+        }
+
+        startBtn.addEventListener('click', function() {
+            startBtn.disabled = true;
+            startBtn.textContent = 'Starting…';
+
+            fetch('/start-workflow', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'}
+            })
+            .then(function(r) { return r.json().then(function(d) { return {status: r.status, data: d}; }); })
+            .then(function(result) {
+                if (result.data.ok) {
+                    if (launchPanel) launchPanel.hidden = true;
+                    if (statusPanel) statusPanel.hidden = false;
+                    pollStatus();
+                } else {
+                    startBtn.disabled = false;
+                    startBtn.textContent = 'Start Workflow';
+                    alert(result.data.error || 'Failed to start workflow.');
+                }
+            })
+            .catch(function() {
+                startBtn.disabled = false;
+                startBtn.textContent = 'Start Workflow';
+                alert('Network error. Check the wizard server and try again.');
+            });
+        });
+    }
+
+    initDoneStep();
+
 })();

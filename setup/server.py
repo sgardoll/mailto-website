@@ -31,6 +31,9 @@ _port = None
 _wizard_state = {}
 # True after _try_prefill() has been called once.
 _prefilled = False
+# Workflow subprocess launched from /start-workflow; survives wizard exit.
+_workflow_proc: "subprocess.Popen | None" = None
+_workflow_log: "Path | None" = None
 
 
 def _try_prefill() -> None:
@@ -171,6 +174,81 @@ def step_preview():
 @app.route('/step/done')
 def step_done():
     return render_template('done.html', port=_port, active_step='preview')
+
+
+@app.route('/start-workflow', methods=['POST'])
+def start_workflow():
+    """Launch scripts/run-workflow.sh as a detached subprocess, piping output to a log file.
+    The subprocess survives wizard exit via start_new_session=True so the user can close
+    the tab once the workflow is running.
+    """
+    global _workflow_proc, _workflow_log
+
+    if _workflow_proc and _workflow_proc.poll() is None:
+        return jsonify({"ok": True, "status": "running", "pid": _workflow_proc.pid})
+
+    script = REPO_ROOT / 'scripts' / 'run-workflow.sh'
+    if not script.exists():
+        return jsonify({"ok": False, "error": "scripts/run-workflow.sh not found"}), 500
+
+    logs_dir = REPO_ROOT / 'logs'
+    try:
+        logs_dir.mkdir(exist_ok=True)
+    except OSError as e:
+        return jsonify({"ok": False, "error": f"cannot create logs directory: {e}"}), 500
+
+    _workflow_log = logs_dir / 'workflow.log'
+    try:
+        log_fh = open(_workflow_log, 'w', buffering=1)
+    except OSError as e:
+        return jsonify({"ok": False, "error": f"cannot open log file: {e}"}), 500
+
+    try:
+        _workflow_proc = subprocess.Popen(
+            [str(script)],
+            cwd=str(REPO_ROOT),
+            stdout=log_fh,
+            stderr=subprocess.STDOUT,
+            stdin=subprocess.DEVNULL,
+            start_new_session=True,
+        )
+    except OSError as e:
+        log_fh.close()
+        return jsonify({"ok": False, "error": f"failed to spawn workflow: {e}"}), 500
+
+    return jsonify({"ok": True, "status": "running", "pid": _workflow_proc.pid})
+
+
+@app.route('/workflow-status')
+def workflow_status():
+    """Return current workflow subprocess status + last ~50 log lines for live tail."""
+    global _workflow_proc, _workflow_log
+
+    if not _workflow_proc:
+        return jsonify({"status": "not_started", "log": []})
+
+    rc = _workflow_proc.poll()
+    if rc is None:
+        status = "running"
+    elif rc == 0:
+        status = "exited"
+    else:
+        status = "failed"
+
+    log_lines: list = []
+    if _workflow_log and _workflow_log.exists():
+        try:
+            with open(_workflow_log) as f:
+                log_lines = f.readlines()[-50:]
+        except OSError:
+            pass
+
+    return jsonify({
+        "status": status,
+        "exit_code": rc,
+        "pid": _workflow_proc.pid,
+        "log": [line.rstrip('\n') for line in log_lines],
+    })
 
 
 @app.route('/validate-form', methods=['POST'])
