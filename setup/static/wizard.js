@@ -250,42 +250,53 @@
     // -- Form submit ----------------------------------------------------------
 
     var form = document.getElementById('wizard-form');
-    if (form) {
+    var isGmailStep = !!document.getElementById('gmail-address');
+    var isLmStudioStep = !isGmailStep && !!document.getElementById('lms-base-url');
+
+    if (form && (isGmailStep || isLmStudioStep)) {
         form.addEventListener('submit', function(e) {
             e.preventDefault();
 
             var sendersError = document.getElementById('allowed-senders-error');
             var formSummary = document.getElementById('form-error-summary');
+            var payload;
 
-            var senders = Array.from(document.querySelectorAll('.sender-input'))
-                .map(function(i) { return i.value.trim(); })
-                .filter(Boolean);
+            if (isGmailStep) {
+                var senders = Array.from(document.querySelectorAll('.sender-input'))
+                    .map(function(i) { return i.value.trim(); })
+                    .filter(Boolean);
 
-            if (senders.length === 0) {
-                if (sendersError) {
-                    sendersError.textContent = 'Add at least one allowed sender';
-                    sendersError.hidden = false;
+                if (senders.length === 0) {
+                    if (sendersError) {
+                        sendersError.textContent = 'Add at least one allowed sender';
+                        sendersError.hidden = false;
+                    }
+                    return;
                 }
-                return;
-            }
-            if (sendersError) {
-                sendersError.textContent = '';
-                sendersError.hidden = true;
-            }
+                if (sendersError) {
+                    sendersError.textContent = '';
+                    sendersError.hidden = true;
+                }
 
-            var payload = {
-                gmail_address: document.getElementById('gmail-address').value.trim(),
-                gmail_app_password: document.getElementById('gmail-app-password').value,
-                gmail_folder: document.getElementById('gmail-folder').value.trim(),
-                allowed_senders: senders,
-                lms_base_url: document.getElementById('lms-base-url').value.trim(),
-                lms_model: document.getElementById('lms-model').value.trim(),
-                lms_temperature: parseFloat(document.getElementById('lms-temperature').value),
-                lms_max_tokens: parseInt(document.getElementById('lms-max-tokens').value, 10),
-                lms_cli_path: document.getElementById('lms-cli-path').value.trim(),
-                autostart: document.getElementById('lms-autostart').checked,
-                request_timeout_s: parseInt(document.getElementById('lms-request-timeout').value, 10)
-            };
+                payload = {
+                    step: 'gmail',
+                    gmail_address: document.getElementById('gmail-address').value.trim(),
+                    gmail_app_password: document.getElementById('gmail-app-password').value,
+                    gmail_folder: document.getElementById('gmail-folder').value.trim(),
+                    allowed_senders: senders
+                };
+            } else {
+                payload = {
+                    step: 'lmstudio',
+                    lms_base_url: document.getElementById('lms-base-url').value.trim(),
+                    lms_model: document.getElementById('lms-model').value.trim(),
+                    lms_temperature: parseFloat(document.getElementById('lms-temperature').value),
+                    lms_max_tokens: parseInt(document.getElementById('lms-max-tokens').value, 10),
+                    lms_cli_path: document.getElementById('lms-cli-path').value.trim(),
+                    autostart: document.getElementById('lms-autostart').checked,
+                    request_timeout_s: parseInt(document.getElementById('lms-request-timeout').value, 10)
+                };
+            }
 
             fetch('/validate-form', {
                 method: 'POST',
@@ -298,6 +309,9 @@
                     if (formSummary) {
                         formSummary.textContent = '';
                         formSummary.hidden = true;
+                    }
+                    if (result.data.next_step) {
+                        window.location.href = result.data.next_step;
                     }
                 } else {
                     if (result.data.errors) {

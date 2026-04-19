@@ -113,7 +113,8 @@ def validate_form():
             })
 
     elif step == 'lmstudio':
-        errors = builder.validate(data)
+        merged = {**_wizard_state, **data}
+        errors = builder.validate(merged)
         next_step = '/step/hosting'
         if not errors:
             _wizard_state.update(data)
