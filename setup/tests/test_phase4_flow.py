@@ -400,6 +400,45 @@ def _seed_siteground_state():
     })
 
 
+def test_hosting_submit_persists_siteground_key_to_disk(client, tmp_path, monkeypatch):
+    """POST /validate-form step=hosting with a pasted SiteGround key writes the
+    key to workflow/state/siteground.key at 0600 and stores the absolute path
+    in wizard state so deploy can read it later.
+    """
+    monkeypatch.setattr(server_module, 'REPO_ROOT', tmp_path)
+    key_text = (
+        "-----BEGIN OPENSSH PRIVATE KEY-----\n"
+        "c29tZS1mYWtlLWtleS1jb250ZW50cy1mb3ItdGVzdA==\n"
+        "-----END OPENSSH PRIVATE KEY-----\n"
+    )
+
+    resp = client.post('/validate-form', json={
+        'step': 'hosting',
+        'hosting_provider': 'siteground',
+        'sg-host': 'ssh.example.com',
+        'sg-port': '18765',
+        'sg-username': 'u123-user',
+        'sg-ssh_private_key': key_text,
+        'sg-password': '',
+        'sg-remote_base_path': '/home/user/public_html',
+        'site_base_url': 'https://example.com',
+    })
+    assert resp.status_code == 200
+    assert resp.get_json()['ok'] is True
+
+    # Key written to workflow/state/siteground.key with 0600 perms
+    written = tmp_path / 'workflow' / 'state' / 'siteground.key'
+    assert written.exists()
+    assert written.read_text() == key_text
+    mode = oct(written.stat().st_mode & 0o777)
+    assert mode == '0o600'
+
+    # Wizard state holds absolute path ready for YAML output
+    sg = server_module._wizard_state.get('siteground')
+    assert sg is not None
+    assert sg['key_path'] == str(written.resolve())
+
+
 def test_done_route_siteground_shows_deploy_button(client):
     _seed_siteground_state()
     resp = client.get('/step/done')

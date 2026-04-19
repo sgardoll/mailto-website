@@ -313,6 +313,15 @@ def validate_form():
         next_step = '/step/inboxes'
         if not errors:
             provider = data.get('hosting_provider', '')
+            # Persist any pasted SiteGround private key to disk BEFORE build_hosting
+            # runs, so the YAML path it emits is already absolute and the key is
+            # available at deploy time.
+            if provider == 'siteground':
+                key_text = builder.extract_siteground_key(data)
+                if key_text:
+                    key_path = _write_siteground_key_file(key_text)
+                    data['sg-existing_key_path'] = str(key_path)
+                    data['sg-ssh_private_key'] = ''  # consumed — drop from state
             if provider == 'netlify':
                 try:
                     data['site_base_url'] = builder.fetch_netlify_site_url(
@@ -385,28 +394,18 @@ def write_config():
             "error": "existing config files detected — set overwrite_confirmed to proceed",
         }), 409
 
-    _persist_siteground_key_if_pasted()
     env_str, yaml_str = builder.build_final_outputs(_wizard_state)
     _write_config_pair(env_path, env_str, config_path, yaml_str)
     return jsonify({"ok": True, "next_step": "/step/done"})
 
 
-def _persist_siteground_key_if_pasted() -> None:
-    """If the user pasted a SiteGround private key, write it to workflow/state/
-    with 0600 perms and rewrite the wizard state so the YAML gets the absolute
-    path. If no key was pasted, leave existing key_path alone.
+def _write_siteground_key_file(key_contents: str) -> Path:
+    """Atomically write the pasted SiteGround private key with 0600 perms.
+    Returns the absolute path the caller should store in wizard state.
     """
-    key_contents = builder.extract_siteground_key(_wizard_state)
-    if not key_contents:
-        # No paste — drop any transient form field and keep existing_key_path
-        # as the effective key_path in state.
-        _wizard_state.pop('sg-ssh_private_key', None)
-        return
-
     key_path = (REPO_ROOT / builder.SITEGROUND_KEY_RELPATH).resolve()
     key_path.parent.mkdir(parents=True, exist_ok=True)
 
-    # Atomic write + 0600 perms
     fd, tmp = tempfile.mkstemp(dir=key_path.parent, prefix='.siteground.key.')
     try:
         with os.fdopen(fd, 'w', encoding='utf-8') as f:
@@ -423,13 +422,7 @@ def _persist_siteground_key_if_pasted() -> None:
             except OSError:
                 pass
 
-    # Rewrite wizard state so build_final_outputs emits the absolute path
-    sg = _wizard_state.get('siteground')
-    if isinstance(sg, dict):
-        sg['key_path'] = str(key_path)
-    _wizard_state['sg-existing_key_path'] = str(key_path)
-    # Secret has been persisted — drop the textarea content from state
-    _wizard_state.pop('sg-ssh_private_key', None)
+    return key_path
 
 
 def _write_config_pair(env_path: Path, env_str: str, config_path: Path, yaml_str: str) -> None:
