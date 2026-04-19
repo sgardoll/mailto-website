@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 03 Plan 7 complete (Phase 3 done)
-last_updated: "2026-04-19T09:35:33Z"
-last_activity: 2026-04-19 -- Phase 03 verified, HUMAN-UAT approved by user; inboxes step simplified to slug+site_name with derived address/URL/base; HOST-07 added
+stopped_at: Phase 04 Plan 01 complete
+last_updated: "2026-04-19T13:02:00Z"
+last_activity: 2026-04-19 -- Phase 04 Plan 01 complete (builder now owns final outputs, preview masking, and existing-config hydration)
 progress:
   total_phases: 4
   completed_phases: 3
-  total_plans: 16
-  completed_plans: 16
-  percent: 100
+  total_plans: 19
+  completed_plans: 17
+  percent: 89
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-19)
 
 **Core value:** Zero-friction first-time setup — clone the repo, run one command, get a working config without hand-editing YAML
-**Current focus:** Phase 03 — hosting-provider-inbox-manager
+**Current focus:** Phase 04 — preview-write-completion
 
 ## Current Position
 
-Phase: 03 (hosting-provider-inbox-manager) — COMPLETE
-Plan: 7 of 7 (all plans complete)
-Status: Phase 03 complete; ready for Phase 04 planning
-Last activity: 2026-04-19 -- Phase 03 Plan 07 complete (Phase 3 JS appended to wizard.js — initHostingStep + initInboxesStep)
+Phase: 04 (preview-write-completion) — IN PROGRESS
+Plan: 2 of 3 (Plan 01 complete)
+Status: Phase 04 Plan 01 complete; ready for Plan 02
+Last activity: 2026-04-19 -- Phase 04 Plan 01 complete (pure builder contract landed in setup/builder.py with tests)
 
-Progress: [██████████] 100% (Phases 1-2)
+Progress: [█████████ ] 89% (Phases 1-3 complete, Phase 4 plan 1 done)
 
 ## Performance Metrics
 
@@ -52,6 +52,7 @@ Progress: [██████████] 100% (Phases 1-2)
 - Trend: -
 
 *Updated after each plan completion*
+| Phase 04 P01 | ~28 min | 3 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -63,6 +64,8 @@ Recent decisions affecting current work:
 - Init: Flask chosen over http.server (matches Python stack, less hand-rolling)
 - Init: Vanilla JS + Jinja2 for UI — no build step, no new runtime
 - Init: Atomic write via `tempfile.mkstemp()` + `os.replace()` — non-negotiable
+- Phase 04 Plan 01: `setup/builder.py` is now the single authoritative source for final `.env` + `workflow/config.yaml` assembly, preview masking, and existing-config hydration
+- Phase 04 Plan 01: Hidden runtime keys (`git_branch`, `git_push`, `dry_run`) must survive hydrate → preview → rewrite flows unchanged when present
 
 ### Pending Todos
 
@@ -80,6 +83,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-19T06:03:30.575Z
-Stopped at: context exhaustion at 90% (2026-04-19)
+Last session: 2026-04-19T13:02:00Z
+Stopped at: Phase 04 Plan 01 complete; ready for 04-02
 Resume file: None
