@@ -421,19 +421,94 @@ select:focus {
     text-decoration: none;
 }
 
-/* Live site link row on the done screen */
-.site-link-row {
+/* Deploy panel — shown after Deploy Site is clicked */
+.deploy-panel {
+    background-color: #f8fafc;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    padding: 16px 20px;
+    margin: 16px 0;
+}
+.deploy-panel h3 {
+    margin: 0 0 12px;
+    font-size: 15px;
+    color: #334155;
+}
+.deploy-panel h3 span {
+    font-weight: 700;
+    color: #0f172a;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    font-size: 13px;
+}
+.deploy-inbox-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.deploy-row {
+    background-color: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    padding: 10px 14px;
+    transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+.deploy-row.ok {
+    border-color: #86efac;
+    background-color: #f0fdf4;
+}
+.deploy-row.failed {
+    border-color: #fca5a5;
+    background-color: #fef2f2;
+}
+.deploy-row-head {
     display: flex;
     align-items: center;
+    justify-content: space-between;
     gap: 12px;
-    flex-wrap: wrap;
 }
-.site-url {
+.deploy-row-name {
+    font-size: 14px;
+    color: #0f172a;
+}
+.deploy-phase-badge {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background-color: #e2e8f0;
+    color: #475569;
+}
+.deploy-phase-badge[data-phase="done"] {
+    background-color: #dcfce7;
+    color: #15803d;
+}
+.deploy-phase-badge[data-phase="failed"] {
+    background-color: #fee2e2;
+    color: #b91c1c;
+}
+.deploy-phase-badge[data-phase="bootstrap"],
+.deploy-phase-badge[data-phase="install"],
+.deploy-phase-badge[data-phase="build"],
+.deploy-phase-badge[data-phase="deploy"] {
+    background-color: #dbeafe;
+    color: #1d4ed8;
+}
+.deploy-row-detail {
+    font-size: 12px;
+    color: #64748b;
+    margin-top: 4px;
+    min-height: 14px;
+}
+.deploy-row-link {
+    display: inline-block;
+    margin-top: 6px;
     font-size: 13px;
     color: #15803d;
-    background-color: #dcfce7;
-    border: 1px solid #86efac;
-    border-radius: 4px;
-    padding: 4px 8px;
     word-break: break-all;
 }

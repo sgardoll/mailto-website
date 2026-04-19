@@ -1029,4 +1029,92 @@
 
     initPreviewStep();
 
+    // ──────────────────────────────────────────────────────────
+    //  Done step — deploy launcher (SiteGround only)
+    // ──────────────────────────────────────────────────────────
+    function initDoneStep() {
+        var deployBtn = document.getElementById('deploy-btn');
+        if (!deployBtn) return;
+
+        var launchPanel = document.getElementById('deploy-launch');
+        var panel = document.getElementById('deploy-panel');
+        var label = document.getElementById('deploy-status-label');
+        var errorEl = document.getElementById('deploy-error');
+
+        function updateRow(row) {
+            var li = document.querySelector('#deploy-inboxes li[data-slug="' + CSS.escape(row.slug) + '"]');
+            if (!li) return;
+            var badge = li.querySelector('.deploy-phase-badge');
+            var detail = li.querySelector('.deploy-row-detail');
+            var link = li.querySelector('.deploy-row-link');
+            if (badge) {
+                badge.textContent = row.phase || 'pending';
+                badge.setAttribute('data-phase', row.phase || 'pending');
+            }
+            if (detail) detail.textContent = row.detail || '';
+            li.classList.toggle('ok', !!row.ok);
+            li.classList.toggle('failed', !!row.error);
+            if (link && row.ok && row.url) {
+                link.hidden = false;
+                link.href = row.url;
+                link.textContent = row.url;
+            }
+        }
+
+        function pollStatus() {
+            fetch('/deploy-status')
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    if (label) label.textContent = data.status || 'unknown';
+                    (data.inboxes || []).forEach(updateRow);
+                    if (data.error && errorEl) {
+                        errorEl.textContent = data.error;
+                        errorEl.hidden = false;
+                    }
+                    if (data.status === 'running') {
+                        setTimeout(pollStatus, 2000);
+                    } else if (data.status === 'failed' && errorEl && !data.error) {
+                        errorEl.textContent = 'One or more inboxes failed to deploy. See per-inbox errors above.';
+                        errorEl.hidden = false;
+                    }
+                })
+                .catch(function() { setTimeout(pollStatus, 5000); });
+        }
+
+        deployBtn.addEventListener('click', function() {
+            deployBtn.disabled = true;
+            deployBtn.textContent = 'Deploying…';
+            if (errorEl) { errorEl.textContent = ''; errorEl.hidden = true; }
+
+            fetch('/deploy', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'}
+            })
+            .then(function(r) { return r.json().then(function(d) { return {status: r.status, data: d}; }); })
+            .then(function(result) {
+                if (result.data.ok) {
+                    if (launchPanel) launchPanel.hidden = true;
+                    if (panel) panel.hidden = false;
+                    pollStatus();
+                } else {
+                    deployBtn.disabled = false;
+                    deployBtn.textContent = 'Deploy';
+                    var msg = result.data.message || result.data.error || 'Deploy failed to start.';
+                    if (errorEl) { errorEl.textContent = msg; errorEl.hidden = false; }
+                    else { alert(msg); }
+                }
+            })
+            .catch(function() {
+                deployBtn.disabled = false;
+                deployBtn.textContent = 'Deploy';
+                if (errorEl) {
+                    errorEl.textContent = 'Network error. Check the wizard server and try again.';
+                    errorEl.hidden = false;
+                }
+            });
+        });
+    }
+
+    initDoneStep();
+
 })();

@@ -32,6 +32,15 @@ _wizard_state = {}
 # True after _try_prefill() has been called once.
 _prefilled = False
 
+# Deploy state for POST /deploy + GET /deploy-status polling.
+_deploy_lock = threading.Lock()
+_deploy_state: dict = {
+    "status": "idle",       # idle | running | complete | failed
+    "started_at": None,
+    "inboxes": [],          # [{slug, phase, detail, url, ok, error}, ...]
+    "error": None,
+}
+
 
 def _try_prefill() -> None:
     """Read existing .env and workflow/config.yaml once at launch and hydrate _wizard_state."""
@@ -171,12 +180,109 @@ def step_preview():
 @app.route('/step/done')
 def step_done():
     site_base_url = _wizard_state.get('site_base_url', '').strip()
+    hosting_provider = (_wizard_state.get('hosting_provider') or '').strip()
+    inboxes = _wizard_state.get('inboxes') or []
+    # Normalize to a template-friendly shape — slug + site_url + site_name
+    inbox_rows = [
+        {
+            'slug': ib.get('slug', ''),
+            'site_url': ib.get('site_url', ''),
+            'site_name': ib.get('site_name') or ib.get('slug', ''),
+        }
+        for ib in inboxes if ib.get('slug')
+    ]
     return render_template(
         'done.html',
         port=_port,
         active_step='preview',
         site_base_url=site_base_url,
+        hosting_provider=hosting_provider,
+        inboxes=inbox_rows,
     )
+
+
+def _reset_deploy_state(slugs: list[str]) -> None:
+    with _deploy_lock:
+        _deploy_state.update({
+            "status": "running",
+            "started_at": time.time(),
+            "inboxes": [
+                {"slug": s, "phase": "pending", "detail": "", "url": "", "ok": False, "error": None}
+                for s in slugs
+            ],
+            "error": None,
+        })
+
+
+def _update_inbox_progress(slug: str, phase: str, detail: str) -> None:
+    with _deploy_lock:
+        for row in _deploy_state["inboxes"]:
+            if row["slug"] == slug:
+                row["phase"] = phase
+                row["detail"] = detail
+                if phase == "done":
+                    row["ok"] = True
+                elif phase == "failed":
+                    row["error"] = detail
+                break
+
+
+def _deploy_worker() -> None:
+    """Run the deploy loop on a background thread. Captures final state."""
+    try:
+        from workflow import config as wf_config
+        from workflow import deploy_once
+        cfg = wf_config.load(REPO_ROOT / 'workflow' / 'config.yaml')
+        results = deploy_once.deploy_all(cfg, on_progress=_update_inbox_progress)
+        with _deploy_lock:
+            for row, r in zip(_deploy_state["inboxes"], results):
+                row["ok"] = r["ok"]
+                row["url"] = r["url"]
+                if not r["ok"]:
+                    row["error"] = r["error"]
+            failures = [r for r in results if not r["ok"]]
+            _deploy_state["status"] = "failed" if failures else "complete"
+    except Exception as e:
+        with _deploy_lock:
+            _deploy_state["status"] = "failed"
+            _deploy_state["error"] = f"{type(e).__name__}: {e}"
+
+
+@app.route('/deploy', methods=['POST'])
+def deploy():
+    provider = (_wizard_state.get('hosting_provider') or '').strip()
+    if provider != 'siteground':
+        return jsonify({
+            "ok": False,
+            "error": "not_implemented",
+            "provider": provider,
+            "message": f"Wizard-driven deploy is not implemented for '{provider}' yet.",
+        }), 400
+
+    with _deploy_lock:
+        if _deploy_state["status"] == "running":
+            return jsonify({"ok": True, "status": "running"})
+
+    inboxes = _wizard_state.get('inboxes') or []
+    slugs = [ib.get('slug') for ib in inboxes if ib.get('slug')]
+    if not slugs:
+        return jsonify({"ok": False, "error": "no inboxes configured"}), 400
+
+    _reset_deploy_state(slugs)
+    threading.Thread(target=_deploy_worker, daemon=True).start()
+    return jsonify({"ok": True, "status": "running"})
+
+
+@app.route('/deploy-status')
+def deploy_status():
+    with _deploy_lock:
+        # Return a shallow copy so callers see a consistent snapshot
+        return jsonify({
+            "status": _deploy_state["status"],
+            "started_at": _deploy_state["started_at"],
+            "inboxes": [dict(row) for row in _deploy_state["inboxes"]],
+            "error": _deploy_state["error"],
+        })
 
 
 @app.route('/validate-form', methods=['POST'])

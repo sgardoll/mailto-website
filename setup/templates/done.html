@@ -36,20 +36,49 @@
             <li><code>workflow/config.yaml</code></li>
         </ul>
 
-        {% if site_base_url %}
-        <div class="success-next-action">
-            <p><strong>Your site is live at:</strong></p>
-            <p class="site-link-row">
-                <a id="site-link" class="btn-primary" href="{{ site_base_url }}" target="_blank" rel="noopener noreferrer">View Your Site</a>
-                <code class="site-url">{{ site_base_url }}</code>
+        {% if hosting_provider == 'siteground' and inboxes %}
+        <div id="deploy-launch" class="success-next-action">
+            <p><strong>Next step:</strong> deploy your site{{ 's' if inboxes|length > 1 else '' }} to SiteGround.</p>
+            <button id="deploy-btn" class="btn-primary" type="button">Deploy Site{{ 's' if inboxes|length > 1 else '' }}</button>
+            <p class="help-text">
+                Builds each inbox's Astro site locally (<code>npm install</code> + <code>npm run build</code>)
+                and uploads the result to your SiteGround path over SFTP.
             </p>
+        </div>
+
+        <section id="deploy-panel" class="deploy-panel" hidden aria-live="polite">
+            <h3>Deploy status: <span id="deploy-status-label">starting…</span></h3>
+            <ul id="deploy-inboxes" class="deploy-inbox-list">
+                {% for inbox in inboxes %}
+                <li class="deploy-row" data-slug="{{ inbox.slug }}">
+                    <div class="deploy-row-head">
+                        <strong class="deploy-row-name">{{ inbox.site_name }}</strong>
+                        <span class="deploy-phase-badge" data-phase="pending">pending</span>
+                    </div>
+                    <div class="deploy-row-detail"></div>
+                    <a class="deploy-row-link" href="{{ inbox.site_url }}" target="_blank" rel="noopener noreferrer" hidden>{{ inbox.site_url }}</a>
+                </li>
+                {% endfor %}
+            </ul>
+            <p id="deploy-error" class="error-text" hidden></p>
+        </section>
+        {% elif hosting_provider and hosting_provider != 'siteground' %}
+        <div class="overwrite-warning">
+            <p><strong>Automatic deploy from the wizard is only supported for SiteGround right now.</strong></p>
+            {% if hosting_provider in ('netlify', 'vercel') %}
+            <p>For {{ hosting_provider|capitalize }}, connect your git repo via the provider dashboard — the dashboard will pick up your code and the config files the wizard just wrote, then deploy automatically on every push.</p>
+            {% elif hosting_provider == 'github_pages' %}
+            <p>For GitHub Pages, push this repo to GitHub and enable Pages in the repo settings. The built site output in <code>sites/&lt;slug&gt;/dist/</code> is what you point Pages at.</p>
+            {% elif hosting_provider == 'generic_ssh' %}
+            <p>For Generic SSH, wizard-driven deploy is pending Phase 5. In the meantime use <code>python -m workflow.deploy_once</code> once generic-SSH support lands, or rsync <code>sites/&lt;slug&gt;/dist/</code> to your target manually.</p>
+            {% endif %}
         </div>
         {% endif %}
 
         <p class="help-text">
-            To start auto-publishing from your Gmail inbox, run
-            <code>./scripts/run-workflow.sh</code> from your project root.
-            It launches the email listener as a long-running process.
+            Once deployed, run <code>./scripts/run-workflow.sh</code> from your project root
+            to start the email listener — it watches your Gmail inbox and auto-publishes new
+            posts to the site{{ 's' if inboxes|length > 1 else '' }} on arrival.
         </p>
 
         <p class="help-text">

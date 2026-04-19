@@ -387,24 +387,158 @@ def test_pair_write_no_partial_files_on_success():
 # /step/done route
 # ---------------------------------------------------------------------------
 
-def test_done_route_renders_site_link(client):
-    """GET /step/done renders a View Your Site link using _wizard_state['site_base_url']."""
-    server_module._wizard_state['site_base_url'] = 'https://example.com'
+def _seed_siteground_state():
+    server_module._wizard_state.update({
+        'hosting_provider': 'siteground',
+        'site_base_url': 'https://example.com',
+        'inboxes': [
+            {'slug': 'guitar', 'address': 'u+guitar@gmail.com',
+             'site_name': 'Guitar', 'site_url': 'https://example.com/guitar', 'site_base': '/guitar/'},
+            {'slug': 'parenting', 'address': 'u+parenting@gmail.com',
+             'site_name': 'Parenting', 'site_url': 'https://example.com/parenting', 'site_base': '/parenting/'},
+        ],
+    })
+
+
+def test_done_route_siteground_shows_deploy_button(client):
+    _seed_siteground_state()
     resp = client.get('/step/done')
     assert resp.status_code == 200
     body = resp.data.decode()
-    assert 'https://example.com' in body
-    assert 'View Your Site' in body
-    assert 'site-link' in body
-    # manual fallback reference remains for users who want to start the listener
+    assert 'deploy-btn' in body
+    assert 'Deploy Site' in body
+    # Per-inbox rows pre-rendered for the progress panel
+    assert 'data-slug="guitar"' in body
+    assert 'data-slug="parenting"' in body
+    # Manual fallback unchanged
     assert 'run-workflow.sh' in body
 
 
-def test_done_route_omits_site_link_when_base_url_missing(client):
-    """If site_base_url is unset, the hero link block is not rendered."""
+@pytest.mark.parametrize('provider,expected_marker', [
+    ('netlify', 'provider dashboard'),
+    ('vercel', 'provider dashboard'),
+    ('github_pages', 'enable Pages'),
+    ('generic_ssh', 'deploy_once'),
+])
+def test_done_route_non_siteground_shows_manual_instructions(client, provider, expected_marker):
+    server_module._wizard_state['hosting_provider'] = provider
+    server_module._wizard_state['inboxes'] = [
+        {'slug': 'x', 'address': 'u+x@gmail.com', 'site_name': 'X',
+         'site_url': 'https://x.example/', 'site_base': '/'},
+    ]
     resp = client.get('/step/done')
     assert resp.status_code == 200
     body = resp.data.decode()
-    assert 'View Your Site' not in body
-    # manual fallback still present
-    assert 'run-workflow.sh' in body
+    assert 'deploy-btn' not in body
+    assert expected_marker in body
+
+
+# ---------------------------------------------------------------------------
+# /deploy and /deploy-status
+# ---------------------------------------------------------------------------
+
+@pytest.fixture(autouse=True)
+def reset_deploy_state():
+    original = dict(server_module._deploy_state)
+    server_module._deploy_state.update({
+        "status": "idle", "started_at": None, "inboxes": [], "error": None,
+    })
+    yield
+    server_module._deploy_state.clear()
+    server_module._deploy_state.update(original)
+
+
+def test_deploy_endpoint_rejects_non_siteground(client):
+    server_module._wizard_state['hosting_provider'] = 'netlify'
+    server_module._wizard_state['inboxes'] = [
+        {'slug': 'x', 'address': 'u+x@gmail.com', 'site_name': 'X',
+         'site_url': 'https://x.example/', 'site_base': '/'},
+    ]
+    resp = client.post('/deploy')
+    assert resp.status_code == 400
+    data = resp.get_json()
+    assert data['ok'] is False
+    assert data['error'] == 'not_implemented'
+    assert data['provider'] == 'netlify'
+
+
+def test_deploy_endpoint_rejects_when_no_inboxes(client):
+    server_module._wizard_state['hosting_provider'] = 'siteground'
+    server_module._wizard_state['inboxes'] = []
+    resp = client.post('/deploy')
+    assert resp.status_code == 400
+    assert resp.get_json()['error'] == 'no inboxes configured'
+
+
+def test_deploy_endpoint_spawns_worker_for_siteground(client, monkeypatch):
+    _seed_siteground_state()
+    captured = {}
+
+    class FakeThread:
+        def __init__(self, target, daemon=None):
+            captured['target'] = target
+            captured['daemon'] = daemon
+        def start(self):
+            captured['started'] = True
+
+    monkeypatch.setattr(server_module.threading, 'Thread', FakeThread)
+
+    resp = client.post('/deploy')
+    assert resp.status_code == 200
+    assert resp.get_json() == {"ok": True, "status": "running"}
+    assert captured.get('started') is True
+    assert captured['daemon'] is True
+    # State initialised with pending rows for each inbox
+    assert server_module._deploy_state['status'] == 'running'
+    slugs = [r['slug'] for r in server_module._deploy_state['inboxes']]
+    assert slugs == ['guitar', 'parenting']
+    assert all(r['phase'] == 'pending' for r in server_module._deploy_state['inboxes'])
+
+
+def test_deploy_endpoint_noop_when_already_running(client, monkeypatch):
+    _seed_siteground_state()
+    server_module._deploy_state['status'] = 'running'
+
+    def fail_thread(*a, **kw):
+        raise AssertionError('Thread should not spawn when already running')
+
+    monkeypatch.setattr(server_module.threading, 'Thread', fail_thread)
+
+    resp = client.post('/deploy')
+    assert resp.status_code == 200
+    assert resp.get_json() == {"ok": True, "status": "running"}
+
+
+def test_deploy_status_idle_by_default(client):
+    resp = client.get('/deploy-status')
+    data = resp.get_json()
+    assert resp.status_code == 200
+    assert data['status'] == 'idle'
+    assert data['inboxes'] == []
+    assert data['error'] is None
+
+
+def test_update_inbox_progress_transitions(client):
+    """_update_inbox_progress drives state correctly through phases."""
+    server_module._reset_deploy_state(['alpha', 'beta'])
+    server_module._update_inbox_progress('alpha', 'install', 'npm install')
+    server_module._update_inbox_progress('alpha', 'done', 'https://alpha.example')
+
+    resp = client.get('/deploy-status')
+    rows = resp.get_json()['inboxes']
+    alpha = next(r for r in rows if r['slug'] == 'alpha')
+    beta = next(r for r in rows if r['slug'] == 'beta')
+    assert alpha['phase'] == 'done'
+    assert alpha['ok'] is True
+    assert beta['phase'] == 'pending'
+    assert beta['ok'] is False
+
+
+def test_update_inbox_progress_records_failure(client):
+    server_module._reset_deploy_state(['alpha'])
+    server_module._update_inbox_progress('alpha', 'failed', 'BuildFailed: npm exited 1')
+
+    rows = client.get('/deploy-status').get_json()['inboxes']
+    assert rows[0]['phase'] == 'failed'
+    assert rows[0]['error'] == 'BuildFailed: npm exited 1'
+    assert rows[0]['ok'] is False
