@@ -113,18 +113,9 @@ def validate_form():
             })
 
     elif step == 'lmstudio':
-        merged = {**_wizard_state, **data}
-        errors = builder.validate(merged)
         next_step = '/step/hosting'
-        if not errors:
-            _wizard_state.update(data)
-            env_str, yaml_str = builder.build(_wizard_state)
-            return jsonify({
-                "ok": True,
-                "next_step": next_step,
-                "env_preview": env_str,
-                "yaml_preview": yaml_str,
-            })
+        _wizard_state.update(data)
+        return jsonify({"ok": True, "next_step": next_step})
 
     elif step == 'hosting':
         errors = builder.validate_hosting(data)
