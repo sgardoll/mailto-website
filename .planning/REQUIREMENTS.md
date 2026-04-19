@@ -4,31 +4,31 @@
 
 ### Server & Launch (SRV)
 
-- [ ] **SRV-01**: User can run `./scripts/setup.sh` and the wizard launches in their default browser automatically
-- [ ] **SRV-02**: Wizard probes for a free port (avoiding 5000/8080), falls back to a random available port if preferred port is taken
-- [ ] **SRV-03**: User can click an "Exit Setup" button to shut down the wizard cleanly; process also cleans up on Ctrl-C via `atexit` handler
-- [ ] **SRV-04**: Wizard checks write permissions on the project directory before rendering the form and surfaces a clear error if it cannot write
+- [x] **SRV-01**: User can run `./scripts/setup.sh` and the wizard launches in their default browser automatically
+- [x] **SRV-02**: Wizard probes for a free port (avoiding 5000/8080), falls back to a random available port if preferred port is taken
+- [x] **SRV-03**: User can click an "Exit Setup" button to shut down the wizard cleanly; process also cleans up on Ctrl-C via `atexit` handler
+- [x] **SRV-04**: Wizard checks write permissions on the project directory before rendering the form and surfaces a clear error if it cannot write
 
 ### Form UX (UX)
 
-- [ ] **UX-01**: User sees a progress indicator showing all steps by name and which step is active
-- [ ] **UX-02**: Validation errors appear on individual fields when the user leaves them (on blur), not only on submission
-- [ ] **UX-03**: User can toggle visibility of any password or token field with a show/hide control; field remains paste-friendly
-- [ ] **UX-04**: Each credential field has help text and a link to the relevant external documentation (Gmail app password page, LM Studio docs, provider-specific docs)
+- [x] **UX-01**: User sees a progress indicator showing all steps by name and which step is active
+- [x] **UX-02**: Validation errors appear on individual fields when the user leaves them (on blur), not only on submission
+- [x] **UX-03**: User can toggle visibility of any password or token field with a show/hide control; field remains paste-friendly
+- [x] **UX-04**: Each credential field has help text and a link to the relevant external documentation (Gmail app password page, LM Studio docs, provider-specific docs)
 
 ### Gmail Configuration (GMAIL)
 
-- [ ] **GMAIL-01**: User can enter their Gmail address once and it is applied to both imap.user, smtp.user, and smtp.from_address in the generated config
-- [ ] **GMAIL-02**: User can enter their Gmail app password; it is stored in `.env` as `GMAIL_APP_PASSWORD` and referenced as `${GMAIL_APP_PASSWORD}` in `config.yaml`
-- [ ] **GMAIL-03**: User can specify which Gmail folder to watch (default: INBOX)
-- [ ] **GMAIL-04**: User can configure the global allowed senders list (at least one address required)
+- [x] **GMAIL-01**: User can enter their Gmail address once and it is applied to both imap.user, smtp.user, and smtp.from_address in the generated config
+- [x] **GMAIL-02**: User can enter their Gmail app password; it is stored in `.env` as `GMAIL_APP_PASSWORD` and referenced as `${GMAIL_APP_PASSWORD}` in `config.yaml`
+- [x] **GMAIL-03**: User can specify which Gmail folder to watch (default: INBOX)
+- [x] **GMAIL-04**: User can configure the global allowed senders list (at least one address required)
 
 ### LM Studio Configuration (LMS)
 
-- [ ] **LMS-01**: User can enter the LM Studio base URL (default pre-filled: `http://localhost:1234/v1`)
-- [ ] **LMS-02**: User can enter the model tag (default pre-filled: `google/gemma-4-26b-a4b`)
-- [ ] **LMS-03**: User can set temperature and max_tokens (defaults pre-filled: 0.4, 4096)
-- [ ] **LMS-04**: User can set the `lms` CLI path (default pre-filled: `lms`)
+- [x] **LMS-01**: User can enter the LM Studio base URL (default pre-filled: `http://localhost:1234/v1`)
+- [x] **LMS-02**: User can enter the model tag (default pre-filled: `google/gemma-4-26b-a4b`)
+- [x] **LMS-03**: User can set temperature and max_tokens (defaults pre-filled: 0.4, 4096)
+- [x] **LMS-04**: User can set the `lms` CLI path (default pre-filled: `lms`)
 
 ### Hosting Provider (HOST)
 
@@ -49,12 +49,12 @@
 
 ### Output & File Writing (OUT)
 
-- [ ] **OUT-01**: Wizard displays a preview of the generated `.env` and `config.yaml` contents before writing to disk; sensitive fields show only the last 4 characters (`••••••••3f9a`)
-- [ ] **OUT-02**: User must explicitly click "Write Config Files" to trigger the write — no writes happen before this action
-- [ ] **OUT-03**: Files are written atomically using `tempfile.mkstemp()` + `os.replace()` — a crash or Ctrl-C mid-write cannot produce a partial or zero-byte config
-- [ ] **OUT-04**: If `.env` or `config.yaml` already exist when the wizard launches, all fields are pre-filled from the existing values
-- [ ] **OUT-05**: If existing config is detected, user must check an "Overwrite existing config" checkbox before the "Write Config Files" button becomes active
-- [ ] **OUT-06**: After a successful write, user sees a success screen with the exact command to run the workflow (`./scripts/run-workflow.sh`)
+- [x] **OUT-01**: Wizard displays a preview of the generated `.env` and `config.yaml` contents before writing to disk; sensitive fields show only the last 4 characters (`••••••••3f9a`)
+- [x] **OUT-02**: User must explicitly click "Write Config Files" to trigger the write — no writes happen before this action
+- [x] **OUT-03**: Files are written atomically using `tempfile.mkstemp()` + `os.replace()` — a crash or Ctrl-C mid-write cannot produce a partial or zero-byte config
+- [x] **OUT-04**: If `.env` or `config.yaml` already exist when the wizard launches, all fields are pre-filled from the existing values
+- [x] **OUT-05**: If existing config is detected, user must check an "Overwrite existing config" checkbox before the "Write Config Files" button becomes active
+- [x] **OUT-06**: After a successful write, user sees a success screen with the exact command to run the workflow (`./scripts/run-workflow.sh`)
 
 ---
 
