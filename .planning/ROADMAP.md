@@ -72,7 +72,7 @@ Plans:
 Plans:
 - [x] 03-01-PLAN.md — Wave 1 (TDD): Extend builder.py — validate_hosting(), build_hosting(), validate_inboxes(), build_inboxes() with full test coverage (2026-04-19)
 - [ ] 03-02-PLAN.md — Wave 1 (parallel): Extract LM Studio section from index.html into lmstudio.html; index.html becomes Gmail-only
-- [ ] 03-03-PLAN.md — Wave 1 (parallel): Create hosting.html — provider dropdown + 5 conditional .provider-fields groups per UI-SPEC
+- [x] 03-03-PLAN.md — Wave 1 (parallel): Create hosting.html — provider dropdown + 5 conditional .provider-fields groups per UI-SPEC (2026-04-19)
 - [ ] 03-04-PLAN.md — Wave 1 (parallel): Create inboxes.html — inbox-row-template, pre-rendered first row, add-inbox button
 - [ ] 03-05-PLAN.md — Wave 2 (parallel): Extend server.py — GET routes for lmstudio/hosting/inboxes; /validate-form step dispatch with next_step
 - [ ] 03-06-PLAN.md — Wave 2 (parallel): Append Phase 3 CSS to wizard.css — select, .provider-fields[hidden], .field-row-thirds, .inbox-row, .remove-inbox, #add-inbox
@@ -99,5 +99,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 |-------|----------------|--------|-----------|
 | 1. Server Foundation | 3/3 | Complete | 2026-04-19 |
 | 2. Core Form & Config Engine | 6/6 | Complete | 2026-04-19 |
-| 3. Hosting Provider & Inbox Manager | 1/7 | In progress | - |
+| 3. Hosting Provider & Inbox Manager | 2/7 | In progress | - |
 | 4. Preview, Write & Completion | 0/TBD | Not started | - |
