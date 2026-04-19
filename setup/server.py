@@ -79,6 +79,21 @@ def index():
     return render_template('index.html', port=_port, active_step='gmail')
 
 
+@app.route('/step/lmstudio')
+def step_lmstudio():
+    return render_template('lmstudio.html', port=_port, active_step='lmstudio')
+
+
+@app.route('/step/hosting')
+def step_hosting():
+    return render_template('hosting.html', port=_port, active_step='hosting')
+
+
+@app.route('/step/inboxes')
+def step_inboxes():
+    return render_template('inboxes.html', port=_port, active_step='inboxes')
+
+
 @app.route('/validate-form', methods=['POST'])
 def validate_form():
     data = request.get_json(force=True) or {}
