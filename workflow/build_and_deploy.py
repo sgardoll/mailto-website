@@ -98,7 +98,16 @@ def _ensure_remote_dir(sftp: paramiko.SFTPClient, path: str) -> None:
         try:
             sftp.stat(cur_no_slash)
         except FileNotFoundError:
-            sftp.mkdir(cur_no_slash)
+            try:
+                sftp.mkdir(cur_no_slash)
+            except (IOError, OSError) as e:
+                raise DeployFailed(
+                    f"Cannot create remote directory {cur_no_slash!r}. "
+                    f"The SSH user likely does not have permission at this path. "
+                    f"Check the 'Remote base path' in the wizard — SiteGround paths "
+                    f"should be inside your home directory, typically "
+                    f"/home/<user>/www/<domain>/public_html. Underlying error: {e}"
+                ) from e
 
 
 def _walk_files(root: Path) -> Iterable[Path]:
