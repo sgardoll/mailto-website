@@ -387,136 +387,24 @@ def test_pair_write_no_partial_files_on_success():
 # /step/done route
 # ---------------------------------------------------------------------------
 
-def test_done_route_renders_run_workflow_command(client):
-    """GET /step/done renders the success screen with a Start Workflow button."""
+def test_done_route_renders_site_link(client):
+    """GET /step/done renders a View Your Site link using _wizard_state['site_base_url']."""
+    server_module._wizard_state['site_base_url'] = 'https://example.com'
     resp = client.get('/step/done')
     assert resp.status_code == 200
     body = resp.data.decode()
-    assert 'start-workflow-btn' in body
-    # manual fallback reference remains for users who prefer the shell
+    assert 'https://example.com' in body
+    assert 'View Your Site' in body
+    assert 'site-link' in body
+    # manual fallback reference remains for users who want to start the listener
     assert 'run-workflow.sh' in body
 
 
-# ---------------------------------------------------------------------------
-# /start-workflow and /workflow-status
-# ---------------------------------------------------------------------------
-
-@pytest.fixture(autouse=True)
-def reset_workflow_state():
-    original_proc = server_module._workflow_proc
-    original_log = server_module._workflow_log
-    server_module._workflow_proc = None
-    server_module._workflow_log = None
-    yield
-    server_module._workflow_proc = original_proc
-    server_module._workflow_log = original_log
-
-
-class _FakeProc:
-    def __init__(self, pid=12345, returncode=None):
-        self.pid = pid
-        self._rc = returncode
-
-    def poll(self):
-        return self._rc
-
-
-def test_start_workflow_spawns_subprocess(client, tmp_path, monkeypatch):
-    """POST /start-workflow spawns run-workflow.sh detached and returns running status."""
-    script_dir = tmp_path / 'scripts'
-    script_dir.mkdir()
-    (script_dir / 'run-workflow.sh').write_text('#!/usr/bin/env bash\necho ok\n')
-    (tmp_path / 'logs').mkdir(exist_ok=True)
-
-    monkeypatch.setattr(server_module, 'REPO_ROOT', tmp_path)
-
-    captured = {}
-
-    class FakePopen:
-        def __init__(self, args, **kwargs):
-            captured['args'] = args
-            captured['kwargs'] = kwargs
-            self.pid = 99999
-            self._rc = None
-
-        def poll(self):
-            return self._rc
-
-    monkeypatch.setattr(server_module.subprocess, 'Popen', FakePopen)
-
-    resp = client.post('/start-workflow')
+def test_done_route_omits_site_link_when_base_url_missing(client):
+    """If site_base_url is unset, the hero link block is not rendered."""
+    resp = client.get('/step/done')
     assert resp.status_code == 200
-    data = resp.get_json()
-    assert data['ok'] is True
-    assert data['status'] == 'running'
-    assert data['pid'] == 99999
-    assert captured['args'] == [str(script_dir / 'run-workflow.sh')]
-    # Must be detached so wizard exit doesn't kill the workflow
-    assert captured['kwargs'].get('start_new_session') is True
-    assert captured['kwargs'].get('cwd') == str(tmp_path)
-
-
-def test_start_workflow_returns_existing_if_already_running(client, monkeypatch):
-    """Second /start-workflow call while running returns the existing pid without respawning."""
-    server_module._workflow_proc = _FakeProc(pid=42, returncode=None)
-
-    def fail_popen(*a, **kw):
-        raise AssertionError('Popen should not be called when already running')
-
-    monkeypatch.setattr(server_module.subprocess, 'Popen', fail_popen)
-
-    resp = client.post('/start-workflow')
-    data = resp.get_json()
-    assert resp.status_code == 200
-    assert data['ok'] is True
-    assert data['status'] == 'running'
-    assert data['pid'] == 42
-
-
-def test_start_workflow_missing_script_returns_error(client, tmp_path, monkeypatch):
-    """If scripts/run-workflow.sh is missing, /start-workflow returns an error payload."""
-    monkeypatch.setattr(server_module, 'REPO_ROOT', tmp_path)
-
-    resp = client.post('/start-workflow')
-    assert resp.status_code == 500
-    data = resp.get_json()
-    assert data['ok'] is False
-    assert 'run-workflow.sh' in data['error']
-
-
-def test_workflow_status_not_started(client):
-    """GET /workflow-status before launch reports not_started."""
-    resp = client.get('/workflow-status')
-    assert resp.status_code == 200
-    data = resp.get_json()
-    assert data['status'] == 'not_started'
-    assert data['log'] == []
-
-
-def test_workflow_status_running_returns_log_tail(client, tmp_path):
-    """GET /workflow-status while running returns the last log lines."""
-    log = tmp_path / 'workflow.log'
-    log.write_text('\n'.join(f'line {i}' for i in range(60)) + '\n')
-    server_module._workflow_proc = _FakeProc(pid=77, returncode=None)
-    server_module._workflow_log = log
-
-    resp = client.get('/workflow-status')
-    data = resp.get_json()
-    assert data['status'] == 'running'
-    assert data['pid'] == 77
-    # Trimmed to last 50 lines
-    assert len(data['log']) == 50
-    assert data['log'][-1] == 'line 59'
-
-
-def test_workflow_status_reports_failure_exit_code(client, tmp_path):
-    """Non-zero exit reports status=failed with the exit code."""
-    log = tmp_path / 'workflow.log'
-    log.write_text('crashed\n')
-    server_module._workflow_proc = _FakeProc(pid=77, returncode=1)
-    server_module._workflow_log = log
-
-    resp = client.get('/workflow-status')
-    data = resp.get_json()
-    assert data['status'] == 'failed'
-    assert data['exit_code'] == 1
+    body = resp.data.decode()
+    assert 'View Your Site' not in body
+    # manual fallback still present
+    assert 'run-workflow.sh' in body

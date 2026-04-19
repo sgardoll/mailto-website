@@ -417,34 +417,23 @@ select:focus {
 }
 .success-next-action .btn-primary {
     margin-top: 4px;
+    display: inline-block;
+    text-decoration: none;
 }
 
-/* Workflow status panel — shown after Start Workflow is clicked */
-.workflow-status {
-    background-color: #f8fafc;
-    border: 1px solid #cbd5e1;
-    border-radius: 8px;
-    padding: 16px 20px;
-    margin: 16px 0;
+/* Live site link row on the done screen */
+.site-link-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
 }
-.workflow-status h3 {
-    margin: 0 0 12px;
-    font-size: 15px;
-    color: #334155;
-}
-.workflow-status h3 span {
-    font-weight: 700;
-    color: #0f172a;
-    text-transform: uppercase;
-    letter-spacing: 0.03em;
+.site-url {
     font-size: 13px;
-}
-.workflow-log {
-    max-height: 280px;
-    overflow-y: auto;
-    font-size: 12px;
-    line-height: 1.5;
-    background-color: #0f172a;
-    color: #e2e8f0;
-    border-color: #1e293b;
+    color: #15803d;
+    background-color: #dcfce7;
+    border: 1px solid #86efac;
+    border-radius: 4px;
+    padding: 4px 8px;
+    word-break: break-all;
 }

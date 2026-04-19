@@ -36,21 +36,21 @@
             <li><code>workflow/config.yaml</code></li>
         </ul>
 
-        <div id="workflow-launch" class="success-next-action">
-            <p><strong>Next step:</strong> start the email listener using your new config.</p>
-            <button id="start-workflow-btn" class="btn-primary" type="button">Start Workflow</button>
-            <p class="help-text">
-                Runs <code>./scripts/run-workflow.sh</code> in the background. You can close this tab once it's running.
+        {% if site_base_url %}
+        <div class="success-next-action">
+            <p><strong>Your site is live at:</strong></p>
+            <p class="site-link-row">
+                <a id="site-link" class="btn-primary" href="{{ site_base_url }}" target="_blank" rel="noopener noreferrer">View Your Site</a>
+                <code class="site-url">{{ site_base_url }}</code>
             </p>
         </div>
+        {% endif %}
 
-        <section id="workflow-status-panel" class="workflow-status" hidden aria-live="polite">
-            <h3>Workflow status: <span id="workflow-status-label">starting…</span></h3>
-            <pre id="workflow-log" class="config-preview workflow-log"></pre>
-            <p class="help-text">
-                If anything looks wrong, you can run <code>./scripts/run-workflow.sh</code> manually from your project root.
-            </p>
-        </section>
+        <p class="help-text">
+            To start auto-publishing from your Gmail inbox, run
+            <code>./scripts/run-workflow.sh</code> from your project root.
+            It launches the email listener as a long-running process.
+        </p>
 
         <p class="help-text">
             You can re-run this wizard at any time to update your config.
