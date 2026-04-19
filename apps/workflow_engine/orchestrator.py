@@ -107,8 +107,16 @@ def _process_locked(
 
 
 def _git_restore(repo: Path, path: str) -> None:
+    """Roll back both tracked modifications and untracked new files under path.
+
+    git restore only reverts tracked files; without the clean step, a failed
+    build leaves behind newly-written entry/thread .md files that poison the
+    next run (same schema error repeats forever).
+    """
     import subprocess
     subprocess.run(["git", "restore", "--source=HEAD", "--", path],
+                   cwd=repo, capture_output=True, text=True)
+    subprocess.run(["git", "clean", "-fd", "--", path],
                    cwd=repo, capture_output=True, text=True)
 
 

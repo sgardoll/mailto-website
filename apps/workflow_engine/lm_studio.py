@@ -104,13 +104,26 @@ def chat_json(
     messages.append({"role": "user", "content": user})
 
     log.info("Calling %s (temp=%s, max_tokens=%s)", cfg.model, cfg.temperature, cfg.max_tokens)
-    completion = client.chat.completions.create(
-        model=cfg.model,
-        messages=messages,  # type: ignore[arg-type]
-        temperature=cfg.temperature,
-        max_tokens=cfg.max_tokens,
-        response_format={"type": "json_object"},
-    )
+    try:
+        completion = client.chat.completions.create(
+            model=cfg.model,
+            messages=messages,  # type: ignore[arg-type]
+            temperature=cfg.temperature,
+            max_tokens=cfg.max_tokens,
+            response_format={"type": "json_object"},
+        )
+    except Exception as e:
+        # Some LM Studio models reject response_format=json_object and only
+        # accept 'text' or 'json_schema'. Fall back to text + lenient parse.
+        if "response_format" not in str(e):
+            raise
+        log.info("Model rejected json_object response_format; retrying as text")
+        completion = client.chat.completions.create(
+            model=cfg.model,
+            messages=messages,  # type: ignore[arg-type]
+            temperature=cfg.temperature,
+            max_tokens=cfg.max_tokens,
+        )
     text = completion.choices[0].message.content or "{}"
     return _parse_json_lenient(text)
 

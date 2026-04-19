@@ -26,7 +26,16 @@ def commit_and_push(
 ) -> str | None:
     """Returns the new commit SHA, or None if there was nothing to commit."""
     add_args = ["git", "add", "--"] + (paths or ["."])
-    _run(add_args, cwd=repo)
+    proc = subprocess.run(add_args, cwd=repo, capture_output=True, text=True)
+    if proc.returncode != 0:
+        # All paths were gitignored (e.g. runtime/ for site builds). Nothing to
+        # commit — the deploy already wrote the artifacts; tracking them in git
+        # is intentionally skipped.
+        if "ignored by one of your .gitignore" in proc.stderr:
+            log.info("paths are gitignored; skipping commit")
+            return None
+        log.error("git failed: %s\n%s", " ".join(add_args), proc.stderr)
+        raise RuntimeError(proc.stderr.strip() or proc.stdout.strip())
     status = _run(["git", "status", "--porcelain"], cwd=repo)
     if not status.strip():
         log.info("nothing to commit")

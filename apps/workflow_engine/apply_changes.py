@@ -62,6 +62,14 @@ def _validate_op(op: dict[str, Any]) -> dict[str, Any]:
     if coll == "entries":
         fm["receivedAt"] = _coerce_iso(fm.get("receivedAt"))
         fm.setdefault("source", {})
+        # The model sometimes hallucinates source.from; the Astro schema requires
+        # a valid email. Drop it if it doesn't look like one — source.from is
+        # optional in the schema.
+        src = fm["source"]
+        if isinstance(src, dict):
+            f = src.get("from")
+            if f is not None and not (isinstance(f, str) and "@" in f and "." in f.split("@")[-1]):
+                src.pop("from", None)
         fm.setdefault("tags", [])
         threads_refs = fm.get("threads") or []
         if not isinstance(threads_refs, list) or not threads_refs:

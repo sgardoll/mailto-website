@@ -8,7 +8,7 @@ from http.server import HTTPServer, BaseHTTPRequestHandler
 from pathlib import Path
 from typing import Any
 
-from imap_tools import MailBox, AND, MailMessage
+from imap_tools import MailBox, AND, OR, MailMessage
 
 from . import config as cfg_mod
 from . import dispatcher, orchestrator
@@ -102,28 +102,42 @@ def _flat_headers(msg: MailMessage) -> dict[str, str]:
     return out
 
 
+def _inbox_criteria(cfg: cfg_mod.Config):
+    """Server-side IMAP filter: unseen AND addressed to one of our configured inboxes.
+
+    Without the TO filter, a backlog of unrelated unread mail stalls the listener
+    (Gmail can easily have tens of thousands of unread items).
+    """
+    addrs = [ib.address for ib in cfg.inboxes if ib.address]
+    if not addrs:
+        return AND(seen=False)
+    if len(addrs) == 1:
+        return AND(seen=False, to=addrs[0])
+    return AND(OR(*[AND(to=a) for a in addrs]), seen=False)
+
+
 def run_once(cfg: cfg_mod.Config) -> int:
     processed = ProcessedLog(cfg.state_dir / "processed.jsonl")
     handled = 0
     with MailBox(cfg.imap.host, port=cfg.imap.port).login(
         cfg.imap.user, cfg.imap.password, initial_folder=cfg.imap.folder,
     ) as mb:
-        for msg in mb.fetch(AND(seen=False), mark_seen=False, bulk=True):
+        for msg in mb.fetch(_inbox_criteria(cfg), mark_seen=False, bulk=True):
             email = _email_dict(msg)
             mid = email["message_id"]
             if processed.seen(mid):
-                mb.flags(msg.uid, ["\\Seen"], True)
+                mb.flag(msg.uid, ["\\Seen"], True)
                 continue
             ib = dispatcher.route(cfg, _flat_headers(msg))
             if not ib:
                 processed.record(mid, "(none)", outcome="no_inbox_match")
-                mb.flags(msg.uid, ["\\Seen"], True)
+                mb.flag(msg.uid, ["\\Seen"], True)
                 continue
             try:
                 orchestrator.process(cfg, ib, email, processed)
                 handled += 1
             finally:
-                mb.flags(msg.uid, ["\\Seen"], True)
+                mb.flag(msg.uid, ["\\Seen"], True)
     if handled > 0:
         _health_state["last_email_check"] = time.strftime("%Y-%m-%dT%H:%M:%S")
     return handled
