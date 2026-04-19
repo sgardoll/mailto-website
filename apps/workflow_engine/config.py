@@ -18,6 +18,7 @@ from packages.config_contract import (
     LmStudioConfig,
     NetlifyConfig,
     SiteGroundConfig,
+    SmtpConfig,
     SshSftpConfig,
     VercelConfig,
     load_config,

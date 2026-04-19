@@ -10,18 +10,7 @@
 
 <header>
     <h1>Setup Wizard</h1>
-    <nav class="wizard-steps" aria-label="Setup progress">
-        {% set steps = [
-            ('gmail', 'Gmail Setup'),
-            ('lmstudio', 'LM Studio'),
-            ('hosting', 'Hosting'),
-            ('inboxes', 'Inboxes'),
-            ('preview', 'Preview & Write'),
-        ] %}
-        {% for slug, label in steps %}
-        <span class="step {% if slug == active_step %}active{% endif %}" {% if slug == active_step %}aria-current="step"{% endif %}>{{ label }}</span>
-        {% endfor %}
-    </nav>
+    {% include '_stepper.html' %}
 </header>
 
 <main>
@@ -69,8 +58,8 @@
             <p>For {{ hosting_provider|capitalize }}, connect your git repo via the provider dashboard — the dashboard will pick up your code and the config files the wizard just wrote, then deploy automatically on every push.</p>
             {% elif hosting_provider == 'github_pages' %}
             <p>For GitHub Pages, push this repo to GitHub and enable Pages in the repo settings. The built site output in <code>sites/&lt;slug&gt;/dist/</code> is what you point Pages at.</p>
-            {% elif hosting_provider == 'generic_ssh' %}
-            <p>For Generic SSH, wizard-driven deploy is pending Phase 5. In the meantime use <code>python -m workflow.deploy_once</code> once generic-SSH support lands, or rsync <code>sites/&lt;slug&gt;/dist/</code> to your target manually.</p>
+{% elif hosting_provider == 'ssh_sftp' %}
+<p>For Generic SSH/SFTP, wizard-driven deploy is pending implementation. In the meantime use <code>python -m apps.workflow_engine.deploy_once</code> or rsync <code>runtime/sites/&lt;slug&gt;/dist/</code> to your target manually.</p>
             {% endif %}
         </div>
         {% endif %}

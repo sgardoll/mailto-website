@@ -1,6 +1,6 @@
 """Typed config contract shared between setup wizard and workflow engine.
 
-This module defines the canonical schema for workflow/config.yaml.
+This module defines the canonical schema for apps/workflow_engine/config.yaml.
 Both apps/setup_wizard and apps/workflow_engine import from here —
 never duplicate validation logic.
 """
@@ -161,7 +161,7 @@ class InboxConfig:
 
 @dataclass
 class Config:
-    """Top-level config. Mirrors workflow/config.yaml structure."""
+    """Top-level config. Mirrors apps/workflow_engine/config.yaml structure."""
     imap: ImapConfig
     smtp: SmtpConfig
     lm_studio: LmStudioConfig

@@ -340,7 +340,7 @@ def _gmail_plus_alias(gmail_address: str, slug: str) -> str:
     return f'{local}+{slug}@{domain}'
 
 
-def build_inboxes(form_data: dict, gmail_address: str, site_base_url: str) -> dict:
+def build_inboxes(form_data: dict, gmail_address: str, site_base_url: str, hosting_provider: str = '') -> dict:
     """Return inboxes list dict with address, site_url, site_base derived from slug."""
     base = site_base_url.rstrip('/') if site_base_url else ''
     inboxes = []
@@ -352,6 +352,7 @@ def build_inboxes(form_data: dict, gmail_address: str, site_base_url: str) -> di
             'site_name': inbox['site_name'].strip(),
             'site_url': f'{base}/{slug}' if base else '',
             'site_base': f'/{slug}/',
+            'hosting_provider': hosting_provider,
             'allowed_senders': [],
         })
     return {'inboxes': inboxes}
@@ -407,6 +408,7 @@ def _normalize_inboxes_for_output(wizard_state: dict) -> list[dict]:
         {'inboxes': inboxes},
         wizard_state.get('gmail_address', '').strip(),
         wizard_state.get('site_base_url', '').strip(),
+        wizard_state.get('hosting_provider', ''),
     )
     return built['inboxes']
 

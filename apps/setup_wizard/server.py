@@ -135,22 +135,22 @@ def _cleanup() -> None:
 
 @app.route('/')
 def index():
-    return render_template('index.html', port=_port, active_step='gmail')
+    return render_template('index.html', port=_port, active_step='gmail', completed_steps=[])
 
 
 @app.route('/step/lmstudio')
 def step_lmstudio():
-    return render_template('lmstudio.html', port=_port, active_step='lmstudio')
+    return render_template('lmstudio.html', port=_port, active_step='lmstudio', completed_steps=['gmail'])
 
 
 @app.route('/step/hosting')
 def step_hosting():
-    return render_template('hosting.html', port=_port, active_step='hosting')
+    return render_template('hosting.html', port=_port, active_step='hosting', completed_steps=['gmail', 'lmstudio'])
 
 
 @app.route('/step/inboxes')
 def step_inboxes():
-    return render_template('inboxes.html', port=_port, active_step='inboxes')
+    return render_template('inboxes.html', port=_port, active_step='inboxes', completed_steps=['gmail', 'lmstudio', 'hosting'])
 
 
 @app.route('/step/preview')
@@ -158,7 +158,7 @@ def step_preview():
     _try_prefill()
     # Guard: require gmail_address and at least one inbox to render a meaningful preview.
     if not _wizard_state.get('gmail_address'):
-        return render_template('index.html', port=_port, active_step='gmail')
+        return render_template('index.html', port=_port, active_step='gmail', completed_steps=[])
 
     env_str, yaml_str = builder.build_final_outputs(_wizard_state)
     env_preview, yaml_preview = builder.mask_for_preview(env_str, yaml_str)
@@ -171,6 +171,7 @@ def step_preview():
         'preview.html',
         port=_port,
         active_step='preview',
+        completed_steps=['gmail', 'lmstudio', 'hosting', 'inboxes'],
         env_preview=env_preview,
         yaml_preview=yaml_preview,
         has_existing_config=has_existing_config,
@@ -195,6 +196,7 @@ def step_done():
         'done.html',
         port=_port,
         active_step='preview',
+        completed_steps=['gmail', 'lmstudio', 'hosting', 'inboxes', 'preview'],
         site_base_url=site_base_url,
         hosting_provider=hosting_provider,
         inboxes=inbox_rows,
@@ -368,7 +370,8 @@ def validate_form():
                     "field": "inboxes",
                     "message": "Site base URL missing — return to the Hosting step.",
                 }]}), 400
-            inboxes_data = builder.build_inboxes(data, gmail_address, site_base_url)
+            hosting_provider = _wizard_state.get('hosting_provider', '').strip()
+            inboxes_data = builder.build_inboxes(data, gmail_address, site_base_url, hosting_provider)
             _wizard_state.update(inboxes_data)
             return jsonify({"ok": True, "next_step": next_step})
 

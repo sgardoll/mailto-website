@@ -457,7 +457,7 @@ def test_done_route_siteground_shows_deploy_button(client):
     ('netlify', 'provider dashboard'),
     ('vercel', 'provider dashboard'),
     ('github_pages', 'enable Pages'),
-    ('generic_ssh', 'deploy_once'),
+    ('ssh_sftp', 'rsync'),
 ])
 def test_done_route_non_siteground_shows_manual_instructions(client, provider, expected_marker):
     server_module._wizard_state['hosting_provider'] = provider

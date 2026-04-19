@@ -10,18 +10,7 @@
 
 <header>
     <h1>Setup Wizard</h1>
-    <nav class="wizard-steps" aria-label="Setup progress">
-        {% set steps = [
-            ('gmail', 'Gmail Setup'),
-            ('lmstudio', 'LM Studio'),
-            ('hosting', 'Hosting'),
-            ('inboxes', 'Inboxes'),
-            ('preview', 'Preview & Write'),
-        ] %}
-        {% for slug, label in steps %}
-        <span class="step {% if slug == active_step %}active{% endif %}" {% if slug == active_step %}aria-current="step"{% endif %}>{{ label }}</span>
-        {% endfor %}
-    </nav>
+    {% include '_stepper.html' %}
 </header>
 
 <main>

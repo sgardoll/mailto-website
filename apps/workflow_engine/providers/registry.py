@@ -3,11 +3,13 @@ from __future__ import annotations
 
 from .base import DeployProvider as DeployProviderProtocol
 from .siteground import SiteGroundProvider
+from .vercel import VercelProvider
 
 # ── Provider Registry ────────────────────────────────────────────────────────
 
 _PROVIDERS: dict[str, DeployProviderProtocol] = {
     "siteground": SiteGroundProvider(),
+    "vercel": VercelProvider(),
 }
 
 

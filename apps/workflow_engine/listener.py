@@ -88,6 +88,34 @@ def run_idle(cfg: cfg_mod.Config) -> None:
             backoff = min(backoff * 2, 60.0)
 
 
+def _log_startup_diagnostics(cfg: cfg_mod.Config) -> None:
+    log.info("=== Engine Startup Diagnostics ===")
+    log.info("Loaded %d inbox(es):", len(cfg.inboxes))
+    for ib in cfg.inboxes:
+        provider = ib.hosting_provider or "siteground"
+        log.info("  [%s] %s -> %s (provider: %s, url: %s)",
+                 ib.slug, ib.address, ib.site_name or ib.slug, provider, ib.site_url or "N/A")
+    log.info("Global allowed senders: %s", cfg.global_allowed_senders or "(none)")
+    log.info("Route map:")
+    for ib in cfg.inboxes:
+        log.info("  %s -> %s", ib.address, ib.slug)
+    log.info("=====================================")
+
+
+def _log_startup_diagnostics(cfg: cfg_mod.Config) -> None:
+    log.info("=== Engine Startup Diagnostics ===")
+    log.info("Loaded %d inbox(es):", len(cfg.inboxes))
+    for ib in cfg.inboxes:
+        provider = ib.hosting_provider or "siteground"
+        log.info("  [%s] %s -> %s (provider: %s, url: %s)",
+                 ib.slug, ib.address, ib.site_name or ib.slug, provider, ib.site_url or "N/A")
+    log.info("Global allowed senders: %s", cfg.global_allowed_senders or "(none)")
+    log.info("Route map:")
+    for ib in cfg.inboxes:
+        log.info("  %s -> %s", ib.address, ib.slug)
+    log.info("=====================================")
+
+
 def main() -> None:
     p = argparse.ArgumentParser()
     p.add_argument("--once", action="store_true", help="poll once and exit (for cron / testing)")
@@ -100,6 +128,7 @@ def main() -> None:
     cfg = cfg_mod.load(args.config)
     if args.dry_run:
         cfg.dry_run = True
+    _log_startup_diagnostics(cfg)
     if args.once:
         n = run_once(cfg)
         log.info("processed %d message(s)", n)
