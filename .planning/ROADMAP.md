@@ -1,108 +1,39 @@
 # Roadmap: thoughts-to-platform-builder Onboarding Wizard
 
-## Overview
+## Milestones
 
-Four phases deliver the wizard from bare server skeleton to a fully functioning, browser-based onboarding UI. Phase 1 establishes the server process and its lifecycle. Phase 2 builds the core form — Gmail, LM Studio, UX polish — backed by pure config-generation logic. Phase 3 adds hosting-provider conditional fields and the multi-inbox manager. Phase 4 closes the loop with the preview/confirm step, atomic file writes, overwrite protection, and the success screen.
+- ✅ **v1.0 Onboarding Wizard + SiteGround Deploy** — Phases 1-4 (shipped 2026-04-20)
+- 📋 **v1.1** — not yet planned (see candidates in PROJECT.md Active requirements)
 
 ## Phases
 
-**Phase Numbering:**
-- Integer phases (1, 2, 3): Planned milestone work
-- Decimal phases (2.1, 2.2): Urgent insertions (marked with INSERTED)
+<details>
+<summary>✅ v1.0 Onboarding Wizard + SiteGround Deploy (Phases 1-4) — SHIPPED 2026-04-20</summary>
 
-Decimal phases appear between their surrounding integers in numeric order.
+- [x] Phase 1: Server Foundation (3/3 plans) — completed 2026-04-19
+- [x] Phase 2: Core Form & Config Engine (6/6 plans) — completed 2026-04-19
+- [x] Phase 3: Hosting Provider & Inbox Manager (7/7 plans) — completed 2026-04-19
+- [x] Phase 4: Preview, Write & Completion (3/3 plans) — completed 2026-04-19
 
-- [x] **Phase 1: Server Foundation** - Flask server skeleton with port probing, browser auto-open, pre-flight checks, and clean shutdown (2026-04-19)
-- [x] **Phase 2: Core Form & Config Engine** - Gmail and LM Studio form sections, UX framework (progress indicator, blur validation, show/hide, help text), and pure builder/validator logic (2026-04-19)
-- [x] **Phase 3: Hosting Provider & Inbox Manager** - Conditional hosting-provider fields for all 5 providers and the multi-inbox card manager (2026-04-19)
-- [x] **Phase 4: Preview, Write & Completion** - Preview screen with masking, atomic file writes, overwrite detection, and success screen with in-wizard workflow launcher (2026-04-19)
+See `.planning/milestones/v1.0-ROADMAP.md` for full phase details, `v1.0-REQUIREMENTS.md` for the traceability archive, and `v1.0-MILESTONE-AUDIT.md` for verification.
 
-## Phase Details
+</details>
 
-### Phase 1: Server Foundation
-**Goal**: The wizard process runs reliably — it finds a free port, opens the browser at the right moment, survives Ctrl-C cleanly, and refuses to start if it cannot write to the project directory
-**Depends on**: Nothing (first phase)
-**Requirements**: SRV-01, SRV-02, SRV-03, SRV-04
-**Success Criteria** (what must be TRUE):
-  1. Running `./scripts/setup.sh` opens the wizard in the default browser without manual URL copy-paste
-  2. The server binds to a working port even when 5000 and 8080 are occupied
-  3. Clicking "Exit Setup" or pressing Ctrl-C terminates the process without leaving orphaned Python processes
-  4. If the project directory is not writable, the wizard shows a clear error before rendering the form
-**Plans**: 3 plans
+### 📋 v1.1 — Planned
 
-Plans:
-- [x] 01-01-PLAN.md — Flask server core: package init, port probe (prefer 7331, avoid 5000/8080), write-permission pre-flight, socket-probe browser auto-open, placeholder index.html (2026-04-19)
-- [x] 01-02-PLAN.md — Entry point wiring: setup/requirements.txt (flask, python-dotenv), scripts/setup.sh (venv activation + pip install + python -m setup.server) (2026-04-19)
-- [x] 01-03-PLAN.md — Shutdown lifecycle: POST /exit with threading dispatch (not direct shutdown — deadlock risk), atexit cleanup, SIGINT handler, Exit Setup button wired in index.html (2026-04-19)
+Candidate scope (see PROJECT.md Active requirements):
+- Non-SiteGround deploy implementations (Netlify / Vercel / GitHub Pages / Generic SSH)
+- Provider dataclasses in `workflow/config.py`
+- Live credential validation (IMAP/SMTP/SSH probes)
+- Streaming deploy output
 
-### Phase 2: Core Form & Config Engine
-**Goal**: Users can fill in Gmail credentials and LM Studio settings through a polished, validated form, and the underlying builder/validator logic produces correct `.env` and `config.yaml` output strings
-**Depends on**: Phase 1
-**Requirements**: UX-01, UX-02, UX-03, UX-04, GMAIL-01, GMAIL-02, GMAIL-03, GMAIL-04, LMS-01, LMS-02, LMS-03, LMS-04
-**Success Criteria** (what must be TRUE):
-  1. A visible progress indicator names all wizard steps and highlights the active one
-  2. Leaving a required field blank and tabbing away shows an inline error on that field — not on submit
-  3. Every password or token field has a show/hide toggle and remains pasteable
-  4. Each field has help text and a link to the relevant external documentation page
-  5. Entering a Gmail address once populates imap.user, smtp.user, and smtp.from_address in the generated config; the app password lands in `.env` and is referenced as `${GMAIL_APP_PASSWORD}` in `config.yaml`
-**Plans**: 6 plans
-**UI hint**: yes
-
-Plans:
-- [x] 02-01-PLAN.md — Wave 0: Add PyYAML>=6.0.1 to setup/requirements.txt (2026-04-19)
-- [x] 02-02-PLAN.md — Wave 1 (parallel): Pure Python config builder (setup/builder.py + setup/tests/test_builder.py) — validate(), build(), YAML key structure per config.example.yaml (2026-04-19)
-- [x] 02-03-PLAN.md — Wave 1 (parallel): HTML wizard form (setup/templates/index.html) — progress indicator, Gmail section, LM Studio section, allowed-senders widget, all field groups per UI-SPEC (2026-04-19)
-- [x] 02-04-PLAN.md — Wave 1 (parallel): CSS (setup/static/wizard.css) — all design tokens, progress indicator styles, field error states, split row layout (2026-04-19)
-- [x] 02-05-PLAN.md — Wave 2 (parallel): JavaScript (setup/static/wizard.js) — blur validation, touched flags, show/hide, Gmail fan-out display, allowed-senders widget, fetch submit (2026-04-19)
-- [x] 02-06-PLAN.md — Wave 2 (parallel): Flask integration (setup/server.py) — _wizard_state dict, active_step='gmail' in GET /, POST /validate-form route wired to builder (2026-04-19)
-
-### Phase 3: Hosting Provider & Inbox Manager
-**Goal**: Users can select any of the five supported hosting providers and see only the fields relevant to their choice, and can define one or more named inboxes with slug uniqueness enforced
-**Depends on**: Phase 2
-**Requirements**: HOST-01, HOST-02, HOST-03, HOST-04, HOST-05, HOST-06, INBOX-01, INBOX-02, INBOX-03, INBOX-04
-**Success Criteria** (what must be TRUE):
-  1. Switching the hosting provider dropdown instantly shows only that provider's credential fields and hides all others
-  2. Selecting SiteGround or Generic SSH/SFTP reveals host, port, username, SSH key path or password, and remote base path
-  3. Selecting Netlify or Vercel reveals the correct API token and site identifier fields; selecting GitHub Pages reveals only the target branch field
-  4. User can add a second inbox card in the same session and cannot remove the last remaining inbox card
-  5. Entering a duplicate slug in any inbox card shows a uniqueness error on that field when leaving it
-**Plans**: 7 plans
-**UI hint**: yes
-
-Plans:
-- [x] 03-01-PLAN.md — Wave 1 (TDD): Extend builder.py — validate_hosting(), build_hosting(), validate_inboxes(), build_inboxes() with full test coverage (2026-04-19)
-- [x] 03-02-PLAN.md — Wave 1 (parallel): Extract LM Studio section from index.html into lmstudio.html; index.html becomes Gmail-only (2026-04-19)
-- [x] 03-03-PLAN.md — Wave 1 (parallel): Create hosting.html — provider dropdown + 5 conditional .provider-fields groups per UI-SPEC (2026-04-19)
-- [x] 03-04-PLAN.md — Wave 1 (parallel): Create inboxes.html — inbox-row-template, pre-rendered first row, add-inbox button (2026-04-19)
-- [x] 03-05-PLAN.md — Wave 2 (parallel): Extend server.py — GET routes for lmstudio/hosting/inboxes; /validate-form step dispatch with next_step (2026-04-19)
-- [x] 03-06-PLAN.md — Wave 2 (parallel): Append Phase 3 CSS to wizard.css — select, .provider-fields[hidden], .field-row-thirds, .inbox-row, .remove-inbox, #add-inbox (2026-04-19)
-- [x] 03-07-PLAN.md — Wave 2 (parallel): Append Phase 3 JS to wizard.js — initHostingStep() and initInboxesStep() in separate IIFEs (2026-04-19)
-
-### Phase 4: Preview, Write & Completion
-**Goal**: Users see exactly what will be written before committing, the write is atomic, existing configs are detected and protected behind an explicit overwrite checkbox, and a success screen tells the user what to run next
-**Depends on**: Phase 3
-**Requirements**: OUT-01, OUT-02, OUT-03, OUT-04, OUT-05, OUT-06
-**Success Criteria** (what must be TRUE):
-  1. The preview screen shows the full generated `.env` and `config.yaml` text with sensitive fields redacted to last-4 characters (`••••••••3f9a`)
-  2. No files are written to disk until the user explicitly clicks "Write Config Files"
-  3. A crash or Ctrl-C during the write does not leave a partial or zero-byte config on disk
-  4. When existing `.env` or `config.yaml` are present on launch, all form fields are pre-filled from those values and the "Write Config Files" button is disabled until the user checks the "Overwrite existing config" checkbox
-  5. After a successful write, the user sees a success screen displaying the exact command to run the workflow (`./scripts/run-workflow.sh`)
-**Plans**: 3 plans
-
-Plans:
-- [x] 04-01-PLAN.md — Pure builder contract: build_final_outputs(), mask_for_preview(), hydrate_wizard_state() in setup/builder.py with test coverage (2026-04-19)
-- [x] 04-02-PLAN.md — Backend flow: prefill hydration, GET /step/preview, POST /write-config (atomic pair-write + rollback), GET /step/done; preview.html, done.html, test_phase4_flow.py (2026-04-19)
-- [x] 04-03-PLAN.md — Frontend wiring: wizard.js preview/write interaction, wizard.css preview/success styles, in-wizard workflow launcher, human verification checkpoint (2026-04-19)
+Start with `/gsd-new-milestone` to scope and plan.
 
 ## Progress
 
-**Execution Order:**
-Phases execute in numeric order: 1 → 2 → 3 → 4
-
-| Phase | Plans Complete | Status | Completed |
-|-------|----------------|--------|-----------|
-| 1. Server Foundation | 3/3 | Complete | 2026-04-19 |
-| 2. Core Form & Config Engine | 6/6 | Complete | 2026-04-19 |
-| 3. Hosting Provider & Inbox Manager | 7/7 | Complete | 2026-04-19 |
-| 4. Preview, Write & Completion | 3/3 | Complete | 2026-04-19 |
+| Phase | Milestone | Plans Complete | Status | Completed |
+|-------|-----------|----------------|--------|-----------|
+| 1. Server Foundation | v1.0 | 3/3 | Complete | 2026-04-19 |
+| 2. Core Form & Config Engine | v1.0 | 6/6 | Complete | 2026-04-19 |
+| 3. Hosting Provider & Inbox Manager | v1.0 | 7/7 | Complete | 2026-04-19 |
+| 4. Preview, Write & Completion | v1.0 | 3/3 | Complete | 2026-04-19 |

@@ -1,11 +1,11 @@
 ---
 gsd_state_version: 1.0
 milestone: v1.0
-milestone_name: milestone
-status: complete
-stopped_at: Phase 04 complete — milestone v1.0 shipped
-last_updated: "2026-04-19T23:45:00Z"
-last_activity: 2026-04-19 -- Phase 04 complete (backend preview/write + frontend wiring + in-wizard workflow launcher; 83 tests passing)
+milestone_name: Onboarding Wizard + SiteGround Deploy
+status: shipped
+stopped_at: v1.0 shipped — ready to plan v1.1
+last_updated: "2026-04-20T02:30:00Z"
+last_activity: 2026-04-20 -- v1.0 milestone archived and tagged
 progress:
   total_phases: 4
   completed_phases: 4
@@ -18,77 +18,35 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-04-19)
+See: .planning/PROJECT.md (updated 2026-04-20 after v1.0 milestone shipped)
 
-**Core value:** Zero-friction first-time setup — clone the repo, run one command, get a working config without hand-editing YAML
-**Current focus:** Milestone v1.0 shipped — all phases complete
+**Core value:** Zero-friction first-time setup — clone → one command → working config → optional one-click deploy
+**Current focus:** Between milestones — v1.0 shipped, v1.1 not yet planned
 
 ## Current Position
 
-Phase: 04 (preview-write-completion) — COMPLETE
-Plan: 3 of 3 (all complete)
-Status: Milestone v1.0 shipped. Setup wizard delivers full prefill → preview → atomic write → in-wizard workflow launcher flow.
-Last activity: 2026-04-19 -- Phase 04 complete (Plan 03 added workflow launcher beyond original scope after human verification feedback)
-
-Progress: [██████████] 100% (All 4 phases complete, 19/19 plans)
-
-## Performance Metrics
-
-**Velocity:**
-
-- Total plans completed: 0
-- Average duration: -
-- Total execution time: 0 hours
-
-**By Phase:**
-
-| Phase | Plans | Total | Avg/Plan |
-|-------|-------|-------|----------|
-| - | - | - | - |
-
-**Recent Trend:**
-
-- Last 5 plans: -
-- Trend: -
-
-*Updated after each plan completion*
-| Phase 04 P01 | ~28 min | 3 tasks | 2 files |
-
-## Accumulated Context
-
-### Decisions
-
-Decisions are logged in PROJECT.md Key Decisions table.
-Recent decisions affecting current work:
-
-- Init: Flask chosen over http.server (matches Python stack, less hand-rolling)
-- Init: Vanilla JS + Jinja2 for UI — no build step, no new runtime
-- Init: Atomic write via `tempfile.mkstemp()` + `os.replace()` — non-negotiable
-- Phase 04 Plan 01: `setup/builder.py` is now the single authoritative source for final `.env` + `workflow/config.yaml` assembly, preview masking, and existing-config hydration
-- Phase 04 Plan 01: Hidden runtime keys (`git_branch`, `git_push`, `dry_run`) must survive hydrate → preview → rewrite flows unchanged when present
-
-### Pending Todos
-
-None yet.
-
-### Blockers/Concerns
-
-- Non-SiteGround providers in `workflow/config.py`: wizard collects all provider fields but `workflow/config.py` currently only defines SiteGroundConfig. Scope of workflow-side loader changes is deferred — resolve before Phase 3 planning.
-
-## Deferred Items
-
-| Category | Item | Status | Deferred At |
-|----------|------|--------|-------------|
-| Workflow | Non-SiteGround provider loader changes in config.py | Needs scoping | Init |
+Milestone: v1.0 COMPLETE (shipped 2026-04-20)
+Next: Plan v1.1 via `/gsd-new-milestone`
 
 ## Quick Tasks Completed
 
 | Date | Slug | Summary | Commit |
 |------|------|---------|--------|
-| 2026-04-19 | done-screen-site-link | Replace success-screen workflow launcher with hero View Your Site link | f70ba6e |
+| 2026-04-19 | done-screen-site-link | First iteration of success-screen redesign (replaced with deploy launcher same day) | f70ba6e |
+| 2026-04-19 | wizard-deploy-siteground | In-wizard SiteGround deploy button + per-inbox progress + live URL | 07f20c7 |
+
+## Deferred Items (acknowledged at v1.0 close)
+
+| Category | Item | Status |
+|----------|------|--------|
+| Phase 01-03 | VERIFICATION.md status = `human_needed` | Acknowledged — functionality UAT-verified for Phase 04 covers overlapping flows; end-to-end wizard run passed 2026-04-20 |
+| Runtime | Non-SiteGround deploy (Netlify / Vercel / GHP / Generic SSH) | Deferred to v1.1 |
+| Runtime | Provider dataclasses in `workflow/config.py` | Deferred to v1.1 |
+| Wizard | Live credential validation (IMAP/SMTP/SSH probe) | Deferred to v1.1 |
+| Wizard | Streaming npm/SFTP output in deploy panel | Deferred to v1.1 |
 
 ## Session Continuity
 
-Last session: 2026-04-19T23:55:00Z
-Stopped at: Milestone v1.0 complete + done-screen refactor via quick task
+Last session: 2026-04-20T02:30:00Z
+Stopped at: v1.0 milestone archived; REQUIREMENTS.md deleted (fresh for v1.1)
 Resume file: None
