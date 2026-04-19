@@ -1,6 +1,7 @@
 import atexit, os, signal, socket, subprocess, sys, threading, time, webbrowser
 from pathlib import Path
-from flask import Flask, jsonify, render_template
+from flask import Flask, jsonify, render_template, request
+import setup.builder as builder
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
@@ -8,6 +9,7 @@ app = Flask(__name__, template_folder='templates', static_folder='static')
 
 # Port used by the running server; set in main() before app.run().
 _port = None
+_wizard_state = {}
 
 
 def find_free_port(preferred: int = 7331) -> int:
@@ -74,7 +76,18 @@ def _cleanup() -> None:
 
 @app.route('/')
 def index():
-    return render_template('index.html', port=_port)
+    return render_template('index.html', port=_port, active_step='gmail')
+
+
+@app.route('/validate-form', methods=['POST'])
+def validate_form():
+    data = request.get_json(force=True) or {}
+    errors = builder.validate(data)
+    if errors:
+        return jsonify({"ok": False, "errors": errors}), 400
+    _wizard_state.update(data)
+    env_str, yaml_str = builder.build(_wizard_state)
+    return jsonify({"ok": True, "env_preview": env_str, "yaml_preview": yaml_str})
 
 
 @app.route('/exit', methods=['POST'])
