@@ -1,0 +1,28 @@
+# Secrets / runtime state
+.env
+.env.*
+!.env.example
+workflow/config.yaml
+workflow/state/*
+!workflow/state/.gitkeep
+
+# Per-inbox site build artefacts
+sites/*/node_modules/
+sites/*/dist/
+sites/*/.astro/
+
+# Template build artefacts
+framework/site-template/node_modules/
+framework/site-template/dist/
+framework/site-template/.astro/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Editor / OS
+.DS_Store
+.idea/
+.vscode/

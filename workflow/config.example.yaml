@@ -1,0 +1,62 @@
+# Copy this to workflow/config.yaml and fill in.
+# DO NOT commit workflow/config.yaml.
+
+git_branch: main
+git_push: true
+dry_run: false
+
+# Anyone whose From: address matches this list can email any inbox.
+# Per-inbox allowed_senders are additive.
+global_allowed_senders:
+  - you@example.com
+
+imap:
+  host: imap.gmail.com
+  port: 993
+  user: youremail@gmail.com
+  password: ${GMAIL_APP_PASSWORD}     # Gmail app password (not your account password)
+  folder: INBOX
+  use_ssl: true
+
+smtp:
+  host: smtp.gmail.com
+  port: 587
+  user: youremail@gmail.com
+  password: ${GMAIL_APP_PASSWORD}
+  from_address: youremail@gmail.com
+  use_starttls: true
+
+lm_studio:
+  base_url: http://localhost:1234/v1
+  api_key: lm-studio
+  model: google/gemma-4-26b-a4b
+  lms_cli_path: lms                   # path to LM Studio's `lms` CLI
+  autostart: true
+  temperature: 0.4
+  max_tokens: 4096
+  request_timeout_s: 600
+
+siteground:
+  host: ssh.yourdomain.com
+  port: 18765                          # SiteGround uses a non-22 SSH port; check Site Tools
+  user: u123-yourcustomer
+  key_path: ~/.ssh/siteground_ed25519
+  password: ""                         # leave empty if using a key
+  base_remote_path: /home/customer/www/yourdomain.com/public_html
+
+# Each entry = one self-extending site.
+# `address` is the To: address that routes mail to this inbox.
+# Gmail plus-aliases work: youremail+guitar@gmail.com
+inboxes:
+  - slug: guitar
+    address: youremail+guitar@gmail.com
+    site_name: Guitar Practice
+    site_url: https://yourdomain.com/guitar
+    site_base: /guitar/
+    allowed_senders: []                # empty -> falls back to global_allowed_senders
+  - slug: parenting
+    address: youremail+parenting@gmail.com
+    site_name: Parenting Notes
+    site_url: https://yourdomain.com/parenting
+    site_base: /parenting/
+    allowed_senders: []

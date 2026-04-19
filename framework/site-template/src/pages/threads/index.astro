@@ -1,0 +1,17 @@
+---
+import { getCollection } from 'astro:content';
+import Base from '../../layouts/Base.astro';
+const threads = (await getCollection('threads'))
+  .sort((a, b) => +new Date(b.data.updatedAt) - +new Date(a.data.updatedAt));
+---
+<Base title="Threads" description="All threads.">
+  <h1>All threads</h1>
+  {threads.length === 0 && <p class="meta">No threads yet.</p>}
+  {threads.map(t => (
+    <article class="thread-card">
+      <h3><a href={`/threads/${t.slug}`}>{t.data.title}</a></h3>
+      <p>{t.data.summary}</p>
+      <p class="meta">{t.data.status} · updated {new Date(t.data.updatedAt).toLocaleDateString()}</p>
+    </article>
+  ))}
+</Base>

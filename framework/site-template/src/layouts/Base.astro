@@ -1,0 +1,36 @@
+---
+export interface Props {
+  title: string;
+  description?: string;
+}
+const { title, description } = Astro.props;
+const siteName = import.meta.env.SITE_NAME ?? 'A Growing Site';
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title} — {siteName}</title>
+    {description && <meta name="description" content={description} />}
+    <link rel="stylesheet" href="/styles/global.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href="/">{siteName}</a>
+      <nav>
+        <a href="/">Home</a>
+        <a href="/threads/">Threads</a>
+        <a href="/entries/">Entries</a>
+        <a href="/tags/">Tags</a>
+        <a href="/topic">Topic</a>
+      </nav>
+    </header>
+    <main class="container">
+      <slot />
+    </main>
+    <footer class="site-footer">
+      <p>Evolving continuously from inbound mail.</p>
+    </footer>
+  </body>
+</html>
