@@ -27,10 +27,11 @@
 <main>
 <form id="wizard-form" novalidate>
 
-    <!-- Gmail Setup -->
+    <!-- ── Gmail Setup ───────────────────────────────────────── -->
     <section class="form-section" aria-labelledby="gmail-heading">
         <h2 id="gmail-heading">Gmail Setup</h2>
 
+        <!-- Gmail Address -->
         <div class="field-group">
             <label for="gmail-address">Gmail address</label>
             <div class="field-row">
@@ -44,11 +45,13 @@
             <span id="gmail-address-error" class="error" hidden aria-live="polite"></span>
         </div>
 
+        <!-- Fan-out display -->
         <p class="derived-values">
             This address will be set as your IMAP user (<code id="imap-user-preview"></code>),
             SMTP user (<code id="smtp-user-preview"></code>), and sender address.
         </p>
 
+        <!-- Gmail App Password -->
         <div class="field-group">
             <label for="gmail-app-password">Gmail app password</label>
             <div class="field-row">
@@ -64,6 +67,7 @@
             <span id="gmail-app-password-error" class="error" hidden aria-live="polite"></span>
         </div>
 
+        <!-- Gmail Folder -->
         <div class="field-group">
             <label for="gmail-folder">Gmail folder</label>
             <div class="field-row">
@@ -76,6 +80,7 @@
             <span id="gmail-folder-error" class="error" hidden aria-live="polite"></span>
         </div>
 
+        <!-- Allowed Senders -->
         <div class="field-group">
             <label>Allowed senders</label>
             <div id="senders-list" aria-describedby="allowed-senders-help allowed-senders-error">
@@ -94,10 +99,11 @@
 
     </section>
 
-    <!-- LM Studio Settings -->
+    <!-- ── LM Studio Settings ─────────────────────────────────── -->
     <section class="form-section" aria-labelledby="lms-heading">
         <h2 id="lms-heading">LM Studio Settings</h2>
 
+        <!-- Base URL -->
         <div class="field-group">
             <label for="lms-base-url">LM Studio base URL</label>
             <div class="field-row">
@@ -112,6 +118,7 @@
             <span id="lms-base-url-error" class="error" hidden aria-live="polite"></span>
         </div>
 
+        <!-- Model Tag -->
         <div class="field-group">
             <label for="lms-model">Model tag</label>
             <div class="field-row">
@@ -125,6 +132,7 @@
             <span id="lms-model-error" class="error" hidden aria-live="polite"></span>
         </div>
 
+        <!-- Temperature + Max Tokens (split row) -->
         <div class="field-row-split">
             <div class="field-group">
                 <label for="lms-temperature">Temperature</label>
@@ -152,6 +160,7 @@
             </div>
         </div>
 
+        <!-- CLI Path -->
         <div class="field-group">
             <label for="lms-cli-path">lms CLI path</label>
             <div class="field-row">
@@ -165,6 +174,7 @@
             <span id="lms-cli-path-error" class="error" hidden aria-live="polite"></span>
         </div>
 
+        <!-- Advanced (collapsible) -->
         <details class="advanced-section">
             <summary>Advanced</summary>
 
@@ -193,7 +203,7 @@
 
     </section>
 
-    <!-- Actions -->
+    <!-- ── Actions ───────────────────────────────────────────── -->
     <div class="form-actions">
         <p id="form-error-summary" class="error" hidden aria-live="polite">Fix the highlighted fields before continuing.</p>
         <button type="submit" class="btn-primary">Save &amp; Continue</button>
