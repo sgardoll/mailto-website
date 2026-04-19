@@ -31,8 +31,8 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans**: 3 plans
 
 Plans:
-- [ ] 01-01-PLAN.md — Flask server core: package init, port probe (prefer 7331, avoid 5000/8080), write-permission pre-flight, socket-probe browser auto-open, placeholder index.html
-- [ ] 01-02-PLAN.md — Entry point wiring: setup/requirements.txt (flask, python-dotenv), scripts/setup.sh (venv activation + pip install + python -m setup.server)
+- [x] 01-01-PLAN.md — Flask server core: package init, port probe (prefer 7331, avoid 5000/8080), write-permission pre-flight, socket-probe browser auto-open, placeholder index.html (2026-04-19)
+- [x] 01-02-PLAN.md — Entry point wiring: setup/requirements.txt (flask, python-dotenv), scripts/setup.sh (venv activation + pip install + python -m setup.server) (2026-04-19)
 - [ ] 01-03-PLAN.md — Shutdown lifecycle: POST /exit with threading dispatch (not direct shutdown — deadlock risk), atexit cleanup, SIGINT handler, Exit Setup button wired in index.html
 
 ### Phase 2: Core Form & Config Engine
