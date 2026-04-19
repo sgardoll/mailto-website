@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Setup Wizard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='wizard.css') }}">
+</head>
+<body>
+
+<header>
+    <h1>Setup Wizard</h1>
+    <nav class="wizard-steps" aria-label="Setup progress">
+        {% set steps = [
+            ('gmail', 'Gmail Setup'),
+            ('lmstudio', 'LM Studio'),
+            ('hosting', 'Hosting'),
+            ('inboxes', 'Inboxes'),
+            ('preview', 'Preview & Write'),
+        ] %}
+        {% for slug, label in steps %}
+        <span class="step {% if slug == active_step %}active{% endif %}" {% if slug == active_step %}aria-current="step"{% endif %}>{{ label }}</span>
+        {% endfor %}
+    </nav>
+</header>
+
+<main>
+<form id="wizard-form" novalidate>
+
+    <!-- ── Hosting Provider ──────────────────────────────────── -->
+    <section class="form-section" aria-labelledby="hosting-heading">
+        <h2 id="hosting-heading">Hosting Provider</h2>
+
+        <!-- Provider dropdown -->
+        <div class="field-group">
+            <label for="hosting-provider">Hosting provider</label>
+            <div class="field-row">
+                <select id="hosting-provider" name="hosting_provider" aria-describedby="hosting-provider-help">
+                    <option value="siteground" selected>SiteGround</option>
+                    <option value="ssh_sftp">Generic SSH/SFTP</option>
+                    <option value="netlify">Netlify</option>
+                    <option value="vercel">Vercel</option>
+                    <option value="github_pages">GitHub Pages</option>
+                </select>
+            </div>
+            <small id="hosting-provider-help" class="help-text">Select the platform where your generated sites will be published.</small>
+        </div>
+
+        <!-- ── SiteGround fields (visible by default) ───────── -->
+        <div class="provider-fields" data-provider="siteground">
+
+            <div class="field-group">
+                <label for="sg-host">Host</label>
+                <div class="field-row">
+                    <input id="sg-host" name="sg-host" type="text"
+                           aria-describedby="sg-host-help sg-host-error" />
+                </div>
+                <small id="sg-host-help" class="help-text">Hostname or IP address of your SSH server.</small>
+                <span id="sg-host-error" class="error" hidden aria-live="polite"></span>
+            </div>
+
+            <div class="field-group">
+                <label for="sg-port">Port</label>
+                <div class="field-row">
+                    <input id="sg-port" name="sg-port" type="number" min="1" max="65535" step="1" value="18765"
+                           aria-describedby="sg-port-help sg-port-error" />
+                </div>
+                <small id="sg-port-help" class="help-text">SSH port for your SiteGround account. Default: 18765.</small>
+                <span id="sg-port-error" class="error" hidden aria-live="polite"></span>
+            </div>
+
+            <div class="field-group">
+                <label for="sg-username">Username</label>
+                <div class="field-row">
+                    <input id="sg-username" name="sg-username" type="text"
+                           aria-describedby="sg-username-help sg-username-error" />
+                </div>
+                <small id="sg-username-help" class="help-text">Your SSH username.</small>
+                <span id="sg-username-error" class="error" hidden aria-live="polite"></span>
+            </div>
+
+            <div class="field-group">
+                <label for="sg-ssh_key_path">SSH key path</label>
+                <div class="field-row">
+                    <input id="sg-ssh_key_path" name="sg-ssh_key_path" type="text"
+                           aria-describedby="sg-ssh_key_path-help sg-ssh_key_path-error" />
+                </div>
+                <small id="sg-ssh_key_path-help" class="help-text">Absolute path to your SSH private key file (e.g. /home/user/.ssh/id_rsa). Leave blank if using a password.</small>
+                <span id="sg-ssh_key_path-error" class="error" hidden aria-live="polite"></span>
+            </div>
+
+            <div class="field-group">
+                <label for="sg-password">Password</label>
+                <div class="field-row">
+                    <input id="sg-password" name="sg-password" type="password" autocomplete="off"
+                           aria-describedby="sg-password-help sg-password-error" />
+                    <button type="button" class="toggle-visibility" data-target="sg-password"
+                            aria-label="Show Password" aria-pressed="false">Show</button>
+                </div>
+                <small id="sg-password-help" class="help-text">SSH password. Leave blank if using a key file. — Only one of key path or password is required.</small>
+                <span id="sg-password-error" class="error" hidden aria-live="polite"></span>
+            </div>
+
+            <div class="field-group">
+                <label for="sg-remote_base_path">Remote base path</label>
+                <div class="field-row">
+                    <input id="sg-remote_base_path" name="sg-remote_base_path" type="text"
+                           aria-describedby="sg-remote_base_path-help sg-remote_base_path-error" />
+                </div>
+                <small id="sg-remote_base_path-help" class="help-text">Absolute path on the remote server where site files will be uploaded (e.g. /home/user/public_html).</small>
+                <span id="sg-remote_base_path-error" class="error" hidden aria-live="polite"></span>
+            </div>
+
+        </div>
+
+        <!-- ── Generic SSH/SFTP fields (hidden) ─────────────── -->
+        <div class="provider-fields" data-provider="ssh_sftp" hidden aria-hidden="true">
+
+            <div class="field-group">
+                <label for="ssh-host">Host</label>
+                <div class="field-row">
+                    <input id="ssh-host" name="ssh-host" type="text"
+                           aria-describedby="ssh-host-help ssh-host-error" />
+                </div>
+                <small id="ssh-host-help" class="help-text">Hostname or IP address of your SSH server.</small>
+                <span id="ssh-host-error" class="error" hidden aria-live="polite"></span>
+            </div>
+
+            <div class="field-group">
+                <label for="ssh-port">Port</label>
+                <div class="field-row">
+                    <input id="ssh-port" name="ssh-port" type="number" min="1" max="65535" step="1" value="22"
+                           aria-describedby="ssh-port-help ssh-port-error" />
+                </div>
+                <small id="ssh-port-help" class="help-text">SSH/SFTP port. Default: 22.</small>
+                <span id="ssh-port-error" class="error" hidden aria-live="polite"></span>
+            </div>
+
+            <div class="field-group">
+                <label for="ssh-username">Username</label>
+                <div class="field-row">
+                    <input id="ssh-username" name="ssh-username" type="text"
+                           aria-describedby="ssh-username-help ssh-username-error" />
+                </div>
+                <small id="ssh-username-help" class="help-text">Your SSH username.</small>
+                <span id="ssh-username-error" class="error" hidden aria-live="polite"></span>
+            </div>
+
+            <div class="field-group">
+                <label for="ssh-ssh_key_path">SSH key path</label>
+                <div class="field-row">
+                    <input id="ssh-ssh_key_path" name="ssh-ssh_key_path" type="text"
+                           aria-describedby="ssh-ssh_key_path-help ssh-ssh_key_path-error" />
+                </div>
+                <small id="ssh-ssh_key_path-help" class="help-text">Absolute path to your SSH private key file (e.g. /home/user/.ssh/id_rsa). Leave blank if using a password.</small>
+                <span id="ssh-ssh_key_path-error" class="error" hidden aria-live="polite"></span>
+            </div>
+
+            <div class="field-group">
+                <label for="ssh-password">Password</label>
+                <div class="field-row">
+                    <input id="ssh-password" name="ssh-password" type="password" autocomplete="off"
+                           aria-describedby="ssh-password-help ssh-password-error" />
+                    <button type="button" class="toggle-visibility" data-target="ssh-password"
+                            aria-label="Show Password" aria-pressed="false">Show</button>
+                </div>
+                <small id="ssh-password-help" class="help-text">SSH password. Leave blank if using a key file. — Only one of key path or password is required.</small>
+                <span id="ssh-password-error" class="error" hidden aria-live="polite"></span>
+            </div>
+
+            <div class="field-group">
+                <label for="ssh-remote_base_path">Remote base path</label>
+                <div class="field-row">
+                    <input id="ssh-remote_base_path" name="ssh-remote_base_path" type="text"
+                           aria-describedby="ssh-remote_base_path-help ssh-remote_base_path-error" />
+                </div>
+                <small id="ssh-remote_base_path-help" class="help-text">Absolute path on the remote server where site files will be uploaded (e.g. /home/user/public_html).</small>
+                <span id="ssh-remote_base_path-error" class="error" hidden aria-live="polite"></span>
+            </div>
+
+        </div>
+
+        <!-- ── Netlify fields (hidden) ──────────────────────── -->
+        <div class="provider-fields" data-provider="netlify" hidden aria-hidden="true">
+
+            <div class="field-group">
+                <label for="netlify-api-token">API token</label>
+                <div class="field-row">
+                    <input id="netlify-api-token" name="netlify_api_token" type="password" autocomplete="off"
+                           aria-describedby="netlify-api-token-help netlify-api-token-error" />
+                    <button type="button" class="toggle-visibility" data-target="netlify-api-token"
+                            aria-label="Show API token" aria-pressed="false">Show</button>
+                </div>
+                <small id="netlify-api-token-help" class="help-text">Your Netlify personal access token. — <a href="https://app.netlify.com/user/applications" target="_blank" rel="noopener">Create a token</a></small>
+                <span id="netlify-api-token-error" class="error" hidden aria-live="polite"></span>
+            </div>
+
+            <div class="field-group">
+                <label for="netlify-site-id">Site ID</label>
+                <div class="field-row">
+                    <input id="netlify-site-id" name="netlify_site_id" type="text"
+                           aria-describedby="netlify-site-id-help netlify-site-id-error" />
+                </div>
+                <small id="netlify-site-id-help" class="help-text">The Netlify site ID (found in Site Settings &gt; General).</small>
+                <span id="netlify-site-id-error" class="error" hidden aria-live="polite"></span>
+            </div>
+
+        </div>
+
+        <!-- ── Vercel fields (hidden) ───────────────────────── -->
+        <div class="provider-fields" data-provider="vercel" hidden aria-hidden="true">
+
+            <div class="field-group">
+                <label for="vercel-api-token">API token</label>
+                <div class="field-row">
+                    <input id="vercel-api-token" name="vercel_api_token" type="password" autocomplete="off"
+                           aria-describedby="vercel-api-token-help vercel-api-token-error" />
+                    <button type="button" class="toggle-visibility" data-target="vercel-api-token"
+                            aria-label="Show API token" aria-pressed="false">Show</button>
+                </div>
+                <small id="vercel-api-token-help" class="help-text">Your Vercel API token. — <a href="https://vercel.com/account/tokens" target="_blank" rel="noopener">Create a token</a></small>
+                <span id="vercel-api-token-error" class="error" hidden aria-live="polite"></span>
+            </div>
+
+            <div class="field-group">
+                <label for="vercel-project-id">Project name or ID</label>
+                <div class="field-row">
+                    <input id="vercel-project-id" name="vercel_project_id" type="text"
+                           aria-describedby="vercel-project-id-help vercel-project-id-error" />
+                </div>
+                <small id="vercel-project-id-help" class="help-text">Your Vercel project name or ID (found in Project Settings).</small>
+                <span id="vercel-project-id-error" class="error" hidden aria-live="polite"></span>
+            </div>
+
+        </div>
+
+        <!-- ── GitHub Pages fields (hidden) ─────────────────── -->
+        <div class="provider-fields" data-provider="github_pages" hidden aria-hidden="true">
+
+            <div class="field-group">
+                <label for="gh-pages-branch">Target branch</label>
+                <div class="field-row">
+                    <input id="gh-pages-branch" name="gh_pages_branch" type="text" value="gh-pages"
+                           aria-describedby="gh-pages-branch-help gh-pages-branch-error" />
+                </div>
+                <small id="gh-pages-branch-help" class="help-text">The Git branch GitHub Pages publishes from. Default: gh-pages.</small>
+                <span id="gh-pages-branch-error" class="error" hidden aria-live="polite"></span>
+            </div>
+
+        </div>
+
+    </section>
+
+    <!-- ── Actions ───────────────────────────────────────────── -->
+    <div class="form-actions">
+        <p id="form-error-summary" class="error" hidden aria-live="polite">Fix the highlighted fields before continuing.</p>
+        <button type="submit" class="btn-primary">Save &amp; Continue</button>
+    </div>
+
+</form>
+</main>
+
+<footer>
+    <button id="exit-btn" class="btn-exit" type="button">Exit Setup</button>
+</footer>
+
+<script src="{{ url_for('static', filename='wizard.js') }}"></script>
+</body>
+</html>
