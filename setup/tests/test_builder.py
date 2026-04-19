@@ -272,3 +272,87 @@ def test_build_hosting_github_pages_uses_default_branch():
     data = {'hosting_provider': 'github_pages', 'gh_pages_branch': ''}
     result = build_hosting(data)
     assert result['github_pages']['branch'] == 'gh-pages'
+
+
+# -- Phase 3: validate_inboxes / build_inboxes tests --------------------------
+
+VALID_INBOXES_DATA = {
+    'inboxes': [
+        {'slug': 'guitar', 'email': 'me+guitar@gmail.com', 'site_name': 'Guitar Notes',
+         'site_url': 'https://example.com/guitar', 'base_path': '/guitar/'},
+        {'slug': 'cooking', 'email': 'me+cooking@gmail.com', 'site_name': 'Cooking Notes',
+         'site_url': 'https://example.com/cooking', 'base_path': '/cooking/'},
+    ]
+}
+
+
+def test_validate_inboxes_passes_on_valid_data():
+    assert validate_inboxes(VALID_INBOXES_DATA) == []
+
+
+def test_validate_inboxes_rejects_empty_list():
+    errors = validate_inboxes({'inboxes': []})
+    assert any(e['field'] == 'inboxes' for e in errors)
+
+
+def test_validate_inboxes_rejects_missing_inboxes_key():
+    errors = validate_inboxes({})
+    assert any(e['field'] == 'inboxes' for e in errors)
+
+
+def test_validate_inboxes_rejects_invalid_slug_format():
+    data = {'inboxes': [{**VALID_INBOXES_DATA['inboxes'][0], 'slug': 'My Inbox!'}]}
+    errors = validate_inboxes(data)
+    assert any(e['field'] == 'inbox_slug' and e['index'] == 0 for e in errors)
+
+
+def test_validate_inboxes_rejects_empty_slug():
+    data = {'inboxes': [{**VALID_INBOXES_DATA['inboxes'][0], 'slug': ''}]}
+    errors = validate_inboxes(data)
+    assert any(e['field'] == 'inbox_slug' and e['index'] == 0 for e in errors)
+
+
+def test_validate_inboxes_rejects_duplicate_slugs():
+    data = {'inboxes': [
+        {**VALID_INBOXES_DATA['inboxes'][0], 'slug': 'guitar'},
+        {**VALID_INBOXES_DATA['inboxes'][1], 'slug': 'guitar'},
+    ]}
+    errors = validate_inboxes(data)
+    dup_errors = [e for e in errors if e.get('message') == 'Slug must be unique across all inboxes']
+    assert len(dup_errors) == 2  # both rows get the error
+
+
+def test_validate_inboxes_rejects_invalid_email():
+    data = {'inboxes': [{**VALID_INBOXES_DATA['inboxes'][0], 'email': 'notanemail'}]}
+    errors = validate_inboxes(data)
+    assert any(e['field'] == 'inbox_email' and e['index'] == 0 for e in errors)
+
+
+def test_validate_inboxes_rejects_base_path_without_slash():
+    data = {'inboxes': [{**VALID_INBOXES_DATA['inboxes'][0], 'base_path': 'guitar/'}]}
+    errors = validate_inboxes(data)
+    assert any(e['field'] == 'inbox_base_path' and e['index'] == 0 for e in errors)
+
+
+def test_validate_inboxes_rejects_invalid_site_url():
+    data = {'inboxes': [{**VALID_INBOXES_DATA['inboxes'][0], 'site_url': 'not-a-url'}]}
+    errors = validate_inboxes(data)
+    assert any(e['field'] == 'inbox_site_url' and e['index'] == 0 for e in errors)
+
+
+def test_build_inboxes_maps_fields_correctly():
+    result = build_inboxes(VALID_INBOXES_DATA)
+    assert 'inboxes' in result
+    first = result['inboxes'][0]
+    assert first['slug'] == 'guitar'
+    assert first['address'] == 'me+guitar@gmail.com'
+    assert first['site_name'] == 'Guitar Notes'
+    assert first['site_url'] == 'https://example.com/guitar'
+    assert first['site_base'] == '/guitar/'
+    assert first['allowed_senders'] == []
+
+
+def test_build_inboxes_preserves_order():
+    result = build_inboxes(VALID_INBOXES_DATA)
+    slugs = [i['slug'] for i in result['inboxes']]
+    assert slugs == ['guitar', 'cooking']
