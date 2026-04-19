@@ -81,8 +81,14 @@ None yet.
 |----------|------|--------|-------------|
 | Workflow | Non-SiteGround provider loader changes in config.py | Needs scoping | Init |
 
+## Quick Tasks Completed
+
+| Date | Slug | Summary | Commit |
+|------|------|---------|--------|
+| 2026-04-19 | done-screen-site-link | Replace success-screen workflow launcher with hero View Your Site link | f70ba6e |
+
 ## Session Continuity
 
-Last session: 2026-04-19T13:27:00Z
-Stopped at: Phase 04 Plan 02 complete; ready for 04-03
+Last session: 2026-04-19T23:55:00Z
+Stopped at: Milestone v1.0 complete + done-screen refactor via quick task
 Resume file: None
