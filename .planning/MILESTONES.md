@@ -1,5 +1,50 @@
 # Milestones
 
+## v1.1 — Runtime/Setup Separation + Deploy Contract Alignment
+
+**Status:** ✅ SHIPPED 2026-04-20
+**Phases:** 9 (Phase 5 → Phase 13)
+**Plans:** 23 | **Commits:** 6 | **LOC:** ~1,750 added, ~400 modified
+**Timeline:** 2026-04-20 (~1.5 hours wall time)
+
+### Delivered
+
+Clean bounded-context separation with deploy provider adapter pattern, Vercel runtime support, multi-inbox diagnostics, stepper UI, and critical workflow engine deployment to remote servers via SSH with systemd service management.
+
+### Key Accomplishments
+
+1. **Bounded context separation** — repo restructured into `apps/setup-wizard/`, `apps/workflow-engine/`, `packages/config-contract/`, `packages/site-template/`, `runtime/` (Phase 05)
+2. **Config contract extraction** — typed schema with validation, migration tooling, unified provider enum (Phase 06)
+3. **DeployProvider adapter pattern** — SiteGround migrated to adapter, provider registry with fail-fast for unimplemented providers (Phase 07)
+4. **Vercel runtime** — API token auth, project creation, deploy via Vercel API (Phase 08)
+5. **Multi-inbox diagnostics** — startup logging of inboxes/route map, per-inbox deploy reporting (Phase 09)
+6. **Stepper indicator UI** — visual progress across all 5 wizard steps (Phase 10)
+7. **Workflow engine SSH deploy** — deploy_engine.py with systemd service template, health check endpoint on port 8899 (Phase 12)
+
+### Known Deferrals (v1.2 candidates)
+
+- Live credential validation (IMAP/SMTP/SSH probe) — requires network test infrastructure
+- Streaming npm/SFTP output in deploy panel — UX enhancement
+- Additional providers (Netlify, GitHub Pages, Generic SSH) — Vercel proves the pattern
+
+### Phases
+
+| # | Name | Plans | Completed |
+|---|------|-------|-----------|
+| 05 | Architecture Split + Folder Moves | 3/3 | 2026-04-20 |
+| 06 | Config Contract Extraction | 3/3 | 2026-04-20 |
+| 07 | Runtime Deploy Adapter Abstraction | 3/3 | 2026-04-20 |
+| 08 | Vercel Runtime Deploy | 3/3 | 2026-04-20 |
+| 09 | Multi-Inbox Routing/Deploy Validation | 2/2 | 2026-04-20 |
+| 10 | Stepper Indicator UI | 2/2 | 2026-04-20 |
+| 11 | End-to-End UAT and Cleanup | 2/2 | 2026-04-20 |
+| 12 | Workflow Engine Deployment to Target Server | 3/3 | 2026-04-20 |
+| 13 | End-to-End Verification + Milestone Close | 2/2 | 2026-04-20 |
+
+Detail in `.planning/milestones/v1.1-ROADMAP.md` and `.planning/milestones/v1.1-MILESTONE-AUDIT.md`.
+
+---
+
 ## v1.0 — Onboarding Wizard + SiteGround Deploy
 
 **Status:** ✅ SHIPPED 2026-04-20

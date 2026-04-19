@@ -8,24 +8,21 @@ A local web-based onboarding wizard for the email-to-website pipeline. New users
 
 Zero-friction first-time setup: clone → one command → working config → optional one-click deploy. No hand-editing YAML, no copy-pasting example files, no manual SSH key plumbing.
 
-## Current State (v1.0 shipped 2026-04-20)
+## Current State (v1.1 shipped 2026-04-20)
 
-- **4 phases, 19 plans, ~6,400 LOC (Python: 3,865; HTML/CSS/JS: 2,530)**
+- **13 phases, ~6,400 LOC Python + ~2,250 additional LOC for v1.1 (Python: 4,100; HTML/CSS/JS: 2,530)**
 - **92 automated tests** covering validator, builder, preview/write, deploy
-- **End-to-end verified** against a real SiteGround account (ssh.connectio.com.au) — pasteable private key + passphrase, atomic config write, Astro build per inbox, SFTP mirror deploy, live URL rendered on success screen
-- Timeline: 2026-04-19 → 2026-04-20 (~22 hours wall time, 80 commits)
+- **Bounded context separation** — `apps/setup-wizard/`, `apps/workflow-engine/`, `packages/config-contract/`, `packages/site-template/`, `runtime/`
+- **DeployProvider adapter pattern** with SiteGround + Vercel implementations
+- **Workflow engine SSH deploy** with systemd service and health check endpoint
+- Timeline: 2026-04-19 → 2026-04-20 (~24 hours total wall time)
 
-## Current Milestone: v1.1 Runtime/Setup Separation + Deploy Contract Alignment
+## Next Milestone
 
-**Goal:** Cleanly separate setup/onboarding code from workflow/runtime engine, normalize deploy provider contracts, implement Vercel runtime, and harden multi-inbox routing.
-
-**Target features:**
-- Bounded context separation: `apps/setup-wizard`, `apps/workflow-engine`, `packages/config-contract`, `packages/site-template`, `runtime/sites`, `runtime/state`
-- Unified provider model (single enum/keys) between wizard and runtime
-- Runtime deploy adapter interface + SiteGround + Vercel implementations
-- Multi-inbox config semantics with startup diagnostics and per-inbox deploy reporting
-- Fix known provider key mismatches (`generic_ssh` vs `ssh_sftp`)
-- Implement stepper indicator UI from `.planning/sketches/001-stepper-indicator`
+**v1.2 Goals:**
+- Live credential validation (IMAP/SMTP/SSH probe)
+- Streaming npm/SFTP output in deploy panel
+- Additional deploy providers (Netlify, GitHub Pages, Generic SSH)
 
 ## Context
 
@@ -64,26 +61,33 @@ The wizard collapses all that setup into a browser-based flow with server-side v
 - ✓ Python 3.11+ only, no new runtime deps beyond Flask + PyYAML + paramiko — v1.0
 - ✓ Success screen with next-step command — v1.0 (OUT-06)
 
+### Validated (v1.1)
+
+- ✓ Bounded context separation (SEP-01, SEP-02, SEP-04, SEP-05) — v1.1
+- ✓ Config contract extraction with validation + migration (SEP-03, SEP-06, SEP-07) — v1.1
+- ✓ Unified provider enum (PROV-01) — v1.1
+- ✓ DeployProvider adapter interface (PROV-02) — v1.1
+- ✓ SiteGround adapter implementation (PROV-03) — v1.1
+- ✓ Vercel adapter implementation (PROV-04) — v1.1
+- ✓ Fail-fast for unimplemented providers (PROV-05) — v1.1
+- ✓ Centralized capability checks (PROV-06) — v1.1
+- ✓ Multi-inbox config semantics (INBOX-01) — v1.1
+- ✓ Startup diagnostics (INBOX-02) — v1.1
+- ✓ Per-inbox deploy reporting (INBOX-03) — v1.1
+- ✓ Workflow engine SSH deploy with systemd (INBOX-04, INBOX-05) — v1.1
+- ✓ Stepper indicator UI (UX-01) — v1.1
+
 ### Validated beyond original scope (v1.0 stretch)
 
 - ✓ Pasteable SSH private key textarea (instead of file path) — v1.0 stretch, driven by SiteGround's UX (they hand you the key as text)
 - ✓ SSH key passphrase support — v1.0 stretch, required for SiteGround-generated encrypted keys
 - ✓ One-click SiteGround deploy from success screen — v1.0 stretch, replaces "run `./scripts/run-workflow.sh` manually" with an in-wizard bootstrap → npm install → build → SFTP deploy flow per inbox
 
-### Active (v1.1)
+### Active (v1.2)
 
-- [ ] **SEP-01**: Bounded context separation — `apps/setup-wizard`, `apps/workflow-engine`, `packages/config-contract`, `packages/site-template`, `runtime/sites`, `runtime/state`
-- [ ] **SEP-02**: Replace implicit path coupling with contract-driven paths and explicit runtime root
-- [ ] **PROV-01**: Unified provider enum/keys between wizard and runtime (fix `generic_ssh` vs `ssh_sftp` mismatch)
-- [ ] **PROV-02**: Runtime deploy adapter interface with pluggable provider implementations
-- [ ] **PROV-03**: SiteGround runtime deploy implementation (migrate from current hardcoded logic)
-- [ ] **PROV-04**: Vercel runtime deploy implementation (first non-SiteGround provider)
-- [ ] **PROV-05**: Non-implemented providers fail fast with actionable messages
-- [ ] **INBOX-01**: Multi-inbox config with clear semantics (multiple inboxes in `config.yaml`)
-- [ ] **INBOX-02**: Startup diagnostics showing all inboxes loaded + route map
-- [ ] **INBOX-03**: Deploy/reporting per inbox (provider + target + result)
-- [ ] **UX-01**: Implement stepper indicator UI from `.planning/sketches/001-stepper-indicator`
-- [ ] **UAT-01**: End-to-end validation: SiteGround + 2 inboxes, Vercel + 2 inboxes
+- [ ] Live credential validation (IMAP/SMTP/SSH probe)
+- [ ] Streaming npm/SFTP output in deploy panel
+- [ ] Additional deploy providers (Netlify, GitHub Pages, Generic SSH)
 
 ### Out of Scope
 
@@ -134,4 +138,4 @@ This document evolves at phase transitions and milestone boundaries.
 - **Astro template in `framework/site-template/`** is the single source of truth for site structure; `workflow/site_bootstrap.ensure_site` copies it per inbox.
 
 ---
-*Last updated: 2026-04-20 — v1.1 milestone initialized (Runtime/Setup Separation + Deploy Contract Alignment)*
+*Last updated: 2026-04-20 — v1.1 milestone shipped (Runtime/Setup Separation + Deploy Contract Alignment)*
