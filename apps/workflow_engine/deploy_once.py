@@ -1,16 +1,17 @@
 """One-shot deploy: bootstrap, build, and deploy every inbox's site.
 
-Reusable entry point for the setup wizard and as a CLI (`python -m workflow.deploy_once`).
-Currently SiteGround-only — other providers are Phase 5 and raise NotImplementedError.
+Reusable entry point for the setup wizard and as a CLI (`python -m apps.workflow_engine.deploy_once`).
+Uses the provider registry to resolve the correct deploy implementation per inbox.
 """
 from __future__ import annotations
 import sys
 from pathlib import Path
 from typing import Callable
 
-from . import build_and_deploy, site_bootstrap
+from . import site_bootstrap
 from .config import Config, InboxConfig, load
 from .logging_setup import get, setup
+from .providers import get_provider, list_providers
 
 log = get("deploy_once")
 
@@ -24,27 +25,63 @@ def _noop(_slug: str, _phase: str, _detail: str) -> None:
 
 
 def deploy_inbox(cfg: Config, inbox: InboxConfig, on_progress: ProgressCb = _noop) -> dict:
-    """Bootstrap, build, and deploy one inbox. Returns {slug, url, ok, error}."""
-    result = {"slug": inbox.slug, "url": inbox.site_url, "ok": False, "error": None}
+    """Bootstrap, build, and deploy one inbox. Returns {slug, provider, url, ok, error}."""
+    # Determine provider for this inbox
+    provider_name = inbox.hosting_provider or "siteground"
+    result = {
+        "slug": inbox.slug,
+        "provider": provider_name,
+        "url": inbox.site_url,
+        "ok": False,
+        "error": None,
+    }
     try:
-        on_progress(inbox.slug, "bootstrap", f"creating sites/{inbox.slug}")
+        provider = get_provider(provider_name)
+        on_progress(inbox.slug, "bootstrap", f"creating runtime/sites/{inbox.slug}")
         site_dir = site_bootstrap.ensure_site(inbox)
 
         on_progress(inbox.slug, "install", "npm install + build")
-        build_result = build_and_deploy.build(site_dir, inbox=inbox)
+        build_result = provider.build(
+            site_dir,
+            site_url=inbox.site_url or "https://example.com",
+            site_name=inbox.site_name or inbox.slug,
+        )
         on_progress(inbox.slug, "build", f"built dist at {build_result.dist_dir}")
 
-        on_progress(inbox.slug, "deploy", "uploading via SFTP")
-        build_and_deploy.deploy(build_result, cfg=cfg, inbox=inbox)
+        on_progress(inbox.slug, "deploy", f"uploading via {provider_name}")
+        # Build provider-specific config from the full config
+        provider_config = _build_provider_config(cfg, inbox, provider_name)
+        deploy_result = provider.deploy(build_result, provider_config)
 
-        on_progress(inbox.slug, "done", inbox.site_url)
+        on_progress(inbox.slug, "done", deploy_result.url)
         result["ok"] = True
+        result["url"] = deploy_result.url
+        result["target"] = deploy_result.target
     except Exception as e:
         err = f"{type(e).__name__}: {e}"
         log.exception("Deploy failed for inbox %s", inbox.slug)
         result["error"] = err
         on_progress(inbox.slug, "failed", err)
     return result
+
+
+def _build_provider_config(cfg: Config, inbox: InboxConfig, provider_name: str) -> dict:
+    """Build provider-specific config dict from the full Config object."""
+    base = {
+        "slug": inbox.slug,
+        "site_url": inbox.site_url,
+        "remote_path": inbox.remote_path,
+    }
+    # Merge provider-specific section
+    provider_section = getattr(cfg, provider_name, None)
+    if provider_section is not None:
+        # Convert dataclass to dict
+        if hasattr(provider_section, "__dataclass_fields__"):
+            for field_name in provider_section.__dataclass_fields__:
+                base[field_name] = getattr(provider_section, field_name)
+        else:
+            base.update(provider_section)
+    return base
 
 
 def deploy_all(cfg: Config, on_progress: ProgressCb = _noop) -> list[dict]:
@@ -55,17 +92,10 @@ def deploy_all(cfg: Config, on_progress: ProgressCb = _noop) -> list[dict]:
     return results
 
 
-def _guard_provider_supported(provider: str) -> None:
-    if provider and provider != "siteground":
-        raise NotImplementedError(
-            f"Deploy for provider '{provider}' is not implemented yet. "
-            f"Only 'siteground' is supported. See Phase 5."
-        )
-
-
 def main() -> None:
     setup()
     cfg = load()
+    log.info("Available providers: %s", list_providers())
     results = deploy_all(cfg, on_progress=lambda s, p, d: log.info("[%s] %s: %s", s, p, d))
     failed = [r for r in results if not r["ok"]]
     if failed:

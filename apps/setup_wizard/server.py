@@ -251,12 +251,15 @@ def _deploy_worker() -> None:
 @app.route('/deploy', methods=['POST'])
 def deploy():
     provider = (_wizard_state.get('hosting_provider') or '').strip()
-    if provider != 'siteground':
+    try:
+        from apps.workflow_engine.providers import get_provider
+        get_provider(provider)
+    except (ValueError, ImportError) as e:
         return jsonify({
             "ok": False,
             "error": "not_implemented",
             "provider": provider,
-            "message": f"Wizard-driven deploy is not implemented for '{provider}' yet.",
+            "message": str(e),
         }), 400
 
     with _deploy_lock:
