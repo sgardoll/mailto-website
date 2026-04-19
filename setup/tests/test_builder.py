@@ -173,12 +173,20 @@ def test_validate_form_route_returns_errors_on_invalid_data():
 
 # -- Phase 3: validate_hosting / build_hosting tests --------------------------
 
+SAMPLE_PRIVATE_KEY = (
+    "-----BEGIN OPENSSH PRIVATE KEY-----\n"
+    "b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAAAMwAAAAtzc2gt\n"
+    "ZWQyNTUxOQAAACBsampledsamplelinesampledsamplelinesampleysample=\n"
+    "-----END OPENSSH PRIVATE KEY-----\n"
+)
+
+
 VALID_HOSTING_SITEGROUND = {
     'hosting_provider': 'siteground',
     'sg-host': 'ssh.example.com',
     'sg-port': '18765',
     'sg-username': 'u123-user',
-    'sg-ssh_key_path': '/home/user/.ssh/id_rsa',
+    'sg-ssh_private_key': SAMPLE_PRIVATE_KEY,
     'sg-password': '',
     'sg-remote_base_path': '/home/user/public_html',
     'site_base_url': 'https://example.com',
@@ -224,14 +232,29 @@ def test_validate_hosting_sg_port_must_be_integer_in_range():
     assert any(e['field'] == 'sg-port' for e in errors)
 
 
-def test_validate_hosting_ssh_at_least_one_credential():
-    data = {**VALID_HOSTING_SITEGROUND, 'sg-ssh_key_path': '', 'sg-password': ''}
+def test_validate_hosting_siteground_at_least_one_credential():
+    data = {**VALID_HOSTING_SITEGROUND, 'sg-ssh_private_key': '', 'sg-password': ''}
     errors = validate_hosting(data)
-    assert any(e['field'] == 'sg-ssh_key_path' and 'required' in e['message'].lower() for e in errors)
+    assert any(e['field'] == 'sg-ssh_private_key' and 'required' in e['message'].lower() for e in errors)
 
 
-def test_validate_hosting_ssh_password_alone_is_sufficient():
-    data = {**VALID_HOSTING_SITEGROUND, 'sg-ssh_key_path': '', 'sg-password': 'secret'}
+def test_validate_hosting_siteground_password_alone_is_sufficient():
+    data = {**VALID_HOSTING_SITEGROUND, 'sg-ssh_private_key': '', 'sg-password': 'secret'}
+    assert validate_hosting(data) == []
+
+
+def test_validate_hosting_siteground_rejects_malformed_key():
+    data = {**VALID_HOSTING_SITEGROUND, 'sg-ssh_private_key': 'not-a-key'}
+    errors = validate_hosting(data)
+    assert any(e['field'] == 'sg-ssh_private_key' for e in errors)
+
+
+def test_validate_hosting_siteground_existing_key_satisfies_credential():
+    """Re-running wizard: existing key_path loaded by hydration counts as a credential."""
+    data = {**VALID_HOSTING_SITEGROUND,
+            'sg-ssh_private_key': '',
+            'sg-password': '',
+            'sg-existing_key_path': '/abs/path/to/siteground.key'}
     assert validate_hosting(data) == []
 
 
@@ -263,8 +286,18 @@ def test_build_hosting_siteground_emits_correct_keys():
     assert sg['host'] == 'ssh.example.com'
     assert sg['port'] == 18765  # must be int
     assert sg['user'] == 'u123-user'
-    assert sg['key_path'] == '/home/user/.ssh/id_rsa'
+    # Pasted key → build_hosting emits the relative target path;
+    # server./write-config resolves it to an absolute path and writes the key.
+    assert sg['key_path'] == 'workflow/state/siteground.key'
     assert sg['base_remote_path'] == '/home/user/public_html'
+
+
+def test_build_hosting_siteground_preserves_existing_key_path_when_no_paste():
+    data = {**VALID_HOSTING_SITEGROUND,
+            'sg-ssh_private_key': '',
+            'sg-existing_key_path': '/abs/previously/configured.key'}
+    result = build_hosting(data)
+    assert result['siteground']['key_path'] == '/abs/previously/configured.key'
 
 
 def test_build_hosting_stores_hosting_provider():

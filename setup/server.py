@@ -385,9 +385,51 @@ def write_config():
             "error": "existing config files detected — set overwrite_confirmed to proceed",
         }), 409
 
+    _persist_siteground_key_if_pasted()
     env_str, yaml_str = builder.build_final_outputs(_wizard_state)
     _write_config_pair(env_path, env_str, config_path, yaml_str)
     return jsonify({"ok": True, "next_step": "/step/done"})
+
+
+def _persist_siteground_key_if_pasted() -> None:
+    """If the user pasted a SiteGround private key, write it to workflow/state/
+    with 0600 perms and rewrite the wizard state so the YAML gets the absolute
+    path. If no key was pasted, leave existing key_path alone.
+    """
+    key_contents = builder.extract_siteground_key(_wizard_state)
+    if not key_contents:
+        # No paste — drop any transient form field and keep existing_key_path
+        # as the effective key_path in state.
+        _wizard_state.pop('sg-ssh_private_key', None)
+        return
+
+    key_path = (REPO_ROOT / builder.SITEGROUND_KEY_RELPATH).resolve()
+    key_path.parent.mkdir(parents=True, exist_ok=True)
+
+    # Atomic write + 0600 perms
+    fd, tmp = tempfile.mkstemp(dir=key_path.parent, prefix='.siteground.key.')
+    try:
+        with os.fdopen(fd, 'w', encoding='utf-8') as f:
+            f.write(key_contents)
+            f.flush()
+            os.fsync(f.fileno())
+        os.chmod(tmp, 0o600)
+        os.replace(tmp, str(key_path))
+        tmp = None
+    finally:
+        if tmp and os.path.exists(tmp):
+            try:
+                os.unlink(tmp)
+            except OSError:
+                pass
+
+    # Rewrite wizard state so build_final_outputs emits the absolute path
+    sg = _wizard_state.get('siteground')
+    if isinstance(sg, dict):
+        sg['key_path'] = str(key_path)
+    _wizard_state['sg-existing_key_path'] = str(key_path)
+    # Secret has been persisted — drop the textarea content from state
+    _wizard_state.pop('sg-ssh_private_key', None)
 
 
 def _write_config_pair(env_path: Path, env_str: str, config_path: Path, yaml_str: str) -> None:

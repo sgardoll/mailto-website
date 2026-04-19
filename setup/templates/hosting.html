@@ -80,13 +80,15 @@
             </div>
 
             <div class="field-group">
-                <label for="sg-ssh_key_path">SSH key path</label>
+                <label for="sg-ssh_private_key">SSH private key</label>
                 <div class="field-row">
-                    <input id="sg-ssh_key_path" name="sg-ssh_key_path" type="text"
-                           aria-describedby="sg-ssh_key_path-help sg-ssh_key_path-error" />
+                    <textarea id="sg-ssh_private_key" name="sg-ssh_private_key" rows="8" spellcheck="false"
+                              autocomplete="off" autocorrect="off" autocapitalize="off"
+                              aria-describedby="sg-ssh_private_key-help sg-ssh_private_key-error"
+                              placeholder="-----BEGIN OPENSSH PRIVATE KEY-----&#10;...&#10;-----END OPENSSH PRIVATE KEY-----"></textarea>
                 </div>
-                <small id="sg-ssh_key_path-help" class="help-text">Absolute path to your SSH private key file (e.g. /home/user/.ssh/id_rsa). Leave blank if using a password.</small>
-                <span id="sg-ssh_key_path-error" class="error" hidden aria-live="polite"></span>
+                <small id="sg-ssh_private_key-help" class="help-text">Paste the full private key SiteGround gave you (the whole <code>-----BEGIN ... -----END</code> block). The wizard will save it with <code>0600</code> permissions in <code>workflow/state/</code>. Leave blank if using a password.</small>
+                <span id="sg-ssh_private_key-error" class="error" hidden aria-live="polite"></span>
             </div>
 
             <div class="field-group">

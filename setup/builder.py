@@ -82,6 +82,35 @@ def build(form_data: dict) -> tuple[str, str]:
 _VALID_PROVIDERS = {'siteground', 'ssh_sftp', 'netlify', 'vercel', 'github_pages'}
 _SSH_PROVIDERS = {'siteground', 'ssh_sftp'}
 _SSH_PREFIX = {'siteground': 'sg-', 'ssh_sftp': 'ssh-'}
+
+# Where the wizard writes pasted SSH keys. Relative to the repo root;
+# the server resolves this against the actual project root.
+SITEGROUND_KEY_RELPATH = 'workflow/state/siteground.key'
+
+
+def _looks_like_private_key(text: str) -> bool:
+    """True if text is a plausible OpenSSH/PEM private key block."""
+    t = text.strip()
+    if '-----BEGIN' not in t or '-----END' not in t:
+        return False
+    # Reject absolute paths that happen to contain the marker text
+    if '\n' not in t:
+        return False
+    return t.startswith('-----BEGIN') and t.rstrip().endswith('-----')
+
+
+def extract_siteground_key(form_data: dict) -> str | None:
+    """Return the pasted SiteGround SSH private key, normalized, or None.
+    Newlines normalized to \\n; trailing newline ensured. Used by the server
+    write step to persist the key to disk before YAML output is written.
+    """
+    raw = form_data.get('sg-ssh_private_key', '')
+    if not raw or not raw.strip():
+        return None
+    key = raw.replace('\r\n', '\n').replace('\r', '\n').strip()
+    if not key.endswith('\n'):
+        key = key + '\n'
+    return key
 _API_PROVIDERS = {'netlify', 'vercel'}
 _URL_RE = re.compile(r'^https?://', re.IGNORECASE)
 
@@ -113,11 +142,23 @@ def validate_hosting(form_data: dict) -> list[dict]:
         username = form_data.get(f'{prefix}username', '').strip()
         if not username:
             errors.append({'field': f'{prefix}username', 'message': 'Username is required'})
-        key_path = form_data.get(f'{prefix}ssh_key_path', '').strip()
         password = form_data.get(f'{prefix}password', '').strip()
-        if not key_path and not password:
-            errors.append({'field': f'{prefix}ssh_key_path',
-                           'message': 'Enter an SSH key path or a password — at least one is required'})
+        if provider == 'siteground':
+            # SiteGround: pasteable private key textarea replaces the legacy path input.
+            key_contents = form_data.get(f'{prefix}ssh_private_key', '').strip()
+            existing_key_path = (form_data.get(f'{prefix}existing_key_path') or '').strip()
+            if key_contents:
+                if not _looks_like_private_key(key_contents):
+                    errors.append({'field': f'{prefix}ssh_private_key',
+                                   'message': 'Paste the full key including -----BEGIN ... -----END lines'})
+            elif not password and not existing_key_path:
+                errors.append({'field': f'{prefix}ssh_private_key',
+                               'message': 'Paste an SSH private key or enter a password — at least one is required'})
+        else:
+            key_path = form_data.get(f'{prefix}ssh_key_path', '').strip()
+            if not key_path and not password:
+                errors.append({'field': f'{prefix}ssh_key_path',
+                               'message': 'Enter an SSH key path or a password — at least one is required'})
         remote_base_path = form_data.get(f'{prefix}remote_base_path', '').strip()
         if not remote_base_path:
             errors.append({'field': f'{prefix}remote_base_path', 'message': 'Remote base path is required'})
@@ -157,11 +198,24 @@ def build_hosting(form_data: dict) -> dict:
     if provider in _SSH_PROVIDERS:
         prefix = _SSH_PREFIX[provider]
         section_key = 'siteground' if provider == 'siteground' else 'ssh_sftp'
+        if provider == 'siteground':
+            # Pasted key → the server will write to SITEGROUND_KEY_RELPATH and
+            # set key_path to its absolute form. At build-hosting time we
+            # emit the relative path; the server rewrites to absolute before
+            # final YAML assembly if it actually wrote a key.
+            pasted = form_data.get('sg-ssh_private_key', '').strip()
+            existing = (form_data.get('sg-existing_key_path') or '').strip()
+            if pasted:
+                key_path = SITEGROUND_KEY_RELPATH
+            else:
+                key_path = existing
+        else:
+            key_path = form_data.get(f'{prefix}ssh_key_path', '').strip()
         result[section_key] = {
             'host': form_data.get(f'{prefix}host', '').strip(),
             'port': int(form_data.get(f'{prefix}port', 22)),
             'user': form_data.get(f'{prefix}username', '').strip(),
-            'key_path': form_data.get(f'{prefix}ssh_key_path', '').strip(),
+            'key_path': key_path,
             'password': form_data.get(f'{prefix}password', '').strip(),
             'base_remote_path': form_data.get(f'{prefix}remote_base_path', '').strip(),
         }
@@ -499,7 +553,10 @@ def hydrate_wizard_state(env_values: dict, config_values: dict) -> dict:
             'sg-host': provider_section.get('host', ''),
             'sg-port': provider_section.get('port', 18765),
             'sg-username': provider_section.get('user', ''),
-            'sg-ssh_key_path': provider_section.get('key_path', ''),
+            # SiteGround key is pasted, never prefilled back into the textarea.
+            # existing_key_path lets validation know a key is already configured.
+            'sg-ssh_private_key': '',
+            'sg-existing_key_path': provider_section.get('key_path', ''),
             'sg-password': provider_section.get('password', ''),
             'sg-remote_base_path': provider_section.get('base_remote_path', ''),
         })
