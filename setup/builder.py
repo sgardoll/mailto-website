@@ -1,4 +1,7 @@
+import json
 import re
+import urllib.error
+import urllib.request
 
 import yaml
 
@@ -67,6 +70,12 @@ def build(form_data: dict) -> tuple[str, str]:
 _VALID_PROVIDERS = {'siteground', 'ssh_sftp', 'netlify', 'vercel', 'github_pages'}
 _SSH_PROVIDERS = {'siteground', 'ssh_sftp'}
 _SSH_PREFIX = {'siteground': 'sg-', 'ssh_sftp': 'ssh-'}
+_API_PROVIDERS = {'netlify', 'vercel'}
+_URL_RE = re.compile(r'^https?://', re.IGNORECASE)
+
+
+def _needs_manual_site_base_url(provider: str) -> bool:
+    return provider in _SSH_PROVIDERS or provider == 'github_pages'
 
 
 def validate_hosting(form_data: dict) -> list[dict]:
@@ -117,11 +126,19 @@ def validate_hosting(form_data: dict) -> list[dict]:
         if not form_data.get('gh_pages_branch', '').strip():
             errors.append({'field': 'gh_pages_branch', 'message': 'Target branch is required'})
 
+    if _needs_manual_site_base_url(provider):
+        site_base_url = form_data.get('site_base_url', '').strip()
+        if not site_base_url:
+            errors.append({'field': 'site_base_url', 'message': 'Site base URL is required'})
+        elif not _URL_RE.match(site_base_url):
+            errors.append({'field': 'site_base_url',
+                           'message': 'Enter a valid URL (e.g. https://example.com)'})
+
     return errors
 
 
 def build_hosting(form_data: dict) -> dict:
-    """Return provider-keyed YAML section dict plus hosting_provider key."""
+    """Return provider-keyed YAML section dict plus hosting_provider and site_base_url keys."""
     provider = form_data['hosting_provider']
     result = {'hosting_provider': provider}
 
@@ -151,14 +168,67 @@ def build_hosting(form_data: dict) -> dict:
             'branch': form_data.get('gh_pages_branch', '').strip() or 'gh-pages',
         }
 
+    site_base_url = form_data.get('site_base_url', '').strip()
+    if site_base_url:
+        result['site_base_url'] = site_base_url.rstrip('/')
+
     return result
+
+
+class ProviderLookupError(Exception):
+    """Raised when the provider API cannot resolve a site base URL."""
+
+
+def _http_get_json(url: str, headers: dict, timeout: int = 10) -> dict:
+    req = urllib.request.Request(url, headers=headers, method='GET')
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            return json.loads(resp.read().decode('utf-8'))
+    except urllib.error.HTTPError as e:
+        raise ProviderLookupError(f'HTTP {e.code}: {e.reason}') from e
+    except (urllib.error.URLError, TimeoutError, OSError) as e:
+        raise ProviderLookupError(f'Network error: {e}') from e
+
+
+def fetch_netlify_site_url(api_token: str, site_id: str) -> str:
+    """Return the public HTTPS URL for a Netlify site, raising ProviderLookupError on failure."""
+    data = _http_get_json(
+        f'https://api.netlify.com/api/v1/sites/{site_id}',
+        {'Authorization': f'Bearer {api_token}'},
+    )
+    url = data.get('ssl_url') or data.get('url')
+    if not url:
+        raise ProviderLookupError('Netlify site has no public URL yet')
+    return url.rstrip('/')
+
+
+def fetch_vercel_project_url(api_token: str, project_id: str) -> str:
+    """Return the public HTTPS URL for a Vercel project, raising ProviderLookupError on failure."""
+    data = _http_get_json(
+        f'https://api.vercel.com/v9/projects/{project_id}',
+        {'Authorization': f'Bearer {api_token}'},
+    )
+    targets = data.get('targets') or {}
+    production = targets.get('production') or {}
+    aliases = production.get('alias') or []
+    if aliases:
+        host = aliases[0]
+        return f'https://{host}' if not host.startswith('http') else host.rstrip('/')
+    name = data.get('name')
+    if name:
+        return f'https://{name}.vercel.app'
+    raise ProviderLookupError('Vercel project has no public URL or name yet')
 
 
 _SLUG_RE = re.compile(r'^[a-z0-9-]+$')
 
 
 def validate_inboxes(form_data: dict) -> list[dict]:
-    """Return list of {field, message[, index]} dicts for the inboxes step."""
+    """Return list of {field, message[, index]} dicts for the inboxes step.
+
+    Each inbox only carries `slug` and `site_name` from the form — address,
+    site_url and site_base are derived during build_inboxes().
+    """
     errors = []
     inboxes = form_data.get('inboxes', None)
     if not isinstance(inboxes, list) or len(inboxes) == 0:
@@ -175,23 +245,9 @@ def validate_inboxes(form_data: dict) -> list[dict]:
                            'message': 'Slug may only contain lowercase letters, numbers, and hyphens'})
         slugs.append(slug)
 
-        email = inbox.get('email', '').strip()
-        if not email or '@' not in email:
-            errors.append({'field': 'inbox_email', 'index': i, 'message': 'Enter a valid email address'})
-
         if not inbox.get('site_name', '').strip():
             errors.append({'field': 'inbox_site_name', 'index': i, 'message': 'Site name is required'})
 
-        site_url = inbox.get('site_url', '').strip()
-        if not (site_url.startswith('http://') or site_url.startswith('https://')):
-            errors.append({'field': 'inbox_site_url', 'index': i,
-                           'message': 'Enter a valid URL (e.g. https://example.com)'})
-
-        base_path = inbox.get('base_path', '').strip()
-        if not base_path or not base_path.startswith('/'):
-            errors.append({'field': 'inbox_base_path', 'index': i, 'message': 'Base path must start with /'})
-
-    # Slug uniqueness check
     seen = {}
     for i, slug in enumerate(slugs):
         if not slug:
@@ -209,16 +265,23 @@ def validate_inboxes(form_data: dict) -> list[dict]:
     return errors
 
 
-def build_inboxes(form_data: dict) -> dict:
-    """Return inboxes list dict per config.example.yaml shape."""
+def _gmail_plus_alias(gmail_address: str, slug: str) -> str:
+    local, _, domain = gmail_address.partition('@')
+    return f'{local}+{slug}@{domain}'
+
+
+def build_inboxes(form_data: dict, gmail_address: str, site_base_url: str) -> dict:
+    """Return inboxes list dict with address, site_url, site_base derived from slug."""
+    base = site_base_url.rstrip('/') if site_base_url else ''
     inboxes = []
     for inbox in form_data.get('inboxes', []):
+        slug = inbox['slug'].strip()
         inboxes.append({
-            'slug': inbox['slug'].strip(),
-            'address': inbox['email'].strip(),
+            'slug': slug,
+            'address': _gmail_plus_alias(gmail_address.strip(), slug),
             'site_name': inbox['site_name'].strip(),
-            'site_url': inbox['site_url'].strip(),
-            'site_base': inbox['base_path'].strip(),
+            'site_url': f'{base}/{slug}' if base else '',
+            'site_base': f'/{slug}/',
             'allowed_senders': [],
         })
     return {'inboxes': inboxes}

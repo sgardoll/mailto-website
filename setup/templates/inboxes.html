@@ -31,6 +31,13 @@
     <section class="form-section" aria-labelledby="inboxes-heading">
         <h2 id="inboxes-heading">Inboxes</h2>
 
+        <p class="help-text" style="margin-bottom: 1rem;">
+            Each inbox is one project the platform will build for you. We derive the monitoring address
+            (<code>youremail+slug@gmail.com</code>) and the published URL from your Gmail address and the
+            site base URL you gave on the Hosting step — so you only need a short slug and a human-readable
+            site name per project.
+        </p>
+
         <!-- Hidden template for JS cloning (not rendered by browser) -->
         <template id="inbox-row-template">
             <div class="inbox-row">
@@ -49,40 +56,11 @@
                         <span class="error" hidden aria-live="polite"></span>
                     </div>
                     <div class="field-group">
-                        <label>Email address</label>
-                        <small class="help-text">The email address monitored for this inbox.</small>
-                        <div class="field-row">
-                            <input type="email" class="inbox-email" name="inbox_email[]"
-                                   autocomplete="off" aria-describedby="" aria-invalid="false" />
-                        </div>
-                        <span class="error" hidden aria-live="polite"></span>
-                    </div>
-                </div>
-                <div class="field-row-thirds">
-                    <div class="field-group">
                         <label>Site name</label>
                         <small class="help-text">A human-readable name for the site this inbox publishes to.</small>
                         <div class="field-row">
                             <input type="text" class="inbox-site-name" name="inbox_site_name[]"
                                    aria-describedby="" aria-invalid="false" />
-                        </div>
-                        <span class="error" hidden aria-live="polite"></span>
-                    </div>
-                    <div class="field-group">
-                        <label>Site URL</label>
-                        <small class="help-text">The public URL of the site (e.g. https://example.com).</small>
-                        <div class="field-row">
-                            <input type="url" class="inbox-site-url" name="inbox_site_url[]"
-                                   aria-describedby="" aria-invalid="false" />
-                        </div>
-                        <span class="error" hidden aria-live="polite"></span>
-                    </div>
-                    <div class="field-group">
-                        <label>Base path</label>
-                        <small class="help-text">URL base path for site content. Use / for root.</small>
-                        <div class="field-row">
-                            <input type="text" class="inbox-base-path" name="inbox_base_path[]"
-                                   value="/" aria-describedby="" aria-invalid="false" />
                         </div>
                         <span class="error" hidden aria-live="polite"></span>
                     </div>
@@ -108,17 +86,6 @@
                         <span id="inbox-slug-1-error" class="error" hidden aria-live="polite"></span>
                     </div>
                     <div class="field-group">
-                        <label for="inbox-email-1">Email address</label>
-                        <small id="inbox-email-1-help" class="help-text">The email address monitored for this inbox.</small>
-                        <div class="field-row">
-                            <input type="email" id="inbox-email-1" class="inbox-email" name="inbox_email[]"
-                                   autocomplete="off" aria-describedby="inbox-email-1-help inbox-email-1-error" aria-invalid="false" />
-                        </div>
-                        <span id="inbox-email-1-error" class="error" hidden aria-live="polite"></span>
-                    </div>
-                </div>
-                <div class="field-row-thirds">
-                    <div class="field-group">
                         <label for="inbox-site-name-1">Site name</label>
                         <small id="inbox-site-name-1-help" class="help-text">A human-readable name for the site this inbox publishes to.</small>
                         <div class="field-row">
@@ -126,24 +93,6 @@
                                    aria-describedby="inbox-site-name-1-help inbox-site-name-1-error" aria-invalid="false" />
                         </div>
                         <span id="inbox-site-name-1-error" class="error" hidden aria-live="polite"></span>
-                    </div>
-                    <div class="field-group">
-                        <label for="inbox-site-url-1">Site URL</label>
-                        <small id="inbox-site-url-1-help" class="help-text">The public URL of the site (e.g. https://example.com).</small>
-                        <div class="field-row">
-                            <input type="url" id="inbox-site-url-1" class="inbox-site-url" name="inbox_site_url[]"
-                                   aria-describedby="inbox-site-url-1-help inbox-site-url-1-error" aria-invalid="false" />
-                        </div>
-                        <span id="inbox-site-url-1-error" class="error" hidden aria-live="polite"></span>
-                    </div>
-                    <div class="field-group">
-                        <label for="inbox-base-path-1">Base path</label>
-                        <small id="inbox-base-path-1-help" class="help-text">URL base path for site content. Use / for root.</small>
-                        <div class="field-row">
-                            <input type="text" id="inbox-base-path-1" class="inbox-base-path" name="inbox_base_path[]"
-                                   value="/" aria-describedby="inbox-base-path-1-help inbox-base-path-1-error" aria-invalid="false" />
-                        </div>
-                        <span id="inbox-base-path-1-error" class="error" hidden aria-live="polite"></span>
                     </div>
                 </div>
             </div>

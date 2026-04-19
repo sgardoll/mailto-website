@@ -121,6 +121,30 @@ def validate_form():
         errors = builder.validate_hosting(data)
         next_step = '/step/inboxes'
         if not errors:
+            provider = data.get('hosting_provider', '')
+            if provider == 'netlify':
+                try:
+                    data['site_base_url'] = builder.fetch_netlify_site_url(
+                        data.get('netlify_api_token', '').strip(),
+                        data.get('netlify_site_id', '').strip(),
+                    )
+                except builder.ProviderLookupError as e:
+                    return jsonify({"ok": False, "errors": [{
+                        "field": "netlify_site_id",
+                        "message": f"Could not fetch site URL from Netlify: {e}",
+                    }]}), 400
+            elif provider == 'vercel':
+                try:
+                    data['site_base_url'] = builder.fetch_vercel_project_url(
+                        data.get('vercel_api_token', '').strip(),
+                        data.get('vercel_project_id', '').strip(),
+                    )
+                except builder.ProviderLookupError as e:
+                    return jsonify({"ok": False, "errors": [{
+                        "field": "vercel_project_id",
+                        "message": f"Could not fetch project URL from Vercel: {e}",
+                    }]}), 400
+
             hosting_data = builder.build_hosting(data)
             _wizard_state.update(hosting_data)
             return jsonify({"ok": True, "next_step": next_step})
@@ -129,7 +153,19 @@ def validate_form():
         errors = builder.validate_inboxes(data)
         next_step = '/step/preview'
         if not errors:
-            inboxes_data = builder.build_inboxes(data)
+            gmail_address = _wizard_state.get('gmail_address', '').strip()
+            site_base_url = _wizard_state.get('site_base_url', '').strip()
+            if not gmail_address:
+                return jsonify({"ok": False, "errors": [{
+                    "field": "inboxes",
+                    "message": "Gmail address missing — return to the Gmail step.",
+                }]}), 400
+            if not site_base_url:
+                return jsonify({"ok": False, "errors": [{
+                    "field": "inboxes",
+                    "message": "Site base URL missing — return to the Hosting step.",
+                }]}), 400
+            inboxes_data = builder.build_inboxes(data, gmail_address, site_base_url)
             _wizard_state.update(inboxes_data)
             return jsonify({"ok": True, "next_step": next_step})
 

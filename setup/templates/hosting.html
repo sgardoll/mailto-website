@@ -249,6 +249,18 @@
 
         </div>
 
+        <!-- ── Site base URL (manual for SSH/GitHub Pages, auto for Netlify/Vercel) ── -->
+        <div id="site-base-url-group" class="field-group">
+            <label for="site-base-url">Site base URL</label>
+            <div class="field-row">
+                <input id="site-base-url" name="site_base_url" type="url"
+                       placeholder="https://yourdomain.com"
+                       aria-describedby="site-base-url-help site-base-url-error" />
+            </div>
+            <small id="site-base-url-help" class="help-text">The public URL where your sites will be served. Each inbox slug is appended as a path (e.g. https://yourdomain.com/guitar). For Netlify and Vercel, this is fetched automatically from their API using your token.</small>
+            <span id="site-base-url-error" class="error" hidden aria-live="polite"></span>
+        </div>
+
     </section>
 
     <!-- ── Actions ───────────────────────────────────────────── -->

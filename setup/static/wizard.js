@@ -426,9 +426,11 @@
         }
 
         showProvider(select.value);
+        toggleSiteBaseUrl();
 
         select.addEventListener('change', function() {
             showProvider(this.value);
+            toggleSiteBaseUrl();
         });
 
         // Validation rules
@@ -497,6 +499,15 @@
         // GitHub Pages validations
         attachFieldValidation('gh-pages-branch', ruleRequired('Target branch is required'));
 
+        // Site base URL validation (only when manual — SSH/GitHub Pages)
+        attachFieldValidation('site-base-url', function(input) {
+            if (!siteBaseUrlIsManual(select.value)) return '';
+            var v = input.value.trim();
+            if (!v) return 'Site base URL is required';
+            if (!/^https?:\/\//i.test(v)) return 'Enter a valid URL (e.g. https://example.com)';
+            return '';
+        });
+
         // -- Form submit ---------------------------------------------------------
         function validateVisibleProvider() {
             var provider = select.value;
@@ -550,7 +561,31 @@
                 } else { clearFieldError('gh-pages-branch'); }
             }
 
+            if (siteBaseUrlIsManual(provider)) {
+                var baseInput = document.getElementById('site-base-url');
+                var baseVal = baseInput ? baseInput.value.trim() : '';
+                if (!baseVal) {
+                    showFieldError('site-base-url', 'Site base URL is required'); errors.push(1);
+                } else if (!/^https?:\/\//i.test(baseVal)) {
+                    showFieldError('site-base-url', 'Enter a valid URL (e.g. https://example.com)'); errors.push(1);
+                } else { clearFieldError('site-base-url'); }
+            } else {
+                clearFieldError('site-base-url');
+            }
+
             return errors.length === 0;
+        }
+
+        function siteBaseUrlIsManual(provider) {
+            return provider === 'siteground' || provider === 'ssh_sftp' || provider === 'github_pages';
+        }
+
+        function toggleSiteBaseUrl() {
+            var group = document.getElementById('site-base-url-group');
+            if (!group) return;
+            var show = siteBaseUrlIsManual(select.value);
+            group.hidden = !show;
+            group.setAttribute('aria-hidden', show ? 'false' : 'true');
         }
 
         function buildHostingPayload() {
@@ -573,6 +608,11 @@
                 payload['vercel_project_id'] = document.getElementById('vercel-project-id').value.trim();
             } else if (provider === 'github_pages') {
                 payload['gh_pages_branch'] = document.getElementById('gh-pages-branch').value.trim();
+            }
+
+            if (siteBaseUrlIsManual(provider)) {
+                var base = document.getElementById('site-base-url');
+                if (base) payload['site_base_url'] = base.value.trim();
             }
 
             return payload;
@@ -711,17 +751,6 @@
             return true;
         }
 
-        function validateEmailInput(input) {
-            var span = input.closest('.field-group').querySelector('.error');
-            var val = input.value.trim();
-            if (!val || input.validity.typeMismatch || !val.includes('@')) {
-                showErrSpan(span, input, 'Enter a valid email address');
-                return false;
-            }
-            clearErrSpan(span, input);
-            return true;
-        }
-
         function validateSiteNameInput(input) {
             var span = input.closest('.field-group').querySelector('.error');
             if (!input.value.trim()) {
@@ -732,38 +761,11 @@
             return true;
         }
 
-        function validateSiteUrlInput(input) {
-            var span = input.closest('.field-group').querySelector('.error');
-            var val = input.value.trim();
-            var valid = false;
-            try { new URL(val); valid = true; } catch(e) {}
-            if (!valid) {
-                showErrSpan(span, input, 'Enter a valid URL (e.g. https://example.com)');
-                return false;
-            }
-            clearErrSpan(span, input);
-            return true;
-        }
-
-        function validateBasePathInput(input) {
-            var span = input.closest('.field-group').querySelector('.error');
-            var val = input.value.trim();
-            if (!val || val[0] !== '/') {
-                showErrSpan(span, input, 'Base path must start with /');
-                return false;
-            }
-            clearErrSpan(span, input);
-            return true;
-        }
-
         // -- Attach validation to a row's inputs ----------------------------
 
         function attachRowValidation(row) {
             var slugInput = row.querySelector('.inbox-slug');
-            var emailInput = row.querySelector('.inbox-email');
             var siteNameInput = row.querySelector('.inbox-site-name');
-            var siteUrlInput = row.querySelector('.inbox-site-url');
-            var basePathInput = row.querySelector('.inbox-base-path');
 
             function makeTouched(input, validator) {
                 var touched = false;
@@ -781,10 +783,7 @@
             }
 
             if (slugInput) makeTouched(slugInput, validateSlugInput);
-            if (emailInput) makeTouched(emailInput, validateEmailInput);
             if (siteNameInput) makeTouched(siteNameInput, validateSiteNameInput);
-            if (siteUrlInput) makeTouched(siteUrlInput, validateSiteUrlInput);
-            if (basePathInput) makeTouched(basePathInput, validateBasePathInput);
         }
 
         // -- Clone and add new row ------------------------------------------
@@ -808,10 +807,7 @@
             // Assign IDs and aria-describedby to each input
             var fields = [
                 {cls: 'inbox-slug', base: 'inbox-slug-' + n},
-                {cls: 'inbox-email', base: 'inbox-email-' + n},
                 {cls: 'inbox-site-name', base: 'inbox-site-name-' + n},
-                {cls: 'inbox-site-url', base: 'inbox-site-url-' + n},
-                {cls: 'inbox-base-path', base: 'inbox-base-path-' + n},
             ];
             fields.forEach(function(f) {
                 var input = row.querySelector('.' + f.cls);
@@ -864,14 +860,10 @@
             var ok = true;
             inboxesList.querySelectorAll('.inbox-row').forEach(function(row) {
                 var s = validateSlugInput(row.querySelector('.inbox-slug'));
-                var e = validateEmailInput(row.querySelector('.inbox-email'));
                 var n = validateSiteNameInput(row.querySelector('.inbox-site-name'));
-                var u = validateSiteUrlInput(row.querySelector('.inbox-site-url'));
-                var b = validateBasePathInput(row.querySelector('.inbox-base-path'));
-                if (!s || !e || !n || !u || !b) ok = false;
+                if (!s || !n) ok = false;
             });
             validateAllSlugs();
-            // Check if any slug still has error after uniqueness check
             if (inboxesList.querySelectorAll('.inbox-slug[aria-invalid="true"]').length > 0) ok = false;
             return ok;
         }
@@ -881,10 +873,7 @@
             inboxesList.querySelectorAll('.inbox-row').forEach(function(row) {
                 inboxes.push({
                     slug: row.querySelector('.inbox-slug').value.trim(),
-                    email: row.querySelector('.inbox-email').value.trim(),
                     site_name: row.querySelector('.inbox-site-name').value.trim(),
-                    site_url: row.querySelector('.inbox-site-url').value.trim(),
-                    base_path: row.querySelector('.inbox-base-path').value.trim(),
                 });
             });
             return {step: 'inboxes', inboxes: inboxes};
@@ -921,10 +910,7 @@
                                     if (row) {
                                         var clsMap = {
                                             inbox_slug: '.inbox-slug',
-                                            inbox_email: '.inbox-email',
                                             inbox_site_name: '.inbox-site-name',
-                                            inbox_site_url: '.inbox-site-url',
-                                            inbox_base_path: '.inbox-base-path',
                                         };
                                         var cls = clsMap[err.field];
                                         if (cls) {

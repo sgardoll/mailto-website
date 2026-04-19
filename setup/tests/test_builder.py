@@ -4,7 +4,12 @@ import json
 import yaml
 import pytest
 
-from setup.builder import validate, build, validate_hosting, build_hosting, validate_inboxes, build_inboxes
+from unittest.mock import patch
+
+from setup.builder import (
+    validate, build, validate_hosting, build_hosting, validate_inboxes, build_inboxes,
+    fetch_netlify_site_url, fetch_vercel_project_url, ProviderLookupError,
+)
 
 
 VALID_DATA = {
@@ -174,6 +179,7 @@ VALID_HOSTING_SITEGROUND = {
     'sg-ssh_key_path': '/home/user/.ssh/id_rsa',
     'sg-password': '',
     'sg-remote_base_path': '/home/user/public_html',
+    'site_base_url': 'https://example.com',
 }
 
 VALID_HOSTING_NETLIFY = {
@@ -191,6 +197,7 @@ VALID_HOSTING_VERCEL = {
 VALID_HOSTING_GITHUB_PAGES = {
     'hosting_provider': 'github_pages',
     'gh_pages_branch': 'gh-pages',
+    'site_base_url': 'https://user.github.io/repo',
 }
 
 
@@ -269,19 +276,44 @@ def test_build_hosting_netlify_keys():
 
 
 def test_build_hosting_github_pages_uses_default_branch():
-    data = {'hosting_provider': 'github_pages', 'gh_pages_branch': ''}
+    data = {'hosting_provider': 'github_pages', 'gh_pages_branch': '', 'site_base_url': 'https://x.github.io/r'}
     result = build_hosting(data)
     assert result['github_pages']['branch'] == 'gh-pages'
+
+
+def test_validate_hosting_requires_site_base_url_for_siteground():
+    data = {**VALID_HOSTING_SITEGROUND, 'site_base_url': ''}
+    errors = validate_hosting(data)
+    assert any(e['field'] == 'site_base_url' and 'required' in e['message'].lower() for e in errors)
+
+
+def test_validate_hosting_rejects_non_url_site_base_url():
+    data = {**VALID_HOSTING_SITEGROUND, 'site_base_url': 'example.com'}
+    errors = validate_hosting(data)
+    assert any(e['field'] == 'site_base_url' and 'valid url' in e['message'].lower() for e in errors)
+
+
+def test_validate_hosting_does_not_require_site_base_url_for_netlify():
+    # Netlify resolves the URL via API, so the form does not collect it.
+    assert validate_hosting(VALID_HOSTING_NETLIFY) == []
+
+
+def test_validate_hosting_does_not_require_site_base_url_for_vercel():
+    assert validate_hosting(VALID_HOSTING_VERCEL) == []
+
+
+def test_build_hosting_includes_site_base_url_stripped_of_trailing_slash():
+    data = {**VALID_HOSTING_SITEGROUND, 'site_base_url': 'https://example.com/'}
+    result = build_hosting(data)
+    assert result['site_base_url'] == 'https://example.com'
 
 
 # -- Phase 3: validate_inboxes / build_inboxes tests --------------------------
 
 VALID_INBOXES_DATA = {
     'inboxes': [
-        {'slug': 'guitar', 'email': 'me+guitar@gmail.com', 'site_name': 'Guitar Notes',
-         'site_url': 'https://example.com/guitar', 'base_path': '/guitar/'},
-        {'slug': 'cooking', 'email': 'me+cooking@gmail.com', 'site_name': 'Cooking Notes',
-         'site_url': 'https://example.com/cooking', 'base_path': '/cooking/'},
+        {'slug': 'guitar', 'site_name': 'Guitar Notes'},
+        {'slug': 'cooking', 'site_name': 'Cooking Notes'},
     ]
 }
 
@@ -301,48 +333,35 @@ def test_validate_inboxes_rejects_missing_inboxes_key():
 
 
 def test_validate_inboxes_rejects_invalid_slug_format():
-    data = {'inboxes': [{**VALID_INBOXES_DATA['inboxes'][0], 'slug': 'My Inbox!'}]}
+    data = {'inboxes': [{'slug': 'My Inbox!', 'site_name': 'X'}]}
     errors = validate_inboxes(data)
     assert any(e['field'] == 'inbox_slug' and e['index'] == 0 for e in errors)
 
 
 def test_validate_inboxes_rejects_empty_slug():
-    data = {'inboxes': [{**VALID_INBOXES_DATA['inboxes'][0], 'slug': ''}]}
+    data = {'inboxes': [{'slug': '', 'site_name': 'X'}]}
     errors = validate_inboxes(data)
     assert any(e['field'] == 'inbox_slug' and e['index'] == 0 for e in errors)
 
 
+def test_validate_inboxes_requires_site_name():
+    data = {'inboxes': [{'slug': 'guitar', 'site_name': ''}]}
+    errors = validate_inboxes(data)
+    assert any(e['field'] == 'inbox_site_name' and e['index'] == 0 for e in errors)
+
+
 def test_validate_inboxes_rejects_duplicate_slugs():
     data = {'inboxes': [
-        {**VALID_INBOXES_DATA['inboxes'][0], 'slug': 'guitar'},
-        {**VALID_INBOXES_DATA['inboxes'][1], 'slug': 'guitar'},
+        {'slug': 'guitar', 'site_name': 'A'},
+        {'slug': 'guitar', 'site_name': 'B'},
     ]}
     errors = validate_inboxes(data)
     dup_errors = [e for e in errors if e.get('message') == 'Slug must be unique across all inboxes']
-    assert len(dup_errors) == 2  # both rows get the error
+    assert len(dup_errors) == 2
 
 
-def test_validate_inboxes_rejects_invalid_email():
-    data = {'inboxes': [{**VALID_INBOXES_DATA['inboxes'][0], 'email': 'notanemail'}]}
-    errors = validate_inboxes(data)
-    assert any(e['field'] == 'inbox_email' and e['index'] == 0 for e in errors)
-
-
-def test_validate_inboxes_rejects_base_path_without_slash():
-    data = {'inboxes': [{**VALID_INBOXES_DATA['inboxes'][0], 'base_path': 'guitar/'}]}
-    errors = validate_inboxes(data)
-    assert any(e['field'] == 'inbox_base_path' and e['index'] == 0 for e in errors)
-
-
-def test_validate_inboxes_rejects_invalid_site_url():
-    data = {'inboxes': [{**VALID_INBOXES_DATA['inboxes'][0], 'site_url': 'not-a-url'}]}
-    errors = validate_inboxes(data)
-    assert any(e['field'] == 'inbox_site_url' and e['index'] == 0 for e in errors)
-
-
-def test_build_inboxes_maps_fields_correctly():
-    result = build_inboxes(VALID_INBOXES_DATA)
-    assert 'inboxes' in result
+def test_build_inboxes_derives_address_url_and_base_from_slug():
+    result = build_inboxes(VALID_INBOXES_DATA, 'me@gmail.com', 'https://example.com')
     first = result['inboxes'][0]
     assert first['slug'] == 'guitar'
     assert first['address'] == 'me+guitar@gmail.com'
@@ -352,7 +371,49 @@ def test_build_inboxes_maps_fields_correctly():
     assert first['allowed_senders'] == []
 
 
+def test_build_inboxes_strips_trailing_slash_from_site_base_url():
+    result = build_inboxes(VALID_INBOXES_DATA, 'me@gmail.com', 'https://example.com/')
+    assert result['inboxes'][0]['site_url'] == 'https://example.com/guitar'
+
+
 def test_build_inboxes_preserves_order():
-    result = build_inboxes(VALID_INBOXES_DATA)
+    result = build_inboxes(VALID_INBOXES_DATA, 'me@gmail.com', 'https://example.com')
     slugs = [i['slug'] for i in result['inboxes']]
     assert slugs == ['guitar', 'cooking']
+
+
+# -- Phase 3: provider URL lookup tests --------------------------------------
+
+class _FakeHTTPResponse:
+    def __init__(self, payload):
+        self._payload = json.dumps(payload).encode('utf-8')
+    def read(self):
+        return self._payload
+    def __enter__(self):
+        return self
+    def __exit__(self, *exc):
+        return False
+
+
+def test_fetch_netlify_site_url_prefers_ssl_url():
+    payload = {'ssl_url': 'https://site.netlify.app', 'url': 'http://site.netlify.app'}
+    with patch('setup.builder.urllib.request.urlopen', return_value=_FakeHTTPResponse(payload)):
+        assert fetch_netlify_site_url('tok', 'id') == 'https://site.netlify.app'
+
+
+def test_fetch_netlify_site_url_raises_on_missing_url():
+    with patch('setup.builder.urllib.request.urlopen', return_value=_FakeHTTPResponse({})):
+        with pytest.raises(ProviderLookupError):
+            fetch_netlify_site_url('tok', 'id')
+
+
+def test_fetch_vercel_project_url_uses_production_alias():
+    payload = {'targets': {'production': {'alias': ['my-proj.vercel.app']}}, 'name': 'my-proj'}
+    with patch('setup.builder.urllib.request.urlopen', return_value=_FakeHTTPResponse(payload)):
+        assert fetch_vercel_project_url('tok', 'proj') == 'https://my-proj.vercel.app'
+
+
+def test_fetch_vercel_project_url_falls_back_to_name():
+    payload = {'name': 'my-proj'}
+    with patch('setup.builder.urllib.request.urlopen', return_value=_FakeHTTPResponse(payload)):
+        assert fetch_vercel_project_url('tok', 'proj') == 'https://my-proj.vercel.app'
