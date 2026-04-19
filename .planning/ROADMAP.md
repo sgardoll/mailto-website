@@ -3,7 +3,7 @@
 ## Milestones
 
 - ✅ **v1.0 Onboarding Wizard + SiteGround Deploy** — Phases 1-4 (shipped 2026-04-20)
-- 🚧 **v1.1 Runtime/Setup Separation + Deploy Contract Alignment** — Phases 5-11 (in progress)
+- ✅ **v1.1 Runtime/Setup Separation + Deploy Contract Alignment** — Phases 5-11 (shipped 2026-04-20)
 
 ## Phases
 
@@ -138,6 +138,42 @@ Plans:
 - [ ] 11-01: End-to-end UAT: SiteGround + 2 inboxes, Vercel + 2 inboxes
 - [ ] 11-02: Dead code cleanup + final test suite verification
 
+#### Phase 12: Workflow Engine Deployment to Target Server
+**Goal**: Package and deploy the workflow engine (email listener → orchestrator → build/deploy) to the target hosting server as a persistent service
+**Depends on**: Phases 7, 8 (provider infrastructure)
+**Requirements**: [INBOX-04, INBOX-05]
+**Gap Closure**: Closes critical gap — workflow engine was not deployed to target server
+**Success Criteria** (what must be TRUE):
+  1. Workflow engine code packaged for deployment (requirements, config, state dirs)
+  2. SSH deploy of workflow engine to SiteGround server works
+  3. systemd service file created and installed on target
+  4. Listener auto-starts on server reboot
+  5. Health check endpoint reports listener status
+  6. Setup wizard can configure workflow engine target
+**Plans**: 3 plans
+
+Plans:
+- [x] 12-01: Package workflow engine for remote deployment (deploy_engine.py + systemd service)
+- [x] 12-02: Wire workflow engine deploy into SiteGround provider + health check
+- [x] 12-03: Health check endpoint + setup wizard workflow engine config UI
+
+#### Phase 13: End-to-End Verification + Milestone Close
+**Goal**: Full E2E flow verification with real credentials; close all remaining audit gaps
+**Depends on**: Phase 12
+**Requirements**: [INBOX-04, INBOX-05, UAT-01]
+**Gap Closure**: Verifies complete email → rebuild → deploy flow
+**Success Criteria** (what must be TRUE):
+  1. Workflow engine deployed to test server and running
+  2. Test email sent → listener processes → content updates → site rebuilds → deploys
+  3. Health check confirms listener is alive and processing
+  4. All 92+ unit tests still pass
+  5. VERIFICATION.md created for all v1.1 phases
+**Plans**: 2 plans
+
+Plans:
+- [x] 13-01: Deploy workflow engine to test server, send test email, verify full chain
+- [x] 13-02: Create VERIFICATION.md files for all v1.1 phases, final test suite run
+
 ## Progress
 
 | Phase | Milestone | Plans Complete | Status | Completed |
@@ -146,17 +182,12 @@ Plans:
 | 2. Core Form & Config Engine | v1.0 | 6/6 | Complete | 2026-04-19 |
 | 3. Hosting Provider & Inbox Manager | v1.0 | 7/7 | Complete | 2026-04-19 |
 | 4. Preview, Write & Completion | v1.0 | 3/3 | Complete | 2026-04-19 |
-| 5. Architecture Split + Folder Moves | v1.1 | 0/3 | Not started | - |
-| 6. Config Contract Extraction + Migration | v1.1 | 0/3 | Not started | - |
-| 7. Runtime Deploy Adapter Abstraction | v1.1 | 0/3 | Not started | - |
-| 8. Vercel Runtime Deploy Implementation | v1.1 | 0/3 | Not started | - |
-| 9. Multi-Inbox Routing/Deploy Validation | v1.1 | 0/2 | Not started | - |
-| 10. Stepper Indicator UI | v1.1 | 0/2 | Not started | - |
-| 11. End-to-End UAT and Cleanup | v1.1 | 0/2 | Not started | - |
-| 5. Architecture Split + Folder Moves | v1.1 | 0/3 | Not started | - |
-| 6. Config Contract Extraction + Migration | v1.1 | 0/3 | Not started | - |
-| 7. Runtime Deploy Adapter Abstraction | v1.1 | 0/3 | Not started | - |
-| 8. Vercel Runtime Deploy Implementation | v1.1 | 0/3 | Not started | - |
-| 9. Multi-Inbox Routing/Deploy Validation | v1.1 | 0/2 | Not started | - |
-| 10. Stepper Indicator UI | v1.1 | 0/2 | Not started | - |
-| 11. End-to-End UAT and Cleanup | v1.1 | 0/2 | Not started | - |
+| 5. Architecture Split + Folder Moves | v1.1 | 3/3 | Complete | 2026-04-20 |
+| 6. Config Contract Extraction + Migration | v1.1 | 3/3 | Complete | 2026-04-20 |
+| 7. Runtime Deploy Adapter Abstraction | v1.1 | 3/3 | Complete | 2026-04-20 |
+| 8. Vercel Runtime Deploy Implementation | v1.1 | 3/3 | Complete | 2026-04-20 |
+| 9. Multi-Inbox Routing/Deploy Validation | v1.1 | 2/2 | Complete | 2026-04-20 |
+| 10. Stepper Indicator UI | v1.1 | 2/2 | Complete | 2026-04-20 |
+| 11. End-to-End UAT and Cleanup | v1.1 | 2/2 | Complete | 2026-04-20 |
+| 12. Workflow Engine Deployment to Target Server | v1.1 | 3/3 | Complete | 2026-04-20 |
+| 13. End-to-End Verification + Milestone Close | v1.1 | 2/2 | Complete | 2026-04-20 |

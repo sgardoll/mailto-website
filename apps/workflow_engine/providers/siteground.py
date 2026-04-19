@@ -16,6 +16,74 @@ from ..logging_setup import get
 log = get("siteground_provider")
 
 
+def _deploy_workflow_engine_if_enabled(config: dict) -> dict | None:
+    """Deploy workflow engine to target server if enabled in config.
+    
+    Returns deploy result dict or None if not enabled.
+    """
+    if not config.get("workflow_engine_enabled", False):
+        log.info("Workflow engine deployment not enabled, skipping")
+        return None
+    
+    try:
+        from ..deploy_engine import deploy_workflow_engine
+        engine_config = {
+            "host": config.get("host", ""),
+            "port": config.get("port", 22),
+            "user": config.get("user", ""),
+            "key_path": config.get("key_path", ""),
+            "key_passphrase": config.get("key_passphrase", ""),
+            "password": config.get("password", ""),
+        }
+        log.info("Deploying workflow engine to %s@%s", engine_config["user"], engine_config["host"])
+        result = deploy_workflow_engine(engine_config)
+        if result["ok"]:
+            log.info("Workflow engine deployed successfully (service: %s)", result.get("service_status"))
+        else:
+            log.warning("Workflow engine deploy failed: %s", result.get("error"))
+        return result
+    except ImportError as e:
+        log.warning("Workflow engine deploy module not available: %s", e)
+        return {"ok": False, "error": f"Import error: {e}"}
+    except Exception as e:
+        log.exception("Workflow engine deploy failed")
+        return {"ok": False, "error": str(e)}
+
+
+def _deploy_workflow_engine_if_enabled(config: dict) -> dict | None:
+    """Deploy workflow engine to target server if enabled in config.
+    
+    Returns deploy result dict or None if not enabled.
+    """
+    if not config.get("workflow_engine_enabled", False):
+        log.info("Workflow engine deployment not enabled, skipping")
+        return None
+    
+    try:
+        from ..deploy_engine import deploy_workflow_engine
+        engine_config = {
+            "host": config.get("host", ""),
+            "port": config.get("port", 22),
+            "user": config.get("user", ""),
+            "key_path": config.get("key_path", ""),
+            "key_passphrase": config.get("key_passphrase", ""),
+            "password": config.get("password", ""),
+        }
+        log.info("Deploying workflow engine to %s@%s", engine_config["user"], engine_config["host"])
+        result = deploy_workflow_engine(engine_config)
+        if result["ok"]:
+            log.info("Workflow engine deployed successfully (service: %s)", result.get("service_status"))
+        else:
+            log.warning("Workflow engine deploy failed: %s", result.get("error"))
+        return result
+    except ImportError as e:
+        log.warning("Workflow engine deploy module not available: %s", e)
+        return {"ok": False, "error": f"Import error: {e}"}
+    except Exception as e:
+        log.exception("Workflow engine deploy failed")
+        return {"ok": False, "error": str(e)}
+
+
 class BuildFailed(RuntimeError):
     pass
 
@@ -79,6 +147,10 @@ class SiteGroundProvider:
         finally:
             sftp.close()
             client.close()
+
+        engine_result = _deploy_workflow_engine_if_enabled(config)
+        if engine_result and not engine_result["ok"]:
+            log.warning("Workflow engine deploy failed: %s", engine_result.get("error"))
 
         return DeployResult(
             slug=sg.get("slug", ""),

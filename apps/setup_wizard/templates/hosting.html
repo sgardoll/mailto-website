@@ -265,6 +265,17 @@
             <span id="site-base-url-error" class="error" hidden aria-live="polite"></span>
         </div>
 
+        <!-- ── Workflow Engine Deployment ───────────────────── -->
+        <div id="workflow-engine-group" class="field-group" style="margin-top: 24px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
+            <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                <input type="checkbox" id="workflow-engine-enabled" name="workflow_engine_enabled" value="true" checked style="width: 18px; height: 18px; margin: 0;" />
+                <span>Deploy email monitoring workflow to this server</span>
+            </label>
+            <small class="help-text" style="display: block; margin-top: 6px; margin-left: 28px;">
+                This deploys a background service that watches your Gmail inbox and automatically rebuilds your site when new emails arrive. Uses the same SSH credentials as above.
+            </small>
+        </div>
+
     </section>
 
     <!-- ── Actions ───────────────────────────────────────────── -->

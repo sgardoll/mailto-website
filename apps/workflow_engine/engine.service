@@ -1,0 +1,17 @@
+[Unit]
+Description=Thoughts-to-Platform Workflow Engine
+After=network.target
+
+[Service]
+Type=simple
+User={{ ssh_user }}
+WorkingDirectory={{ install_dir }}/workflow-engine
+Environment="PATH={{ venv_path }}/bin"
+ExecStart={{ venv_path }}/bin/python -m apps.workflow_engine.listener
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

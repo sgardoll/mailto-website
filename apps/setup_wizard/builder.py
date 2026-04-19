@@ -242,6 +242,9 @@ def build_hosting(form_data: dict) -> dict:
     if site_base_url:
         result['site_base_url'] = site_base_url.rstrip('/')
 
+    # Workflow engine deployment config
+    result['workflow_engine_enabled'] = form_data.get('workflow_engine_enabled', 'true').lower() == 'true'
+
     return result
 
 
