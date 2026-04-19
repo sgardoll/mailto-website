@@ -97,12 +97,55 @@ def step_inboxes():
 @app.route('/validate-form', methods=['POST'])
 def validate_form():
     data = request.get_json(force=True) or {}
-    errors = builder.validate(data)
-    if errors:
-        return jsonify({"ok": False, "errors": errors}), 400
-    _wizard_state.update(data)
-    env_str, yaml_str = builder.build(_wizard_state)
-    return jsonify({"ok": True, "env_preview": env_str, "yaml_preview": yaml_str})
+    step = data.get('step', 'gmail')
+
+    if step == 'gmail':
+        errors = builder.validate(data)
+        next_step = '/step/lmstudio'
+        if not errors:
+            _wizard_state.update(data)
+            env_str, yaml_str = builder.build(_wizard_state)
+            return jsonify({
+                "ok": True,
+                "next_step": next_step,
+                "env_preview": env_str,
+                "yaml_preview": yaml_str,
+            })
+
+    elif step == 'lmstudio':
+        errors = builder.validate(data)
+        next_step = '/step/hosting'
+        if not errors:
+            _wizard_state.update(data)
+            env_str, yaml_str = builder.build(_wizard_state)
+            return jsonify({
+                "ok": True,
+                "next_step": next_step,
+                "env_preview": env_str,
+                "yaml_preview": yaml_str,
+            })
+
+    elif step == 'hosting':
+        errors = builder.validate_hosting(data)
+        next_step = '/step/inboxes'
+        if not errors:
+            hosting_data = builder.build_hosting(data)
+            _wizard_state.update(hosting_data)
+            return jsonify({"ok": True, "next_step": next_step})
+
+    elif step == 'inboxes':
+        errors = builder.validate_inboxes(data)
+        next_step = '/step/preview'
+        if not errors:
+            inboxes_data = builder.build_inboxes(data)
+            _wizard_state.update(inboxes_data)
+            return jsonify({"ok": True, "next_step": next_step})
+
+    else:
+        return jsonify({"ok": False, "errors": [{"field": "step", "message": "Unknown step"}]}), 400
+
+    # Reach here only on validation errors
+    return jsonify({"ok": False, "errors": errors}), 400
 
 
 @app.route('/exit', methods=['POST'])
