@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Setup Wizard</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            max-width: 600px;
+            margin: 4rem auto;
+            padding: 0 1rem;
+        }
+        h1 { margin-bottom: 1rem; }
+        #status { color: #666; }
+        button {
+            margin-top: 2rem;
+            padding: 0.5rem 1.5rem;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <h1>Setup Wizard</h1>
+    <p>Server running on port {{ port }}</p>
+    <p id="status">Loading...</p>
+    <button id="exit-btn">Exit Setup</button>
+</body>
+</html>
