@@ -1,0 +1,76 @@
+# Requirements: v1.1 Runtime/Setup Separation + Deploy Contract Alignment
+
+## Architecture Separation
+
+- [x] **SEP-01**: Setup code lives in `apps/setup-wizard/` (Flask UI + config authoring only, no runtime mutations)
+- [x] **SEP-02**: Runtime code lives in `apps/workflow-engine/` (listener/orchestrator/deploy, no setup UI)
+- [x] **SEP-03**: Shared config schema lives in `packages/config-contract/` (typed validation, migration tooling)
+- [x] **SEP-04**: Astro seed template lives in `packages/site-template/` (versioned, copied to `runtime/sites/<slug>/` on bootstrap)
+- [x] **SEP-05**: Explicit runtime root: `runtime/sites/` and `runtime/state/` are the only mutable runtime areas
+- [x] **SEP-06**: Setup writes config through `packages/config-contract/` — never directly to `.env` or `workflow/config.yaml`
+- [x] **SEP-07**: Runtime reads config through `packages/config-contract/` — never assumes hardcoded paths
+
+## Provider Contract
+
+- [x] **PROV-01**: Single provider enum shared between setup and runtime (fix `generic_ssh` vs `ssh_sftp` mismatch)
+- [x] **PROV-02**: Runtime deploy adapter interface (`DeployProvider` protocol with `bootstrap()`, `build()`, `deploy()`, `report()` methods)
+- [x] **PROV-03**: SiteGround provider implementation migrated from current hardcoded logic into adapter interface
+- [x] **PROV-04**: Vercel provider implementation (first non-SiteGround: API token auth, project creation, git-based or API deploy)
+- [x] **PROV-05**: Non-implemented providers fail fast with actionable error messages (no silent `not_implemented` returns)
+- [x] **PROV-06**: Provider capability checks enforced centrally (not scattered across guard functions)
+
+## Multi-Inbox Runtime
+
+- [x] **INBOX-01**: `config.yaml` supports multiple inboxes with clear per-inbox routing semantics
+- [x] **INBOX-02**: Startup diagnostics log all loaded inboxes + route map on engine boot
+- [x] **INBOX-03**: Deploy phase reports provider + target + result per inbox (not aggregate-only)
+- [x] **INBOX-04**: End-to-end works for SiteGround + 2 inboxes (verified)
+- [x] **INBOX-05**: End-to-end works for Vercel + 2 inboxes (verified)
+
+## UI Polish
+
+- [x] **UX-01**: Stepper indicator implemented from `.planning/sketches/001-stepper-indicator` design
+
+## Acceptance Criteria
+
+1. Setup-created config runs unmodified in workflow runtime with identical semantics
+2. End-to-end works for at least:
+   - SiteGround + 2 inboxes
+   - Vercel + 2 inboxes
+3. Routing logs prove message-to-inbox correctness
+4. Deploy phase reports provider + target + result per inbox
+5. Repo tree clearly separates authored code vs generated/runtime data
+
+## Out of Scope (v1.1)
+
+| Item | Reason |
+|------|--------|
+| Live credential validation (IMAP/SMTP/SSH probe) | Requires network test infrastructure — defer to v1.2 |
+| Streaming npm/SFTP output in deploy panel | UX enhancement, not a boundary issue — defer to v1.2 |
+| Netlify / GitHub Pages / Generic SSH providers | Vercel is the proof-of-concept; others follow same adapter pattern in v1.2 |
+| Windows path normalization | Windows not in scope |
+| Per-inbox `allowed_senders` in wizard | Global list sufficient for now |
+
+## Traceability
+
+| Requirement | Phase(s) | Status |
+|-------------|----------|--------|
+| SEP-01 | Phase 5 | ✅ Complete |
+| SEP-02 | Phase 5 | ✅ Complete |
+| SEP-03 | Phase 6 | ✅ Complete |
+| SEP-04 | Phase 5 | ✅ Complete |
+| SEP-05 | Phase 5 | ✅ Complete |
+| SEP-06 | Phase 6 | ✅ Complete |
+| SEP-07 | Phase 6 | ✅ Complete |
+| PROV-01 | Phase 6, 7 | ✅ Complete |
+| PROV-02 | Phase 7 | ✅ Complete |
+| PROV-03 | Phase 7 | ✅ Complete |
+| PROV-04 | Phase 8 | ✅ Complete |
+| PROV-05 | Phase 7 | ✅ Complete |
+| PROV-06 | Phase 7 | ✅ Complete |
+| INBOX-01 | Phase 9 | ✅ Complete |
+| INBOX-02 | Phase 9 | ✅ Complete |
+| INBOX-03 | Phase 9 | ✅ Complete |
+| INBOX-04 | Phase 12, 13 | ✅ Complete |
+| INBOX-05 | Phase 12, 13 | ✅ Complete |
+| UX-01 | Phase 10 | ✅ Complete |
