@@ -45,8 +45,16 @@ Plans:
   3. Every password or token field has a show/hide toggle and remains pasteable
   4. Each field has help text and a link to the relevant external documentation page
   5. Entering a Gmail address once populates imap.user, smtp.user, and smtp.from_address in the generated config; the app password lands in `.env` and is referenced as `${GMAIL_APP_PASSWORD}` in `config.yaml`
-**Plans**: TBD
+**Plans**: 6 plans
 **UI hint**: yes
+
+Plans:
+- [ ] 02-01-PLAN.md — Wave 0: Add PyYAML>=6.0.1 to setup/requirements.txt
+- [ ] 02-02-PLAN.md — Wave 1 (parallel): Pure Python config builder (setup/builder.py + setup/tests/test_builder.py) — validate(), build(), YAML key structure per config.example.yaml
+- [ ] 02-03-PLAN.md — Wave 1 (parallel): HTML wizard form (setup/templates/index.html) — progress indicator, Gmail section, LM Studio section, allowed-senders widget, all field groups per UI-SPEC
+- [ ] 02-04-PLAN.md — Wave 1 (parallel): CSS (setup/static/wizard.css) — all design tokens, progress indicator styles, field error states, split row layout
+- [ ] 02-05-PLAN.md — Wave 2 (parallel): JavaScript (setup/static/wizard.js) — blur validation, touched flags, show/hide, Gmail fan-out display, allowed-senders widget, fetch submit
+- [ ] 02-06-PLAN.md — Wave 2 (parallel): Flask integration (setup/server.py) — _wizard_state dict, active_step='gmail' in GET /, POST /validate-form route wired to builder
 
 ### Phase 3: Hosting Provider & Inbox Manager
 **Goal**: Users can select any of the five supported hosting providers and see only the fields relevant to their choice, and can define one or more named inboxes with slug uniqueness enforced
@@ -80,7 +88,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Server Foundation | 0/3 | Not started | - |
-| 2. Core Form & Config Engine | 0/TBD | Not started | - |
+| 1. Server Foundation | 3/3 | Complete | 2026-04-19 |
+| 2. Core Form & Config Engine | 0/6 | Not started | - |
 | 3. Hosting Provider & Inbox Manager | 0/TBD | Not started | - |
 | 4. Preview, Write & Completion | 0/TBD | Not started | - |
