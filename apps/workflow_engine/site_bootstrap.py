@@ -28,7 +28,11 @@ def ensure_site(inbox: InboxConfig, *, force: bool = False) -> Path:
     ))
     # Stamp inbox-specific metadata into a small file the workflow can read.
     (target / ".inbox.json").write_text(
-        f'{{"slug": "{inbox.slug}", "address": "{inbox.address}", "site_name": "{inbox.site_name or inbox.slug}"}}\n'
+        json.dumps({
+            "slug": inbox.slug,
+            "address": inbox.address,
+            "site_name": inbox.site_name or inbox.slug,
+        }) + "\n"
     )
     # PROF-01: bootstrap per-inbox profile.json (idempotent; not in site git tree — see .gitignore).
     profile_dir = STATE_DIR / inbox.slug
