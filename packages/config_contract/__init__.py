@@ -47,6 +47,21 @@ class DeployProvider(str, Enum):
             )
 
 
+# ── Mechanic Enum ─────────────────────────────────────────────────────────────
+
+class MechanicKind(str, Enum):
+    """Canonical mechanic kinds for v2.0 pipeline.
+
+    Defined once here. DISTILL, BUILD, and validator import from this module.
+    Never redefine locally. v2.0 is capped at 5 kinds; comparator/matcher deferred.
+    """
+    CALCULATOR = "calculator"
+    WIZARD     = "wizard"
+    DRILL      = "drill"
+    SCORER     = "scorer"
+    GENERATOR  = "generator"
+
+
 # ── Legacy alias for backward compatibility ───────────────────────────────────
 _PROVIDER_ALIASES = {
     "generic_ssh": "ssh_sftp",
@@ -137,6 +152,7 @@ class InboxConfig:
     remote_path: str = ""
     hosting_provider: str = ""
     allowed_senders: list[str] = field(default_factory=list)
+    pipeline_version: str = "v1"  # "v1" or "v2" — per-inbox pipeline selector (CONF-01)
 
     def __post_init__(self):
         if not self.slug:
