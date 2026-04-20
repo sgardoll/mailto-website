@@ -93,6 +93,7 @@ def chat_json(
     *,
     system: str,
     user: str,
+    schema: dict | None = None,
     schema_hint: str | None = None,
 ) -> dict[str, Any]:
     """Run a chat completion expected to return JSON. Robustly extracts the JSON object."""
@@ -103,14 +104,25 @@ def chat_json(
         messages.append({"role": "system", "content": f"Respond with a single JSON object matching:\n{schema_hint}"})
     messages.append({"role": "user", "content": user})
 
-    log.info("Calling %s (temp=%s, max_tokens=%s)", cfg.model, cfg.temperature, cfg.max_tokens)
+    if schema is not None:
+        response_format = {
+            "type": "json_schema",
+            "json_schema": {
+                "schema": schema,
+                "strict": True,
+            },
+        }
+    else:
+        response_format = {"type": "json_object"}
+
+    log.info("Calling %s (temp=%s, max_tokens=%s, schema=%s)", cfg.model, cfg.temperature, cfg.max_tokens, schema is not None)
     try:
         completion = client.chat.completions.create(
             model=cfg.model,
             messages=messages,  # type: ignore[arg-type]
             temperature=cfg.temperature,
             max_tokens=cfg.max_tokens,
-            response_format={"type": "json_object"},
+            response_format=response_format,
         )
     except Exception as e:
         # Some LM Studio models reject response_format=json_object and only
