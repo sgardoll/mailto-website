@@ -82,7 +82,7 @@ class ImapConfig:
     host: str
     port: int = 993
     user: str = ""
-    password: str = ""
+    password: str = field(default="", repr=False)
     folder: str = "INBOX"
     use_ssl: bool = True
 
@@ -92,7 +92,7 @@ class SmtpConfig:
     host: str
     port: int = 587
     user: str = ""
-    password: str = ""
+    password: str = field(default="", repr=False)
     from_address: str = ""
     use_starttls: bool = True
 
@@ -116,8 +116,8 @@ class SiteGroundConfig:
     port: int = 22
     user: str = ""
     key_path: str = ""
-    key_passphrase: str = ""
-    password: str = ""
+    key_passphrase: str = field(default="", repr=False)
+    password: str = field(default="", repr=False)
     base_remote_path: str = "/home/USER/public_html"
 
 
@@ -128,15 +128,15 @@ class SshSftpConfig:
     port: int = 22
     user: str = ""
     key_path: str = ""
-    key_passphrase: str = ""
-    password: str = ""
+    key_passphrase: str = field(default="", repr=False)
+    password: str = field(default="", repr=False)
     remote_path: str = ""
 
 
 @dataclass
 class VercelConfig:
     """Vercel deploy target."""
-    api_token: str = ""
+    api_token: str = field(default="", repr=False)
     project_id: str = ""
     team_id: str = ""
 
