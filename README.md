@@ -1,6 +1,5 @@
 <div align="center">
-
-# mailto.website
+<img width="1239" alt="logo" src="docs/v1.png" />
 
 ### Email an idea. Get a website.
 
