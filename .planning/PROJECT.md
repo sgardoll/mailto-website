@@ -1,12 +1,14 @@
-# thoughts-to-platform-builder — Onboarding UI
+# thoughts-to-platform-builder
 
 ## What This Is
 
-A local web-based onboarding wizard for the email-to-website pipeline. New users clone the repo, run `./scripts/setup.sh`, complete a 5-step wizard (Gmail → LM Studio → Hosting → Inboxes → Preview), and end up with a working `.env` + `workflow/config.yaml` plus — for SiteGround targets — a live deployed site launched directly from the success screen.
+A self-extending publishing platform powered by your inbox and a local LLM. Email an idea to a Gmail plus-alias, and the pipeline — IMAP listener → orchestrator → local LLM (via LM Studio) → Astro build → deploy — folds it into a living website. A five-step browser wizard handles first-time setup: Gmail credentials, LM Studio model selection, hosting provider, inbox definition, and config preview/write.
+
+The model operates under two prime directives enforced in code: **fold in, don't silo** (every new entry must extend or link to an existing thread) and **take initiative** (synthesise the email into something useful, never a verbatim transcription).
 
 ## Core Value
 
-Zero-friction first-time setup: clone → one command → working config → optional one-click deploy. No hand-editing YAML, no copy-pasting example files, no manual SSH key plumbing.
+Email an idea. Get a website. No CMS, no editor, no dashboard — just send mail to a plus-alias and watch the site evolve. The wizard collapses all setup friction into a five-step browser flow with server-side validation, atomic file writes, and one-click deploy.
 
 ## Current State (v1.1 shipped 2026-04-20)
 
@@ -17,18 +19,26 @@ Zero-friction first-time setup: clone → one command → working config → opt
 - **Workflow engine SSH deploy** with systemd service and health check endpoint
 - Timeline: 2026-04-19 → 2026-04-20 (~24 hours total wall time)
 
-## Next Milestone
+## Current Milestone: v2.0 Interactive SPA Pipeline
 
-**v1.2 Goals:**
-- Live credential validation (IMAP/SMTP/SSH probe)
-- Streaming npm/SFTP output in deploy panel
-- Additional deploy providers (Netlify, GitHub Pages, Generic SSH)
+**Goal:** Redesign the email-to-site generation pipeline from a markdown-curator model to a 5-stage interactive module builder that produces Gemini Canvas–style SPA output per inbox.
+
+**Target features:**
+- 5-stage pipeline: INGEST → DISTILL → PLAN → BUILD → INTEGRATE
+- mechanic.kind enum (13 types) forces output variety — wizards, matchers, scorers, drills
+- Tailwind CDN + Alpine.js modules with window.AI() + window.STATE shared state
+- JSON envelope with base64-encoded HTML/JS artifacts
+- Deterministic post-build validator + auto-retry
+- SPA manifest-only context passback (not full HTML each turn)
+- Per-inbox profile.json for shared state persistence
+- Module-level versioning + rollback via git
+- Content extraction: yt-dlp + whisper.cpp (video), readability (articles)
 
 ## Context
 
-The underlying project (`thoughts-to-platform-builder`) is an email-to-website pipeline that watches a Gmail inbox, processes incoming emails with a local LM Studio model, and publishes them as posts to per-inbox Astro sites. Before v1.0, onboarding required hand-editing a YAML file and understanding SSH/SFTP credential layouts — high friction for non-technical collaborators.
+The platform watches one or more Gmail plus-aliases via IMAP IDLE. When an email arrives, the pipeline processes it through a local LLM (via a single LM Studio server) and publishes the result to the matching per-inbox Astro site. Before v1.0, onboarding required hand-editing a YAML file and understanding SSH/SFTP credential layouts — high friction for non-technical collaborators.
 
-The wizard collapses all that setup into a browser-based flow with server-side validation, prefill from existing config (re-runs don't start from scratch), atomic file writes with rollback, and a one-click SiteGround deploy.
+The five-step wizard collapses all setup into a browser-based flow with server-side validation, prefill from existing config (re-runs don't start from scratch), atomic file writes with rollback, and a one-click SiteGround or Vercel deploy.
 
 ## Who It's For
 
