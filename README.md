@@ -1,5 +1,5 @@
 <div align="center">
-<img width="1239" height="358" alt="logo" src="docs/v1.png" />
+<img width="1239" alt="logo" src="docs/v1.png" />
 
 ### Email an idea. Get a website.
 
