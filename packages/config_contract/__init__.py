@@ -275,7 +275,7 @@ def load_config(raw: dict) -> Config:
         smtp=SmtpConfig(**raw["smtp"]),
         lm_studio=LmStudioConfig(**(raw.get("lm_studio") or {})),
         siteground=SiteGroundConfig(**(raw.get("siteground") or {})),
-        ssh_sftp=SshSftpConfig(**(raw.get("ssh_sftp") or raw.get("generic_ssh") or {})),
+        ssh_sftp=SshSftpConfig(**(raw.get("ssh_sftp") or {})),
         vercel=VercelConfig(**(raw.get("vercel") or {})),
         inboxes=[InboxConfig(**ib) for ib in raw.get("inboxes", [])],
         global_allowed_senders=raw.get("global_allowed_senders", []),
