@@ -179,10 +179,6 @@ class Config:
     sites_dir: Path = Path("runtime/sites")
     template_dir: Path = Path("packages/site-template")
     state_dir: Path = Path("runtime/state")
-    repo_root: Path = Path(".")
-    sites_dir: Path = Path("runtime/sites")
-    template_dir: Path = Path("packages/site-template")
-    state_dir: Path = Path("runtime/state")
 
     def find_inbox(self, address: str) -> InboxConfig | None:
         addr = address.strip().lower()

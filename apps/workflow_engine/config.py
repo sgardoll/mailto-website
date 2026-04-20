@@ -46,7 +46,7 @@ def load(path: Path | None = None) -> Config:
     cfg = load_config(raw)
     # Inject runtime paths
     cfg.repo_root = REPO_ROOT
-    cfg.sites_dir = SITES_DIR  # type: ignore[attr-defined]
-    cfg.template_dir = TEMPLATE_DIR  # type: ignore[attr-defined]
-    cfg.state_dir = STATE_DIR  # type: ignore[attr-defined]
+    cfg.sites_dir = SITES_DIR
+    cfg.template_dir = TEMPLATE_DIR
+    cfg.state_dir = STATE_DIR
     return cfg
