@@ -47,7 +47,7 @@ def test_multiple_urls_first_wins_warning_logged(monkeypatch, caplog):
     with caplog.at_level(logging.WARNING, logger="workflow.ingest"):
         result = ingest.ingest(_email(body=body))
     assert result["source_url"] == "https://example.com/a"
-    assert any("https://example.com/b" in r.message % r.args if r.args else "https://example.com/b" in r.getMessage() for r in caplog.records)
+    assert any("https://example.com/b" in r.getMessage() for r in caplog.records)
 
 
 def test_video_url_detected_tools_present(monkeypatch):
