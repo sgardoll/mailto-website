@@ -31,6 +31,7 @@ CLAUDE.md
 /packages/site-template/node_modules
 /runtime/sites/test/node_modules
 runtime/state/siteground.key
+runtime/state/**/profile.json
 /runtime
 apps/runtime/state/siteground.key
 apps/apps/workflow_engine/config.yaml
