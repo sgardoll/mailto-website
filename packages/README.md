@@ -13,10 +13,6 @@ The template is deliberately minimal:
 - **`src/pages/`** — home + per-collection list and detail pages. Generic enough to look reasonable for any topic the inboxes evolve into.
 - **`public/styles/global.css`** — typography + layout. Restrained on purpose; let the content carry the visual weight.
 
-> _Screenshot placeholder: the rendered template with a thread page + entries list — same Astro template, two different inbox topics_
->
-> ![template-rendered](../docs/screenshots/template-rendered.png)
-
 To regenerate a site from the current template (destructive — drops all LM-curated content for that inbox):
 
 ```bash

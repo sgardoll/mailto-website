@@ -1,7 +1,5 @@
 <div align="center">
 
-<img src="docs/screenshots/hero-banner.png" alt="thoughts-to-platform-builder" width="100%" />
-
 # thoughts-to-platform-builder
 
 ### Email an idea. Get a website.
@@ -45,9 +43,9 @@
 
 <br />
 
-<img src="docs/screenshots/live-site.png" alt="A site that grew itself from emails" width="85%" />
+<img src="docs/screenshots/wizard-done.png" alt="The wizard's done screen, post-deploy" width="70%" />
 
-<sub>_The site you're looking at grew itself from forwarded articles. The user wrote nothing._</sub>
+<sub>_The wizard's done screen — five steps earlier you ran one command. Now your sites are live and your aliases are in your contacts._</sub>
 
 </div>
 
@@ -65,7 +63,22 @@
 
 <div align="center">
 
-<img src="docs/screenshots/wizard-stepper.png" alt="Wizard stepper" width="90%" />
+<table>
+<tr>
+<td width="33%" align="center">
+<img src="docs/screenshots/wizard-gmail.png" alt="Gmail step" width="100%" />
+<br /><sub><b>Step 1</b> — Gmail</sub>
+</td>
+<td width="33%" align="center">
+<img src="docs/screenshots/wizard-lmstudio.png" alt="LM Studio step" width="100%" />
+<br /><sub><b>Step 2</b> — LM Studio</sub>
+</td>
+<td width="33%" align="center">
+<img src="docs/screenshots/wizard-inboxes.png" alt="Inboxes step" width="100%" />
+<br /><sub><b>Step 4</b> — Inboxes</sub>
+</td>
+</tr>
+</table>
 
 </div>
 
@@ -88,8 +101,8 @@
 <br /><sub><b>Step 3</b> — Hosting picker with SSH key auto-discovery</sub>
 </td>
 <td width="50%" align="center">
-<img src="docs/screenshots/wizard-done.png" alt="Done screen" width="100%" />
-<br /><sub><b>Done</b> — One-click Deploy + per-inbox <i>Add to Contacts</i> vCards</sub>
+<img src="docs/screenshots/wizard-preview.png" alt="Preview step" width="100%" />
+<br /><sub><b>Step 5</b> — Preview every line of YAML before it's written</sub>
 </td>
 </tr>
 </table>
@@ -150,17 +163,6 @@ The model operates under two prime directives, enforced in code:
 
 <br />
 
-<div align="center">
-<img src="docs/screenshots/thread-page.png" alt="A thread page" width="80%" />
-<br /><sub>A thread page showing how multiple emails were folded into one narrative.</sub>
-</div>
-
-<br />
-
----
-
-<br />
-
 ## ✦ Quick start
 
 After the wizard, the listener is yours to run however you like:
@@ -172,13 +174,6 @@ After the wizard, the listener is yours to run however you like:
 ```
 
 A health endpoint runs on `http://127.0.0.1:8899/health` so you can confirm the listener is alive and which inboxes it's watching.
-
-<br />
-
-<div align="center">
-<img src="docs/screenshots/health-check.png" alt="Health endpoint" width="70%" />
-<br /><sub>Live health check — status, inboxes loaded, last poll.</sub>
-</div>
 
 <br />
 
