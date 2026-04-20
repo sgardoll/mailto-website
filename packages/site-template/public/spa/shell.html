@@ -77,7 +77,10 @@
         navigate(initial || (manifest.modules.length ? manifest.modules[0].module_id : ''));
       }
 
+      var _validModuleIds = new Set();
+
       function buildNav(modules) {
+        _validModuleIds = new Set(modules.map(function(m) { return m.module_id; }));
         var nav = document.getElementById('nav');
         nav.textContent = '';
         if (!modules.length) {
@@ -99,6 +102,7 @@
       }
 
       function navigate(moduleId) {
+        if (moduleId && !_validModuleIds.has(moduleId)) return;
         document.querySelectorAll('.nav-item').forEach(function(a) {
           a.removeAttribute('aria-current');
           if (a.dataset.id === moduleId) a.setAttribute('aria-current', 'page');
