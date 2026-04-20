@@ -124,6 +124,9 @@ def test_schemas_package_exports_correctly():
 
 
 def test_schemas_package_does_not_import_lm_studio():
+    import pathlib
+    # Run subprocess from the worktree root so 'apps' package is importable
+    worktree_root = pathlib.Path(__file__).parent.parent.parent.parent
     result = subprocess.run(
         [
             sys.executable,
@@ -137,5 +140,6 @@ def test_schemas_package_does_not_import_lm_studio():
         ],
         capture_output=True,
         text=True,
+        cwd=str(worktree_root),
     )
     assert result.returncode == 0, result.stderr
