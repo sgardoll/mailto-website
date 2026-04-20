@@ -39,8 +39,8 @@ See `.planning/milestones/v1.1-ROADMAP.md` for full phase details and `.planning
 
 ### v2.0 Interactive SPA Pipeline (Phases 14-19)
 
-- [ ] **Phase 14: Foundation** - mechanic enum, manifest schema, config contract extension, SPA shell skeleton, profile.json bootstrap
-- [ ] **Phase 15: INGEST** - content extractors, ingest.py, yt-dlp + whisper.cpp + trafilatura wrappers, shutil.which pre-flights
+- [x] **Phase 14: Foundation** - mechanic enum, manifest schema, config contract extension, SPA shell skeleton, profile.json bootstrap
+- [x] **Phase 15: INGEST** - content extractors, ingest.py, yt-dlp + whisper.cpp + trafilatura wrappers, shutil.which pre-flights (completed 2026-04-20)
 - [ ] **Phase 16: DISTILL + PLAN** - prompt builders, distill.py, plan.py, mechanic_spec schema, structured LM output
 - [ ] **Phase 17: BUILD + Validator** - validator.py TDD-first, build.py, Alpine exemplars per kind, retry loop
 - [ ] **Phase 18: INTEGRATE + Orchestrator** - integrate.py, orchestrator wiring, pipeline_version flag, window.AI() proxy, .gitignore audit
@@ -76,7 +76,10 @@ See `.planning/milestones/v1.1-ROADMAP.md` for full phase details and `.planning
   3. An article-URL email produces extracted article text via trafilatura (readability-lxml fallback on parse failure)
   4. When yt-dlp, ffmpeg, or whisper-cli are absent (`shutil.which()` returns None), the pipeline starts without error and falls back to treating the URL as plain text
   5. New pip deps (`yt-dlp`, `pywhispercpp`, `trafilatura`, `sentence-transformers`, `faiss-cpu`, `gitpython`, `jsonschema`) are listed in `apps/workflow_engine/requirements.txt`
-**Plans**: TBD
+**Plans**: 3 plans
+- [x] 15-01-PLAN.md — Append v2.0 pip deps to apps/workflow_engine/requirements.txt (CONF-02)
+- [x] 15-02-PLAN.md — Create ingest.py module + unit tests: plain-text/video/article paths with tool-absent fallback (ING-01..ING-04)
+- [x] 15-03-PLAN.md — Wire ingest.ingest() into orchestrator._process_locked before topic_curator (ING-01 integration)
 
 ### Phase 16: DISTILL + PLAN
 **Goal**: An email's `normalized_input` is converted into a validated `mechanic_spec` and a routing decision (new module / extend / upgrade state only) before any HTML is generated
@@ -88,7 +91,11 @@ See `.planning/milestones/v1.1-ROADMAP.md` for full phase details and `.planning
   3. PLAN stage inspects the SPA manifest and emits one of `new_module`, `extend_module`, or `upgrade_state_only`; the decision is logged alongside the manifest at that moment
   4. An email whose content is semantically unrelated to all existing modules results in `new_module` decision, not a forced merge
   5. The raw email body is not present in any object passed from DISTILL stage onward — only `mechanic_spec` crosses the stage boundary
-**Plans**: TBD
+**Plans**: 4 plans
+- [ ] 16-01-PLAN.md — schemas/ package (Pydantic discriminated union + DISTILL_SCHEMA) + lm_studio.chat_json schema kwarg (DIST-02, PIPE-04)
+- [ ] 16-02-PLAN.md — distill.py + tests: json_schema structured output, retry-once, DistillFailed (DIST-01, DIST-02, PIPE-03)
+- [ ] 16-03-PLAN.md — plan.py + tests: cosine similarity routing + LM judge on ambiguous (PLAN-01, PLAN-02)
+- [ ] 16-04-PLAN.md — orchestrator wiring: v2 branch for DISTILL+PLAN (PIPE-03, PIPE-04)
 
 ### Phase 17: BUILD + Validator
 **Goal**: A `mechanic_spec` deterministically produces a valid, self-contained Alpine/Tailwind HTML module that passes all validator checks; invalid output triggers an automatic retry that terminates on repeated failure
@@ -145,9 +152,9 @@ See `.planning/milestones/v1.1-ROADMAP.md` for full phase details and `.planning
 | 11. End-to-End UAT and Cleanup | v1.1 | 2/2 | Complete | 2026-04-20 |
 | 12. Workflow Engine Deployment to Target Server | v1.1 | 3/3 | Complete | 2026-04-20 |
 | 13. End-to-End Verification + Milestone Close | v1.1 | 2/2 | Complete | 2026-04-20 |
-| 14. Foundation | v2.0 | 0/? | Not started | - |
-| 15. INGEST | v2.0 | 0/? | Not started | - |
-| 16. DISTILL + PLAN | v2.0 | 0/? | Not started | - |
+| 14. Foundation | v2.0 | 3/3 | Complete | 2026-04-20 |
+| 15. INGEST | v2.0 | 3/3 | Complete    | 2026-04-20 |
+| 16. DISTILL + PLAN | v2.0 | 0/4 | Planned | - |
 | 17. BUILD + Validator | v2.0 | 0/? | Not started | - |
 | 18. INTEGRATE + Orchestrator | v2.0 | 0/? | Not started | - |
 | 19. End-to-End + Hardening | v2.0 | 0/? | Not started | - |
