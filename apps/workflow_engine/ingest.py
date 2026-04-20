@@ -93,19 +93,19 @@ def _handle_video(url: str, body: str, subject: str, sender: str) -> dict[str, A
         log.info("ffmpeg absent — skipping video transcription for %s", url)
         return _plain_text_result(body, subject, sender)
 
-    tmpdir = tempfile.mkdtemp()
-    transcript = ""
+    tmpdir = None
     try:
+        tmpdir = tempfile.mkdtemp()
         wav_path = _download_audio(url, tmpdir)
         transcript = _transcribe(wav_path)
+        return {"body": transcript, "subject": subject, "sender": sender,
+                "source_type": "video", "source_url": url}
     except Exception as e:
         log.warning("whisper transcription failed for %s: %s", url, e)
-        transcript = ""
+        return _plain_text_result(body, subject, sender)
     finally:
-        shutil.rmtree(tmpdir, ignore_errors=True)
-
-    return {"body": transcript, "subject": subject, "sender": sender,
-            "source_type": "video", "source_url": url}
+        if tmpdir is not None:
+            shutil.rmtree(tmpdir, ignore_errors=True)
 
 
 def _handle_article(url: str, body: str, subject: str, sender: str) -> dict[str, Any]:
