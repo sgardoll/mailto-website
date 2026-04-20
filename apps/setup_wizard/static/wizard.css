@@ -163,10 +163,10 @@ label { font-size: 14px; font-weight: 600; line-height: 1.4; display: block; mar
 }
 .step.active {
     font-weight: 600;
-    color: #2563eb;
+    color: #111827;
 }
 .step.active::before {
-    background-color: #2563eb;
+    background-color: #111827;
 }
 
 /* Form sections */
@@ -213,9 +213,9 @@ input[type="email"]:focus,
 input[type="password"]:focus,
 input[type="url"]:focus,
 input[type="number"]:focus {
-    outline: 2px solid #2563eb;
+    outline: 2px solid #111827;
     outline-offset: 2px;
-    border-color: #2563eb;
+    border-color: #111827;
 }
 input[aria-invalid="true"] {
     border-color: #dc2626;
@@ -280,7 +280,7 @@ input[aria-invalid="true"]:focus {
 .remove-sender:disabled { color: #d1d5db; cursor: not-allowed; }
 #add-sender {
     font-size: 14px;
-    color: #2563eb;
+    color: #111827;
     background: none;
     border: none;
     padding: 4px 0;
@@ -322,14 +322,14 @@ input[aria-invalid="true"]:focus {
 }
 .derived-values code {
     font-family: monospace;
-    color: #2563eb;
+    color: #111827;
 }
 
 /* Buttons */
 .btn-primary {
     display: inline-block;
     padding: 10px 24px;
-    background-color: #2563eb;
+    background-color: #111827;
     color: #ffffff;
     border: none;
     border-radius: 6px;
@@ -338,8 +338,8 @@ input[aria-invalid="true"]:focus {
     cursor: pointer;
     min-height: 44px;
 }
-.btn-primary:hover { background-color: #1d4ed8; }
-.btn-primary:disabled { background-color: #93c5fd; cursor: not-allowed; }
+.btn-primary:hover { background-color: #1f2937; }
+.btn-primary:disabled { background-color: #9ca3af; cursor: not-allowed; }
 .btn-exit {
     font-size: 14px;
     color: #6b7280;
@@ -397,9 +397,9 @@ select {
     cursor: pointer;
 }
 select:focus {
-    outline: 2px solid #2563eb;
+    outline: 2px solid #111827;
     outline-offset: 2px;
-    border-color: #2563eb;
+    border-color: #111827;
 }
 
 /* Conditional provider field groups */
@@ -452,7 +452,7 @@ select:focus {
 /* Add inbox button — matches add-sender */
 #add-inbox {
     font-size: 14px;
-    color: #2563eb;
+    color: #111827;
     background: none;
     border: none;
     padding: 4px 0;
@@ -508,7 +508,7 @@ select:focus {
 
 /* Write Config Files button disabled state — clearly unavailable */
 #write-btn:disabled {
-    background-color: #93c5fd;
+    background-color: #9ca3af;
     cursor: not-allowed;
     opacity: 0.7;
 }
@@ -615,8 +615,8 @@ select:focus {
 .deploy-phase-badge[data-phase="install"],
 .deploy-phase-badge[data-phase="build"],
 .deploy-phase-badge[data-phase="deploy"] {
-    background-color: #dbeafe;
-    color: #1d4ed8;
+    background-color: #f3f4f6;
+    color: #1f2937;
 }
 .deploy-row-detail {
     font-size: 12px;
