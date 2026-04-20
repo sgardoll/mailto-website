@@ -5,13 +5,13 @@
       "args": [
         "/opt/homebrew/lib/node_modules/gsd-pi/packages/mcp-server/dist/cli.js"
       ],
-      "cwd": "/Users/home/Projects/thoughts-to-platform-builder",
+      "cwd": "/Users/home/Projects/mailto-platform",
       "env": {
         "GSD_CLI_PATH": "/opt/homebrew/bin/gsd",
         "GSD_WORKFLOW_EXECUTORS_MODULE": "/Users/home/.gsd/agent/extensions/gsd/tools/workflow-tool-executors.js",
         "GSD_WORKFLOW_WRITE_GATE_MODULE": "/Users/home/.gsd/agent/extensions/gsd/bootstrap/write-gate.js",
         "GSD_PERSIST_WRITE_GATE_STATE": "1",
-        "GSD_WORKFLOW_PROJECT_ROOT": "/Users/home/Projects/thoughts-to-platform-builder"
+        "GSD_WORKFLOW_PROJECT_ROOT": "/Users/home/Projects/mailto-platform"
       }
     }
   }

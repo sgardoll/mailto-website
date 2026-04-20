@@ -31,7 +31,7 @@ scripts/                   foreground runner + install systemd / launchd agents
 ## First-time setup
 
 ```bash
-cd /path/to/thoughts-to-platform-builder
+cd /path/to/mailto-website
 cp apps/workflow_engine/config.example.yaml apps/workflow_engine/config.yaml
 cp .env.example .env
 # Edit .env: set GMAIL_APP_PASSWORD

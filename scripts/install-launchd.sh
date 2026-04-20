@@ -3,7 +3,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 REPO_ROOT="$(pwd)"
-LABEL="com.thoughts-to-platform.email-ai"
+LABEL="com.mailto-website.email-ai"
 PLIST="$HOME/Library/LaunchAgents/$LABEL.plist"
 mkdir -p "$HOME/Library/LaunchAgents"
 cat >"$PLIST" <<EOF

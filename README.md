@@ -1,6 +1,6 @@
 <div align="center">
 
-# thoughts-to-platform-builder
+# mailto.website
 
 ### Email an idea. Get a website.
 
@@ -118,7 +118,7 @@
 <br />
 
 ```bash
-git clone <repo> && cd thoughts-to-platform-builder
+git clone <repo> && cd mailto-website
 python3 -m venv .venv && .venv/bin/pip install -r apps/workflow_engine/requirements.txt
 ./scripts/setup.sh
 ```

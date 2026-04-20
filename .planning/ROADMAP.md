@@ -1,4 +1,4 @@
-# Roadmap: thoughts-to-platform-builder Onboarding Wizard
+# Roadmap: mailto.website
 
 ## Milestones
 
@@ -60,7 +60,10 @@ See `.planning/milestones/v1.1-ROADMAP.md` for full phase details and `.planning
   3. `window.STATE` (localStorage-backed) and `window.AI()` bridge are injected by the SPA shell before any module script loads, verifiable in browser console
   4. `profile.json` is created at `runtime/state/<slug>/` during site bootstrap and is absent from the site git tree (covered by `.gitignore`)
   5. `pipeline_version` key is present in `packages/config_contract/`; `v1` is the default; importing the contract in both v1 and v2 code paths does not raise
-**Plans**: TBD
+**Plans**: 3 plans
+- [ ] 14-01-PLAN.md — Config contract extension: MechanicKind enum + pipeline_version field + workflow_engine re-export (PIPE-01, DIST-03, CONF-01)
+- [ ] 14-02-PLAN.md — SPA shell: spa_manifest_schema.json + seed manifest + shell.html with window.STATE, window.AI, hash routing, sandboxed iframe (SPA-01..04)
+- [ ] 14-03-PLAN.md — profile.json bootstrap: extend ensure_site() + .gitignore rule (PROF-01, PROF-02)
 **UI hint**: yes
 
 ### Phase 15: INGEST

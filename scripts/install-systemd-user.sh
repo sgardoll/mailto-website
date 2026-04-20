@@ -5,10 +5,10 @@ cd "$(dirname "$0")/.."
 REPO_ROOT="$(pwd)"
 UNIT_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user"
 mkdir -p "$UNIT_DIR"
-UNIT="$UNIT_DIR/thoughts-to-platform.service"
+UNIT="$UNIT_DIR/mailto-website.service"
 cat >"$UNIT" <<EOF
 [Unit]
-Description=thoughts-to-platform-builder email-AI workflow listener
+Description=mailto.website email-AI workflow listener
 After=network-online.target
 Wants=network-online.target
 
@@ -25,5 +25,5 @@ WantedBy=default.target
 EOF
 echo "Wrote $UNIT"
 systemctl --user daemon-reload
-systemctl --user enable --now thoughts-to-platform.service
-echo "Started. Tail logs with: journalctl --user -u thoughts-to-platform -f"
+systemctl --user enable --now mailto-website.service
+echo "Started. Tail logs with: journalctl --user -u mailto-website -f"

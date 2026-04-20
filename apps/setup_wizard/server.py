@@ -275,7 +275,7 @@ def contact_vcard(slug: str):
         f"FN:{name}\r\n"
         f"N:{name};;;;\r\n"
         f"EMAIL;TYPE=INTERNET:{addr}\r\n"
-        f"NOTE:Inbox alias for {name} on the thoughts-to-platform builder.\r\n"
+        f"NOTE:Inbox alias for {name} on mailto.website.\r\n"
         "END:VCARD\r\n"
     )
     from flask import Response

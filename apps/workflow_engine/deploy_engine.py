@@ -112,14 +112,14 @@ def deploy_workflow_engine(config: dict, install_dir: str = "/home/{user}") -> d
             install_dir=install_dir,
             venv_path=venv_path,
         )
-        service_path = f"/etc/systemd/system/thoughts-to-platform.service"
+        service_path = f"/etc/systemd/system/mailto-website.service"
         _run_ssh(client, f"echo '{service_content}' | sudo tee {service_path}")
         _run_ssh(client, "sudo systemctl daemon-reload")
-        _run_ssh(client, "sudo systemctl enable thoughts-to-platform.service")
-        _run_ssh(client, "sudo systemctl restart thoughts-to-platform.service")
+        _run_ssh(client, "sudo systemctl enable mailto-website.service")
+        _run_ssh(client, "sudo systemctl restart mailto-website.service")
 
         # Check service status
-        stdout, _, _ = _run_ssh(client, "sudo systemctl is-active thoughts-to-platform.service")
+        stdout, _, _ = _run_ssh(client, "sudo systemctl is-active mailto-website.service")
         result["service_status"] = stdout.strip()
         result["ok"] = result["service_status"] == "active"
         if not result["ok"]:
