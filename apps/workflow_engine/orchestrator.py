@@ -1,7 +1,6 @@
 """End-to-end processing for one inbound email."""
 from __future__ import annotations
 import time
-import traceback
 from pathlib import Path
 from typing import Any
 
@@ -106,7 +105,7 @@ def _process_locked(
 
     except Exception as e:
         log.exception("orchestrator failed for %s", mid)
-        _reply_failure(cfg, inbox, email, f"{e}\n\n{traceback.format_exc()}")
+        _reply_failure(cfg, inbox, email, str(e))
         processed.record(mid, inbox.slug, outcome="error", error=str(e))
 
 
