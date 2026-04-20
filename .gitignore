@@ -7,9 +7,9 @@ workflow/state/*
 !workflow/state/.gitkeep
 
 # Per-inbox site build artefacts
-runtime/runtime/sites/*/node_modules/
-runtime/runtime/sites/*/dist/
-runtime/runtime/sites/*/.astro/
+runtime/sites/*/node_modules/
+runtime/sites/*/dist/
+runtime/sites/*/.astro/
 
 # Template build artefacts
 packages/site-template/node_modules/
