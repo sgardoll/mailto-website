@@ -117,10 +117,14 @@ def _git_restore(repo: Path, path: str) -> None:
     next run (same schema error repeats forever).
     """
     import subprocess
-    subprocess.run(["git", "restore", "--source=HEAD", "--", path],
-                   cwd=repo, capture_output=True, text=True)
-    subprocess.run(["git", "clean", "-fd", "--", path],
-                   cwd=repo, capture_output=True, text=True)
+    r1 = subprocess.run(["git", "restore", "--source=HEAD", "--", path],
+                        cwd=repo, capture_output=True, text=True)
+    if r1.returncode != 0:
+        log.error("git restore failed: %s", r1.stderr.strip())
+    r2 = subprocess.run(["git", "clean", "-fd", "--", path],
+                        cwd=repo, capture_output=True, text=True)
+    if r2.returncode != 0:
+        log.error("git clean failed: %s", r2.stderr.strip())
 
 
 def _commit_message(inbox: InboxConfig, plan: dict) -> str:
