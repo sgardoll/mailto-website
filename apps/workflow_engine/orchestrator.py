@@ -5,7 +5,7 @@ import traceback
 from pathlib import Path
 from typing import Any
 
-from . import apply_changes, build_and_deploy, git_ops, lm_studio, notify, prompt, site_bootstrap, site_index, topic_curator
+from . import apply_changes, build_and_deploy, git_ops, ingest, lm_studio, notify, prompt, site_bootstrap, site_index, topic_curator
 from .config import Config, InboxConfig
 from .logging_setup import get
 from .state import ProcessedLog, file_lock
@@ -47,6 +47,10 @@ def _process_locked(
     idx = site_index.build(site_dir, inbox_slug=inbox.slug, site_name=inbox.site_name or inbox.slug)
 
     try:
+        normalized_input = ingest.ingest(email)
+        log.info("ingest source_type=%s source_url=%s",
+                 normalized_input["source_type"], normalized_input["source_url"])
+
         new_topic = topic_curator.update_topic(
             site_dir=site_dir, idx=idx, email=email,
             lm_cfg=cfg.lm_studio, dry_run=cfg.dry_run,
