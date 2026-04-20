@@ -1,6 +1,5 @@
 <div align="center">
-
-# mailto.website
+<img width="1239" height="358" alt="v0" src="https://github.com/user-attachments/assets/b87286c3-ace2-40e4-992d-097eedc09ce9" />
 
 ### Email an idea. Get a website.
 
