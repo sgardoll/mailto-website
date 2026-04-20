@@ -88,7 +88,7 @@
 |:---:|:---|:---|
 | **1. Gmail** | Paste your address + app password | Pings IMAP to confirm the credentials work before letting you continue |
 | **2. LM Studio** | Pick a model | Auto-discovers every model loaded in your local LM Studio |
-| **3. Hosting** | Choose SiteGround / Vercel / Netlify / GitHub Pages / SSH | Validates the credentials, derives the deploy paths |
+| **3. Hosting** | Choose SiteGround / Vercel / SSH | Validates the credentials, derives the deploy paths |
 | **4. Inboxes** | Name each idea you want a site for | Derives the plus-alias and the site URL automatically |
 | **5. Preview** | Eyeball the `.env` and `config.yaml` | Writes them atomically — and only if you click confirm |
 
@@ -147,7 +147,7 @@ After the wizard finishes, this is the loop that runs forever:
  │     ├── synthesiser (LM)     plans entry/thread writes           │
  │     ├── apply_changes        schema-validated frontmatter        │
  │     ├── astro build          on failure → git restore rollback   │
- │     └── deploy provider      SFTP / Vercel / Netlify / Pages     │
+ │     └── deploy provider      SFTP / Vercel                      │
  └──────────────────────────────────────────────────────────────────┘
 ```
 
@@ -185,11 +185,11 @@ A health endpoint runs on `http://127.0.0.1:8899/health` so you can confirm the 
 
 | Provider | Wizard auto-deploy | Notes |
 |:---|:---:|:---|
-| **SiteGround** (SSH/SFTP) | ✓ | Full one-click deploy from the done screen |
-| **Vercel** | ✓ | API token; deploy on every email arrival |
-| **Netlify** | partial | Connect repo via dashboard, wizard writes config |
-| **GitHub Pages** | partial | Push the repo, point Pages at `runtime/sites/<slug>/dist/` |
-| **Generic SSH/SFTP** | manual | `python -m apps.workflow_engine.deploy_once` |
+| **SiteGround** (SSH/SFTP) | ✓ | Full one-click deploy from the done screen. Listener can co-locate on the same box, so processing keeps running 24/7 |
+| **Vercel** | ✓ | API token; static-only host. The listener has to live elsewhere (your laptop, a VPS) and pushes to Vercel via API |
+| **Generic SSH/SFTP** | manual | `python -m apps.workflow_engine.deploy_once` for now |
+
+> _Netlify and GitHub Pages were dropped: both are static-only hosts that cannot run the IMAP listener, and the local-listener-pushes-to-static-host model adds nothing on top of Vercel for that use case._
 
 <br />
 

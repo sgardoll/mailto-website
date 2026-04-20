@@ -21,7 +21,7 @@ class DeployResult:
 class DeployProvider(Protocol):
     """Protocol for deploy providers.
 
-    Every provider (SiteGround, Vercel, Netlify, etc.) must implement
+    Every provider (SiteGround, Vercel, etc.) must implement
     these four methods. The workflow engine calls them in order:
     bootstrap() → build() → deploy() → report()
     """

@@ -21,15 +21,15 @@ class DeployProvider(str, Enum):
     Use these exact string values in config.yaml:
         hosting_provider: siteground
         hosting_provider: ssh_sftp
-        hosting_provider: netlify
         hosting_provider: vercel
-        hosting_provider: github_pages
+
+    Netlify and GitHub Pages were dropped — they're static-only hosts
+    that cannot run the IMAP listener, and the local-listener-pushing-
+    to-static-host model adds no value over Vercel for static sites.
     """
     SITEGROUND = "siteground"
     SSH_SFTP = "ssh_sftp"
-    NETLIFY = "netlify"
     VERCEL = "vercel"
-    GITHUB_PAGES = "github_pages"
 
     @property
     def is_ssh(self) -> bool:
@@ -119,25 +119,11 @@ class SshSftpConfig:
 
 
 @dataclass
-class NetlifyConfig:
-    """Netlify deploy target."""
-    api_token: str = ""
-    site_id: str = ""
-
-
-@dataclass
 class VercelConfig:
     """Vercel deploy target."""
     api_token: str = ""
     project_id: str = ""
     team_id: str = ""
-
-
-@dataclass
-class GitHubPagesConfig:
-    """GitHub Pages deploy target."""
-    repo_url: str = ""
-    branch: str = "gh-pages"
 
 
 @dataclass
@@ -167,9 +153,7 @@ class Config:
     lm_studio: LmStudioConfig
     siteground: SiteGroundConfig = field(default_factory=SiteGroundConfig)
     ssh_sftp: SshSftpConfig = field(default_factory=SshSftpConfig)
-    netlify: NetlifyConfig = field(default_factory=NetlifyConfig)
     vercel: VercelConfig = field(default_factory=VercelConfig)
-    github_pages: GitHubPagesConfig = field(default_factory=GitHubPagesConfig)
     inboxes: list[InboxConfig] = field(default_factory=list)
     global_allowed_senders: list[str] = field(default_factory=list)
     git_branch: str = "main"
@@ -280,9 +264,7 @@ def load_config(raw: dict) -> Config:
         lm_studio=LmStudioConfig(**(raw.get("lm_studio") or {})),
         siteground=SiteGroundConfig(**(raw.get("siteground") or {})),
         ssh_sftp=SshSftpConfig(**(raw.get("ssh_sftp") or raw.get("generic_ssh") or {})),
-        netlify=NetlifyConfig(**(raw.get("netlify") or {})),
         vercel=VercelConfig(**(raw.get("vercel") or {})),
-        github_pages=GitHubPagesConfig(**(raw.get("github_pages") or {})),
         inboxes=[InboxConfig(**ib) for ib in raw.get("inboxes", [])],
         global_allowed_senders=raw.get("global_allowed_senders", []),
         git_branch=raw.get("git_branch", "main"),

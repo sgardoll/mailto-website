@@ -112,12 +112,12 @@ def extract_siteground_key(form_data: dict) -> str | None:
     if not key.endswith('\n'):
         key = key + '\n'
     return key
-_API_PROVIDERS = {'netlify', 'vercel'}
+_API_PROVIDERS = {'vercel'}
 _URL_RE = re.compile(r'^https?://', re.IGNORECASE)
 
 
 def _needs_manual_site_base_url(provider: str) -> bool:
-    return provider in _SSH_PROVIDERS or provider == 'github_pages'
+    return provider in _SSH_PROVIDERS
 
 
 def validate_hosting(form_data: dict) -> list[dict]:
@@ -164,21 +164,11 @@ def validate_hosting(form_data: dict) -> list[dict]:
         if not remote_base_path:
             errors.append({'field': f'{prefix}remote_base_path', 'message': 'Remote base path is required'})
 
-    elif provider == 'netlify':
-        if not form_data.get('netlify_api_token', '').strip():
-            errors.append({'field': 'netlify_api_token', 'message': 'API token is required'})
-        if not form_data.get('netlify_site_id', '').strip():
-            errors.append({'field': 'netlify_site_id', 'message': 'Site ID is required'})
-
     elif provider == 'vercel':
         if not form_data.get('vercel_api_token', '').strip():
             errors.append({'field': 'vercel_api_token', 'message': 'API token is required'})
         if not form_data.get('vercel_project_id', '').strip():
             errors.append({'field': 'vercel_project_id', 'message': 'Project name or ID is required'})
-
-    elif provider == 'github_pages':
-        if not form_data.get('gh_pages_branch', '').strip():
-            errors.append({'field': 'gh_pages_branch', 'message': 'Target branch is required'})
 
     if _needs_manual_site_base_url(provider):
         site_base_url = form_data.get('site_base_url', '').strip()
@@ -223,19 +213,10 @@ def build_hosting(form_data: dict) -> dict:
         if provider == 'siteground':
             section['key_passphrase'] = form_data.get('sg-key_passphrase', '')
         result[section_key] = section
-    elif provider == 'netlify':
-        result['netlify'] = {
-            'api_token': form_data.get('netlify_api_token', '').strip(),
-            'site_id': form_data.get('netlify_site_id', '').strip(),
-        }
     elif provider == 'vercel':
         result['vercel'] = {
             'api_token': form_data.get('vercel_api_token', '').strip(),
             'project_id': form_data.get('vercel_project_id', '').strip(),
-        }
-    elif provider == 'github_pages':
-        result['github_pages'] = {
-            'branch': form_data.get('gh_pages_branch', '').strip() or 'gh-pages',
         }
 
     site_base_url = form_data.get('site_base_url', '').strip()
@@ -261,18 +242,6 @@ def _http_get_json(url: str, headers: dict, timeout: int = 10) -> dict:
         raise ProviderLookupError(f'HTTP {e.code}: {e.reason}') from e
     except (urllib.error.URLError, TimeoutError, OSError) as e:
         raise ProviderLookupError(f'Network error: {e}') from e
-
-
-def fetch_netlify_site_url(api_token: str, site_id: str) -> str:
-    """Return the public HTTPS URL for a Netlify site, raising ProviderLookupError on failure."""
-    data = _http_get_json(
-        f'https://api.netlify.com/api/v1/sites/{site_id}',
-        {'Authorization': f'Bearer {api_token}'},
-    )
-    url = data.get('ssl_url') or data.get('url')
-    if not url:
-        raise ProviderLookupError('Netlify site has no public URL yet')
-    return url.rstrip('/')
 
 
 def fetch_vercel_project_url(api_token: str, project_id: str) -> str:
@@ -364,9 +333,7 @@ def build_inboxes(form_data: dict, gmail_address: str, site_base_url: str, hosti
 _PROVIDER_SECTION_KEYS = {
     'siteground': 'siteground',
     'ssh_sftp': 'ssh_sftp',
-    'netlify': 'netlify',
     'vercel': 'vercel',
-    'github_pages': 'github_pages',
 }
 
 
@@ -466,7 +433,6 @@ def mask_for_preview(env_str: str, yaml_str: str) -> tuple[str, str]:
     for section_key, field_names in {
         'siteground': ('password', 'key_passphrase'),
         'ssh_sftp': ('password',),
-        'netlify': ('api_token',),
         'vercel': ('api_token',),
     }.items():
         section = config.get(section_key)
@@ -579,19 +545,10 @@ def hydrate_wizard_state(env_values: dict, config_values: dict) -> dict:
             'ssh-password': provider_section.get('password', ''),
             'ssh-remote_base_path': provider_section.get('base_remote_path', ''),
         })
-    elif provider == 'netlify':
-        state.update({
-            'netlify_api_token': provider_section.get('api_token', ''),
-            'netlify_site_id': provider_section.get('site_id', ''),
-        })
     elif provider == 'vercel':
         state.update({
             'vercel_api_token': provider_section.get('api_token', ''),
             'vercel_project_id': provider_section.get('project_id', ''),
-        })
-    elif provider == 'github_pages':
-        state.update({
-            'gh_pages_branch': provider_section.get('branch', 'gh-pages'),
         })
 
     return state

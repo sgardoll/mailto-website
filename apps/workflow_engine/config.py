@@ -12,11 +12,9 @@ from pathlib import Path
 from packages.config_contract import (
     Config,
     DeployProvider,
-    GitHubPagesConfig,
     ImapConfig,
     InboxConfig,
     LmStudioConfig,
-    NetlifyConfig,
     SiteGroundConfig,
     SmtpConfig,
     SshSftpConfig,

@@ -500,18 +500,11 @@
             });
         }
 
-        // Netlify validations
-        attachFieldValidation('netlify-api-token', ruleRequired('API token is required'));
-        attachFieldValidation('netlify-site-id', ruleRequired('Site ID is required'));
-
         // Vercel validations
         attachFieldValidation('vercel-api-token', ruleRequired('API token is required'));
         attachFieldValidation('vercel-project-id', ruleRequired('Project name or ID is required'));
 
-        // GitHub Pages validations
-        attachFieldValidation('gh-pages-branch', ruleRequired('Target branch is required'));
-
-        // Site base URL validation (only when manual — SSH/GitHub Pages)
+        // Site base URL validation (only when manual — SSH providers)
         attachFieldValidation('site-base-url', function(input) {
             if (!siteBaseUrlIsManual(select.value)) return '';
             var v = input.value.trim();
@@ -564,14 +557,6 @@
                     showFieldError(prefix + 'remote_base_path', 'Remote base path is required'); errors.push(1);
                 } else { clearFieldError(prefix + 'remote_base_path'); }
 
-            } else if (provider === 'netlify') {
-                if (!document.getElementById('netlify-api-token').value.trim()) {
-                    showFieldError('netlify-api-token', 'API token is required'); errors.push(1);
-                } else { clearFieldError('netlify-api-token'); }
-                if (!document.getElementById('netlify-site-id').value.trim()) {
-                    showFieldError('netlify-site-id', 'Site ID is required'); errors.push(1);
-                } else { clearFieldError('netlify-site-id'); }
-
             } else if (provider === 'vercel') {
                 if (!document.getElementById('vercel-api-token').value.trim()) {
                     showFieldError('vercel-api-token', 'API token is required'); errors.push(1);
@@ -579,11 +564,6 @@
                 if (!document.getElementById('vercel-project-id').value.trim()) {
                     showFieldError('vercel-project-id', 'Project name or ID is required'); errors.push(1);
                 } else { clearFieldError('vercel-project-id'); }
-
-            } else if (provider === 'github_pages') {
-                if (!document.getElementById('gh-pages-branch').value.trim()) {
-                    showFieldError('gh-pages-branch', 'Target branch is required'); errors.push(1);
-                } else { clearFieldError('gh-pages-branch'); }
             }
 
             if (siteBaseUrlIsManual(provider)) {
@@ -602,7 +582,7 @@
         }
 
         function siteBaseUrlIsManual(provider) {
-            return provider === 'siteground' || provider === 'ssh_sftp' || provider === 'github_pages';
+            return provider === 'siteground' || provider === 'ssh_sftp';
         }
 
         function toggleSiteBaseUrl() {
@@ -633,14 +613,9 @@
                 }
                 payload[prefix + 'password'] = document.getElementById(prefix + 'password').value;
                 payload[prefix + 'remote_base_path'] = document.getElementById(prefix + 'remote_base_path').value.trim();
-            } else if (provider === 'netlify') {
-                payload['netlify_api_token'] = document.getElementById('netlify-api-token').value.trim();
-                payload['netlify_site_id'] = document.getElementById('netlify-site-id').value.trim();
             } else if (provider === 'vercel') {
                 payload['vercel_api_token'] = document.getElementById('vercel-api-token').value.trim();
                 payload['vercel_project_id'] = document.getElementById('vercel-project-id').value.trim();
-            } else if (provider === 'github_pages') {
-                payload['gh_pages_branch'] = document.getElementById('gh-pages-branch').value.trim();
             }
 
             if (siteBaseUrlIsManual(provider)) {

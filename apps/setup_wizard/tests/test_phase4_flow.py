@@ -454,9 +454,7 @@ def test_done_route_siteground_shows_deploy_button(client):
 
 
 @pytest.mark.parametrize('provider,expected_marker', [
-    ('netlify', 'provider dashboard'),
-    ('vercel', 'provider dashboard'),
-    ('github_pages', 'enable Pages'),
+    ('vercel', 'Vercel dashboard'),
     ('ssh_sftp', 'rsync'),
 ])
 def test_done_route_non_siteground_shows_manual_instructions(client, provider, expected_marker):
@@ -487,8 +485,10 @@ def reset_deploy_state():
     server_module._deploy_state.update(original)
 
 
-def test_deploy_endpoint_rejects_non_siteground(client):
-    server_module._wizard_state['hosting_provider'] = 'netlify'
+def test_deploy_endpoint_rejects_unimplemented_provider(client):
+    # ssh_sftp is configurable in the wizard but has no provider impl yet,
+    # so /deploy should reject it cleanly with a structured error.
+    server_module._wizard_state['hosting_provider'] = 'ssh_sftp'
     server_module._wizard_state['inboxes'] = [
         {'slug': 'x', 'address': 'u+x@gmail.com', 'site_name': 'X',
          'site_url': 'https://x.example/', 'site_base': '/'},
@@ -498,7 +498,7 @@ def test_deploy_endpoint_rejects_non_siteground(client):
     data = resp.get_json()
     assert data['ok'] is False
     assert data['error'] == 'not_implemented'
-    assert data['provider'] == 'netlify'
+    assert data['provider'] == 'ssh_sftp'
 
 
 def test_deploy_endpoint_rejects_when_no_inboxes(client):

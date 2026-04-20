@@ -363,18 +363,7 @@ def validate_form():
                     key_path = _write_siteground_key_file(key_text)
                     data['sg-existing_key_path'] = str(key_path)
                     data['sg-ssh_private_key'] = ''  # consumed — drop from state
-            if provider == 'netlify':
-                try:
-                    data['site_base_url'] = builder.fetch_netlify_site_url(
-                        data.get('netlify_api_token', '').strip(),
-                        data.get('netlify_site_id', '').strip(),
-                    )
-                except builder.ProviderLookupError as e:
-                    return jsonify({"ok": False, "errors": [{
-                        "field": "netlify_site_id",
-                        "message": f"Could not fetch site URL from Netlify: {e}",
-                    }]}), 400
-            elif provider == 'vercel':
+            if provider == 'vercel':
                 try:
                     data['site_base_url'] = builder.fetch_vercel_project_url(
                         data.get('vercel_api_token', '').strip(),

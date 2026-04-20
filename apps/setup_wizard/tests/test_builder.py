@@ -9,7 +9,7 @@ from unittest.mock import patch
 
 from apps.setup_wizard.builder import (
     validate, build, validate_hosting, build_hosting, validate_inboxes, build_inboxes,
-    fetch_netlify_site_url, fetch_vercel_project_url, ProviderLookupError,
+    fetch_vercel_project_url, ProviderLookupError,
     build_final_outputs, mask_for_preview, hydrate_wizard_state,
 )
 
@@ -192,22 +192,10 @@ VALID_HOSTING_SITEGROUND = {
     'site_base_url': 'https://example.com',
 }
 
-VALID_HOSTING_NETLIFY = {
-    'hosting_provider': 'netlify',
-    'netlify_api_token': 'tok123',
-    'netlify_site_id': 'abc-site',
-}
-
 VALID_HOSTING_VERCEL = {
     'hosting_provider': 'vercel',
     'vercel_api_token': 'vtok456',
     'vercel_project_id': 'my-project',
-}
-
-VALID_HOSTING_GITHUB_PAGES = {
-    'hosting_provider': 'github_pages',
-    'gh_pages_branch': 'gh-pages',
-    'site_base_url': 'https://user.github.io/repo',
 }
 
 
@@ -258,24 +246,13 @@ def test_validate_hosting_siteground_existing_key_satisfies_credential():
     assert validate_hosting(data) == []
 
 
-def test_validate_hosting_netlify_requires_token_and_site_id():
-    errors = validate_hosting({'hosting_provider': 'netlify', 'netlify_api_token': '', 'netlify_site_id': ''})
-    fields = [e['field'] for e in errors]
-    assert 'netlify_api_token' in fields
-    assert 'netlify_site_id' in fields
-
-
 def test_validate_hosting_vercel_passes():
     assert validate_hosting(VALID_HOSTING_VERCEL) == []
 
 
-def test_validate_hosting_github_pages_passes():
-    assert validate_hosting(VALID_HOSTING_GITHUB_PAGES) == []
-
-
 def test_validate_hosting_does_not_validate_hidden_provider_fields():
-    """Only siteground fields should be validated when provider='siteground', not netlify fields."""
-    data = {**VALID_HOSTING_SITEGROUND}  # no netlify_api_token present
+    """Only siteground fields should be validated when provider='siteground', not vercel fields."""
+    data = {**VALID_HOSTING_SITEGROUND}  # no vercel_api_token present
     assert validate_hosting(data) == []
 
 
@@ -301,19 +278,13 @@ def test_build_hosting_siteground_preserves_existing_key_path_when_no_paste():
 
 
 def test_build_hosting_stores_hosting_provider():
-    result = build_hosting(VALID_HOSTING_NETLIFY)
-    assert result.get('hosting_provider') == 'netlify'
+    result = build_hosting(VALID_HOSTING_VERCEL)
+    assert result.get('hosting_provider') == 'vercel'
 
 
-def test_build_hosting_netlify_keys():
-    result = build_hosting(VALID_HOSTING_NETLIFY)
-    assert result['netlify'] == {'api_token': 'tok123', 'site_id': 'abc-site'}
-
-
-def test_build_hosting_github_pages_uses_default_branch():
-    data = {'hosting_provider': 'github_pages', 'gh_pages_branch': '', 'site_base_url': 'https://x.github.io/r'}
-    result = build_hosting(data)
-    assert result['github_pages']['branch'] == 'gh-pages'
+def test_build_hosting_vercel_keys():
+    result = build_hosting(VALID_HOSTING_VERCEL)
+    assert result['vercel'] == {'api_token': 'vtok456', 'project_id': 'my-project'}
 
 
 def test_validate_hosting_requires_site_base_url_for_siteground():
@@ -328,12 +299,8 @@ def test_validate_hosting_rejects_non_url_site_base_url():
     assert any(e['field'] == 'site_base_url' and 'valid url' in e['message'].lower() for e in errors)
 
 
-def test_validate_hosting_does_not_require_site_base_url_for_netlify():
-    # Netlify resolves the URL via API, so the form does not collect it.
-    assert validate_hosting(VALID_HOSTING_NETLIFY) == []
-
-
 def test_validate_hosting_does_not_require_site_base_url_for_vercel():
+    # Vercel resolves the URL via API, so the form does not collect it.
     assert validate_hosting(VALID_HOSTING_VERCEL) == []
 
 
@@ -430,18 +397,6 @@ class _FakeHTTPResponse:
         return False
 
 
-def test_fetch_netlify_site_url_prefers_ssl_url():
-    payload = {'ssl_url': 'https://site.netlify.app', 'url': 'http://site.netlify.app'}
-    with patch('apps.setup_wizard.builder.urllib.request.urlopen', return_value=_FakeHTTPResponse(payload)):
-        assert fetch_netlify_site_url('tok', 'id') == 'https://site.netlify.app'
-
-
-def test_fetch_netlify_site_url_raises_on_missing_url():
-    with patch('apps.setup_wizard.builder.urllib.request.urlopen', return_value=_FakeHTTPResponse({})):
-        with pytest.raises(ProviderLookupError):
-            fetch_netlify_site_url('tok', 'id')
-
-
 def test_fetch_vercel_project_url_uses_production_alias():
     payload = {'targets': {'production': {'alias': ['my-proj.vercel.app']}}, 'name': 'my-proj'}
     with patch('apps.setup_wizard.builder.urllib.request.urlopen', return_value=_FakeHTTPResponse(payload)):
@@ -495,7 +450,7 @@ def test_build_final_outputs_includes_runtime_defaults_provider_and_inboxes():
     assert config['dry_run'] is False
     assert config['siteground']['host'] == 'ssh.example.com'
     assert config['inboxes'][0]['site_url'] == 'https://example.com/guitar'
-    for forbidden in ('netlify', 'vercel', 'github_pages', 'ssh_sftp', 'hosting_provider', 'site_base_url'):
+    for forbidden in ('vercel', 'ssh_sftp', 'hosting_provider', 'site_base_url'):
         assert forbidden not in config
 
 
@@ -540,15 +495,15 @@ def test_mask_for_preview_masks_env_secret_but_keeps_yaml_placeholder_literal():
 def test_mask_for_preview_masks_provider_secrets_to_last_four_only():
     env_str, yaml_str = build_final_outputs({
         **FINAL_WIZARD_STATE,
-        'hosting_provider': 'netlify',
-        'netlify': {'api_token': 'netlify-secret-token', 'site_id': 'site-123'},
+        'hosting_provider': 'vercel',
+        'vercel': {'api_token': 'vercel-secret-token', 'project_id': 'proj-123'},
     })
     _, masked_yaml = mask_for_preview(env_str, yaml_str)
     config = yaml.safe_load(masked_yaml)
 
-    assert config['netlify']['api_token'].endswith('oken')
-    assert config['netlify']['api_token'] != 'netlify-secret-token'
-    assert 'netlify-secret-token' not in masked_yaml
+    assert config['vercel']['api_token'].endswith('oken')
+    assert config['vercel']['api_token'] != 'vercel-secret-token'
+    assert 'vercel-secret-token' not in masked_yaml
 
 
 def test_hydrate_wizard_state_reconstructs_visible_values_and_hidden_runtime_keys():
@@ -637,7 +592,7 @@ def test_hydrate_wizard_state_leaves_site_base_url_empty_when_inbox_urls_are_amb
             'imap': {'user': 'user@gmail.com'},
             'smtp': {'user': 'user@gmail.com'},
             'lm_studio': {},
-            'github_pages': {'branch': 'gh-pages'},
+            'ssh_sftp': {'host': 'h', 'user': 'u'},
             'inboxes': [
                 {
                     'slug': 'guitar',
@@ -653,5 +608,5 @@ def test_hydrate_wizard_state_leaves_site_base_url_empty_when_inbox_urls_are_amb
         },
     )
 
-    assert state['hosting_provider'] == 'github_pages'
+    assert state['hosting_provider'] == 'ssh_sftp'
     assert state['site_base_url'] == ''

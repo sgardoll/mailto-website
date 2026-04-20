@@ -22,20 +22,21 @@ const { tag, entries, threads } = Astro.props as {
   entries: Awaited<ReturnType<typeof getCollection<'entries'>>>;
   threads: Awaited<ReturnType<typeof getCollection<'threads'>>>;
 };
+const base = import.meta.env.BASE_URL;
 ---
 <Base title={`#${tag}`}>
   <h1>#{tag}</h1>
   {threads.length > 0 && <h2>Threads</h2>}
   {threads.map(t => (
     <article class="thread-card">
-      <h3><a href={`/threads/${t.slug}`}>{t.data.title}</a></h3>
+      <h3><a href={`${base}threads/${t.slug}`}>{t.data.title}</a></h3>
       <p>{t.data.summary}</p>
     </article>
   ))}
   {entries.length > 0 && <h2>Entries</h2>}
   {entries.map(e => (
     <article class="entry-card">
-      <h3><a href={`/entries/${e.slug}`}>{e.data.title}</a></h3>
+      <h3><a href={`${base}entries/${e.slug}`}>{e.data.title}</a></h3>
       <p>{e.data.summary}</p>
     </article>
   ))}
