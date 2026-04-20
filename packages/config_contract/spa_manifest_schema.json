@@ -1,0 +1,27 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "SPA Manifest",
+  "type": "object",
+  "required": ["schema_version", "modules"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "type": "string" },
+    "modules": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["module_id", "kind", "title", "version"],
+        "additionalProperties": false,
+        "properties": {
+          "module_id": { "type": "string" },
+          "kind": {
+            "type": "string",
+            "enum": ["calculator", "wizard", "drill", "scorer", "generator"]
+          },
+          "title":   { "type": "string" },
+          "version": { "type": "string" }
+        }
+      }
+    }
+  }
+}
