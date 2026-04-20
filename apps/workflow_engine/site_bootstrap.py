@@ -1,10 +1,11 @@
 """Create sites/<slug>/ from the template the first time an inbox is hit."""
 from __future__ import annotations
 import argparse
+import json
 import shutil
 from pathlib import Path
 
-from .config import REPO_ROOT, SITES_DIR, TEMPLATE_DIR, InboxConfig, load
+from .config import REPO_ROOT, SITES_DIR, STATE_DIR, TEMPLATE_DIR, InboxConfig, load
 from .logging_setup import get, setup
 
 log = get("site_bootstrap")
@@ -29,6 +30,17 @@ def ensure_site(inbox: InboxConfig, *, force: bool = False) -> Path:
     (target / ".inbox.json").write_text(
         f'{{"slug": "{inbox.slug}", "address": "{inbox.address}", "site_name": "{inbox.site_name or inbox.slug}"}}\n'
     )
+    # PROF-01: bootstrap per-inbox profile.json (idempotent; not in site git tree — see .gitignore).
+    profile_dir = STATE_DIR / inbox.slug
+    profile_dir.mkdir(parents=True, exist_ok=True)
+    profile_path = profile_dir / "profile.json"
+    if not profile_path.exists():
+        profile_path.write_text(json.dumps({
+            "schema_version": "1",
+            "inbox_slug": inbox.slug,
+            "state": {},
+        }, indent=2))
+        log.info("Wrote profile.json for inbox '%s' at %s", inbox.slug, profile_path)
     return target
 
 
