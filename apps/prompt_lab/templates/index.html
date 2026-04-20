@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Prompt Lab — site-builder prompt tester</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <strong>Prompt Lab</strong>
+      <span class="muted">site-builder prompt tester · OpenRouter-backed</span>
+    </div>
+    <div class="topbar-right">
+      {% if has_env_api_key %}
+        <span class="pill pill-ok">OPENROUTER_API_KEY found in env</span>
+      {% else %}
+        <span class="pill pill-warn">No env key — paste one below</span>
+      {% endif %}
+    </div>
+  </header>
+
+  <main class="layout">
+    <section class="panel panel-config">
+      <h2>1. Configure</h2>
+
+      <label class="field">
+        <span>OpenRouter API key</span>
+        <input id="api-key" type="password" placeholder="sk-or-..." autocomplete="off" />
+        <small class="muted">Never stored. Sent with each run.</small>
+      </label>
+
+      <div class="field-row">
+        <label class="field">
+          <span>Temperature</span>
+          <input id="temperature" type="number" min="0" max="2" step="0.05" value="0.4" />
+        </label>
+        <label class="field">
+          <span>Max tokens</span>
+          <input id="max-tokens" type="number" min="256" max="32768" step="256" value="4096" />
+        </label>
+      </div>
+
+      <fieldset class="field">
+        <legend>Models to test (tick one or more)</legend>
+        <div id="models-list">
+          {% for m in models %}
+          <div class="model-row">
+            <label class="checkbox">
+              <input type="checkbox" class="model-check" data-label="{{ m.label }}" />
+              <span>{{ m.label }}</span>
+            </label>
+            <input type="text" class="model-slug" value="{{ m.slug }}"
+                   title="OpenRouter model slug — edit if OpenRouter uses a different identifier"
+                   data-default="{{ m.slug }}" />
+            <small class="muted">{{ m.notes }}</small>
+          </div>
+          {% endfor %}
+        </div>
+        <small class="muted">
+          Slugs are editable — OpenRouter occasionally renames models.
+          Tick multiple to race them in parallel.
+        </small>
+      </fieldset>
+
+      <label class="field">
+        <span>Task</span>
+        <select id="task">
+          <option value="synthesise_and_fold_in">synthesise_and_fold_in (default)</option>
+          <option value="topic_curation">topic_curation</option>
+        </select>
+      </label>
+
+      <div class="buttons">
+        <button id="run-btn" class="primary">Run against selected models</button>
+        <button id="reset-btn" class="ghost">Reset prompts to defaults</button>
+      </div>
+    </section>
+
+    <section class="panel panel-prompts">
+      <h2>2. Edit prompts</h2>
+
+      <label class="field">
+        <span>System prompt</span>
+        <textarea id="system-prompt" rows="14" spellcheck="false"></textarea>
+      </label>
+
+      <label class="field">
+        <span>User prompt (JSON)</span>
+        <textarea id="user-prompt" rows="26" spellcheck="false"></textarea>
+        <small class="muted">
+          Full payload sent to the model — including site topic, existing threads/entries,
+          and the incoming email. Edit freely to test different scenarios.
+        </small>
+      </label>
+
+      <details class="field">
+        <summary>Advanced: seed data used by the deploy simulator</summary>
+        <small class="muted">
+          When you click <em>Build &amp; preview</em> on a result, the simulator
+          first seeds the site with the existing threads/entries below (so cross-references
+          resolve), then applies the model's plan on top. Match these to the prompt payload
+          you send.
+        </small>
+        <label class="field">
+          <span>topic.md</span>
+          <textarea id="topic-md" rows="4" spellcheck="false"></textarea>
+        </label>
+        <label class="field">
+          <span>Existing threads (JSON array)</span>
+          <textarea id="seed-threads" rows="8" spellcheck="false"></textarea>
+        </label>
+        <label class="field">
+          <span>Existing entries (JSON array)</span>
+          <textarea id="seed-entries" rows="8" spellcheck="false"></textarea>
+        </label>
+      </details>
+    </section>
+
+    <section class="panel panel-results">
+      <h2>3. Results</h2>
+      <div id="results" class="results-empty">
+        <p class="muted">No runs yet. Pick one or more models and click <em>Run</em>.</p>
+      </div>
+    </section>
+  </main>
+
+  <script id="defaults" type="application/json">
+    {{ {
+      "system": system_default,
+      "user_synthesis": user_default_synthesis,
+      "user_topic": user_default_topic,
+      "topic_md": topic_md_default,
+      "threads": existing_threads_default,
+      "entries": existing_entries_default
+    } | tojson }}
+  </script>
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>
