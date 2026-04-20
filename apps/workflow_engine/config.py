@@ -15,6 +15,7 @@ from packages.config_contract import (
     ImapConfig,
     InboxConfig,
     LmStudioConfig,
+    MechanicKind,
     SiteGroundConfig,
     SmtpConfig,
     SshSftpConfig,
