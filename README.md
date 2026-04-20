@@ -1,77 +1,266 @@
+<div align="center">
+
+<img src="docs/screenshots/hero-banner.png" alt="thoughts-to-platform-builder" width="100%" />
+
 # thoughts-to-platform-builder
 
-Turn emails into an evolving, topic-specific website. Each inbox you dedicate
-to a goal or idea in your life becomes its own self-extending platform. You
-email an idea, quote, article, or scrap to the inbox; a local LM Studio
-model (Gemma) synthesises it, folds it into what's already there, and the
-site is rebuilt and redeployed — automatically.
+### Email an idea. Get a website.
 
-## How it works
+**A self-extending publishing platform powered by your inbox and a local LLM.**
+**Five-step setup. Zero YAML. One commit per idea.**
 
-```
- One Gmail account, many plus-aliases (you+guitar@..., you+parenting@...)
-        │  IMAP IDLE (push)
-        ▼
- apps/workflow_engine/listener.py  ─►  dispatcher  ─►  orchestrator(inbox=guitar)
-                                        ─►  orchestrator(inbox=parenting)
-                                        ─►  ...
-                                                │
-                    per-inbox site at runtime/runtime/sites/<slug>/ (Astro)
-                                                │
-          topic curator (Gemma) → synthesiser (Gemma) →
-          schema-validated writes → astro build →
-          SFTP mirror to SiteGround → git commit → reply email
-```
+<br />
 
-Two prime directives for the model:
+[![Python](https://img.shields.io/badge/Python-3.11+-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
+[![Node](https://img.shields.io/badge/Node-20+-339933?style=for-the-badge&logo=node.js&logoColor=white)](https://nodejs.org/)
+[![Astro](https://img.shields.io/badge/Astro-5-FF5D01?style=for-the-badge&logo=astro&logoColor=white)](https://astro.build/)
+[![LM Studio](https://img.shields.io/badge/LM_Studio-Local-7C3AED?style=for-the-badge)](https://lmstudio.ai/)
+[![License](https://img.shields.io/badge/License-MIT-blue?style=for-the-badge)](LICENSE)
 
-1. **Fold in, don't silo.** Every new entry must extend or link to an
-   existing thread on the site. The content schema enforces this — a
-   silo'd write won't even validate.
-2. **Take initiative.** Synthesise the email into something useful
-   (tools, questions, next steps, connections to earlier entries), not a
-   verbatim transcription.
+<br />
 
-## Project layout
+[**Five-step Wizard**](#-the-wizard) ·
+[**How it works**](#-how-it-works) ·
+[**Quick start**](#-quick-start) ·
+[**Hosting**](#-hosting) ·
+[**Safety**](#-safety) ·
+[**Troubleshooting**](#-when-something-goes-wrong)
 
-```
-packages/site-template/   Astro 5 template. Copied to runtime/runtime/sites/<slug>/ on an
-                           inbox's first email. Inbox-owned thereafter.
-runtime/runtime/sites/<slug>/              One evolving site per inbox.
-apps/workflow_engine/                  Python pipeline. Imports into a single venv.
-scripts/                   Foreground runner, systemd / launchd installers.
-docs/SETUP.md              Full wiring guide. Read this first.
-```
+</div>
 
-## Quick start
+<br />
+
+---
+
+<br />
+
+<div align="center">
+
+> _Dedicate a Gmail plus-alias to any goal — guitar practice, parenting notes, a half-formed business idea — and that alias becomes a living website._
+>
+> _Forward articles. Jot voice-to-text thoughts. Paste quotes._
+> _A local LLM folds each one into the existing narrative, rebuilds the site, and pushes it live._
+>
+> **No CMS. No editor. No "let me just open the dashboard real quick." Just send mail.**
+
+<br />
+
+<img src="docs/screenshots/live-site.png" alt="A site that grew itself from emails" width="85%" />
+
+<sub>_The site you're looking at grew itself from forwarded articles. The user wrote nothing._</sub>
+
+</div>
+
+<br />
+
+---
+
+<br />
+
+## ✦ The Wizard
+
+> Every other "self-hosted thing" makes you copy YAML, generate app passwords, paste API tokens, and stare at SFTP errors. **This one ships with a five-step browser wizard.**
+
+<br />
+
+<div align="center">
+
+<img src="docs/screenshots/wizard-stepper.png" alt="Wizard stepper" width="90%" />
+
+</div>
+
+<br />
+
+| Step | What you do | What the wizard does |
+|:---:|:---|:---|
+| **1. Gmail** | Paste your address + app password | Pings IMAP to confirm the credentials work before letting you continue |
+| **2. LM Studio** | Pick a model | Auto-discovers every model loaded in your local LM Studio |
+| **3. Hosting** | Choose SiteGround / Vercel / Netlify / GitHub Pages / SSH | Validates the credentials, derives the deploy paths |
+| **4. Inboxes** | Name each idea you want a site for | Derives the plus-alias and the site URL automatically |
+| **5. Preview** | Eyeball the `.env` and `config.yaml` | Writes them atomically — and only if you click confirm |
+
+<br />
+
+<table>
+<tr>
+<td width="50%" align="center">
+<img src="docs/screenshots/wizard-hosting.png" alt="Hosting step" width="100%" />
+<br /><sub><b>Step 3</b> — Hosting picker with SSH key auto-discovery</sub>
+</td>
+<td width="50%" align="center">
+<img src="docs/screenshots/wizard-done.png" alt="Done screen" width="100%" />
+<br /><sub><b>Done</b> — One-click Deploy + per-inbox <i>Add to Contacts</i> vCards</sub>
+</td>
+</tr>
+</table>
+
+<br />
+
+<div align="center">
+
+### From `git clone` to a live, listening site: **under five minutes.**
+
+</div>
+
+<br />
 
 ```bash
-cp apps/workflow_engine/config.example.yaml apps/workflow_engine/config.yaml
-cp .env.example .env
-# Edit .env: set GMAIL_APP_PASSWORD
-# Edit apps/workflow_engine/config.yaml: imap user, smtp user, siteground.*, inboxes
-
-./scripts/run-workflow-dry.sh        # safe smoke test
-./scripts/run-workflow.sh            # foreground, persistent IMAP IDLE
-./scripts/install-systemd-user.sh    # or install-launchd.sh on macOS
+git clone <repo> && cd thoughts-to-platform-builder
+python3 -m venv .venv && .venv/bin/pip install -r apps/workflow_engine/requirements.txt
+./scripts/setup.sh
 ```
 
-Full setup + troubleshooting in [docs/SETUP.md](docs/SETUP.md).
+That last command opens [`http://localhost:7331`](http://localhost:7331). The wizard takes you the rest of the way.
 
-## Prerequisites
+<br />
 
-- Python 3.11+, Node 20+.
-- LM Studio with the `lms` CLI on PATH and a Gemma model loaded. Default
-  config tag is `google/gemma-4-26b-a4b`; change to whatever LM Studio
-  shows for your model.
-- Gmail with an [app password](https://myaccount.google.com/apppasswords).
-- SiteGround hosting with SSH/SFTP enabled.
+---
 
-## Safety
+<br />
 
-- Sender allowlist is mandatory.
-- Model's file writes are path-restricted to `runtime/runtime/sites/<slug>/src/content/`.
-- Astro content-collection Zod schema + a second validator in
-  `apply_changes.py` double-check every op.
-- Build failure triggers a `git restore` rollback so the live site never breaks.
-- Every successful integration is one git commit — `git revert` is the undo.
+## ✦ How it works
+
+After the wizard finishes, this is the loop that runs forever:
+
+```
+ One Gmail account, many plus-aliases  (you+guitar@…, you+parenting@…)
+        │
+        │  IMAP IDLE  (push, near-instant)
+        ▼
+ ┌──────────────────────────────────────────────────────────────────┐
+ │  listener.py  →  dispatcher  →  orchestrator (per inbox)         │
+ │                                                                  │
+ │     ├── topic curator (LM)   updates topic.md                    │
+ │     ├── synthesiser (LM)     plans entry/thread writes           │
+ │     ├── apply_changes        schema-validated frontmatter        │
+ │     ├── astro build          on failure → git restore rollback   │
+ │     └── deploy provider      SFTP / Vercel / Netlify / Pages     │
+ └──────────────────────────────────────────────────────────────────┘
+```
+
+<br />
+
+The model operates under two prime directives, enforced in code:
+
+> **1. Fold in, don't silo.**
+> Every new entry must extend or link to an existing thread. The Astro content schema enforces this — silo'd writes don't even validate.
+
+> **2. Take initiative.**
+> Synthesise the email into something useful — questions, next steps, connections to earlier entries — never a verbatim transcription.
+
+<br />
+
+<div align="center">
+<img src="docs/screenshots/thread-page.png" alt="A thread page" width="80%" />
+<br /><sub>A thread page showing how multiple emails were folded into one narrative.</sub>
+</div>
+
+<br />
+
+---
+
+<br />
+
+## ✦ Quick start
+
+After the wizard, the listener is yours to run however you like:
+
+```bash
+./scripts/run-workflow.sh             # foreground, persistent IMAP IDLE — best for first try
+./scripts/install-launchd.sh          # macOS background service
+./scripts/install-systemd-user.sh     # Linux background service
+```
+
+A health endpoint runs on `http://127.0.0.1:8899/health` so you can confirm the listener is alive and which inboxes it's watching.
+
+<br />
+
+<div align="center">
+<img src="docs/screenshots/health-check.png" alt="Health endpoint" width="70%" />
+<br /><sub>Live health check — status, inboxes loaded, last poll.</sub>
+</div>
+
+<br />
+
+---
+
+<br />
+
+## ✦ Hosting
+
+| Provider | Wizard auto-deploy | Notes |
+|:---|:---:|:---|
+| **SiteGround** (SSH/SFTP) | ✓ | Full one-click deploy from the done screen |
+| **Vercel** | ✓ | API token; deploy on every email arrival |
+| **Netlify** | partial | Connect repo via dashboard, wizard writes config |
+| **GitHub Pages** | partial | Push the repo, point Pages at `runtime/sites/<slug>/dist/` |
+| **Generic SSH/SFTP** | manual | `python -m apps.workflow_engine.deploy_once` |
+
+<br />
+
+---
+
+<br />
+
+## ✦ Project layout
+
+```
+apps/setup_wizard/         Flask wizard you just used. Five steps + done screen.
+apps/workflow_engine/      Python pipeline. IMAP listener → dispatcher → orchestrator → deploy.
+packages/site-template/    Astro 5 template. Copied to runtime/sites/<slug>/ on first email.
+packages/config_contract/  Typed config schema shared by wizard + engine.
+runtime/sites/<slug>/      One evolving site per inbox. LM-owned after bootstrap.
+runtime/state/             listener.log, processed.jsonl, SSH keys.
+scripts/                   setup.sh (wizard), run-workflow.sh (foreground), install-* (services).
+docs/SETUP.md              Manual config path if you'd rather edit YAML directly.
+```
+
+<br />
+
+---
+
+<br />
+
+## ✦ Safety
+
+> The platform writes to a real website on real hosting. The safety model is intentionally conservative.
+
+- **Sender allowlist is mandatory.** No allowlist, no processing — even if the address resolves to a configured inbox.
+- **The model can only write inside `runtime/sites/<slug>/src/content/`.** Path-checked before every write.
+- **Two layers of validation** — Astro's Zod content-collection schema + a second validator in `apply_changes.py`. Anything malformed is rejected before it touches the site.
+- **Build failure ⟶ automatic rollback.** A broken synthesis triggers `git restore` + `git clean` so the live site never breaks. You get an email telling you exactly what failed.
+- **Every successful integration is one git commit.** `git revert` is the undo button.
+
+<br />
+
+---
+
+<br />
+
+## ✦ When something goes wrong
+
+```bash
+tail -f runtime/state/listener.log              # live pipeline log
+curl -s localhost:8899/health                   # is the listener alive? which inboxes?
+cat runtime/state/processed.jsonl | tail        # last N messages and their outcomes
+```
+
+Full troubleshooting + the manual (no-wizard) config path live in **[docs/SETUP.md](docs/SETUP.md)**.
+
+<br />
+
+---
+
+<br />
+
+<div align="center">
+
+### One Gmail account. Many plus-aliases. Many self-extending sites.
+
+**Sit back and email yourself a website.**
+
+<br /><br />
+
+<sub>Built with Python, Astro, LM Studio, and a deeply held conviction that publishing should not require a dashboard.</sub>
+
+</div>
