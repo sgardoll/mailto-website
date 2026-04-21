@@ -140,6 +140,59 @@ def chat_json(
     return _parse_json_lenient(text)
 
 
+def chat_json_with_meta(
+    cfg: LmStudioConfig,
+    *,
+    system: str,
+    user: str,
+    schema: dict | None = None,
+    schema_hint: str | None = None,
+) -> tuple[dict[str, Any], str]:
+    """Like chat_json but also returns finish_reason as the second tuple element."""
+    ensure_running(cfg)
+    client = make_client(cfg)
+    messages = [{"role": "system", "content": system}]
+    if schema_hint:
+        messages.append({"role": "system", "content": f"Respond with a single JSON object matching:\n{schema_hint}"})
+    messages.append({"role": "user", "content": user})
+
+    if schema is not None:
+        response_format = {
+            "type": "json_schema",
+            "json_schema": {
+                "schema": schema,
+                "strict": True,
+            },
+        }
+    else:
+        response_format = {"type": "json_object"}
+
+    log.info("Calling %s (temp=%s, max_tokens=%s, schema=%s)", cfg.model, cfg.temperature, cfg.max_tokens, schema is not None)
+    try:
+        completion = client.chat.completions.create(
+            model=cfg.model,
+            messages=messages,  # type: ignore[arg-type]
+            temperature=cfg.temperature,
+            max_tokens=cfg.max_tokens,
+            response_format=response_format,
+        )
+    except Exception as e:
+        # Some LM Studio models reject response_format=json_object and only
+        # accept 'text' or 'json_schema'. Fall back to text + lenient parse.
+        if "response_format" not in str(e):
+            raise
+        log.info("Model rejected json_object response_format; retrying as text")
+        completion = client.chat.completions.create(
+            model=cfg.model,
+            messages=messages,  # type: ignore[arg-type]
+            temperature=cfg.temperature,
+            max_tokens=cfg.max_tokens,
+        )
+    finish_reason = completion.choices[0].finish_reason or "stop"
+    text = completion.choices[0].message.content or "{}"
+    return _parse_json_lenient(text), finish_reason
+
+
 def _parse_json_lenient(text: str) -> dict[str, Any]:
     text = text.strip()
     # Strip ```json fences if the model added them despite response_format.
