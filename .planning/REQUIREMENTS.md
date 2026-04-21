@@ -4,26 +4,26 @@
 
 - [ ] **PIPE-01**: User's email is processed through a 5-stage pipeline: INGEST → DISTILL → PLAN → BUILD → INTEGRATE
 - [ ] **PIPE-02**: Pipeline version (`v1`/`v2`) is selectable per-inbox via `config.yaml`; v1 remains the default
-- [ ] **PIPE-03**: Each stage receives only its predecessor's structured output — raw email body never reaches DISTILL or beyond
-- [ ] **PIPE-04**: Three sequential LM calls per email (DISTILL, PLAN, BUILD) use the single LM Studio server
+- [x] **PIPE-03**: Each stage receives only its predecessor's structured output — raw email body never reaches DISTILL or beyond
+- [x] **PIPE-04**: Three sequential LM calls per email (DISTILL, PLAN, BUILD) use the single LM Studio server
 
 ## INGEST
 
-- [ ] **ING-01**: Email body, subject, and sender are normalized into a structured `normalized_input` payload
-- [ ] **ING-02**: Video URLs in email are downloaded via yt-dlp and transcribed via whisper.cpp (subprocess with `Popen` + stderr drain to avoid M4 deadlock)
-- [ ] **ING-03**: Article URLs are extracted via trafilatura with readability-lxml fallback
-- [ ] **ING-04**: Pipeline starts and falls back to plain email text when yt-dlp / ffmpeg / whisper-cli are absent (`shutil.which()` pre-flight)
+- [x] **ING-01**: Email body, subject, and sender are normalized into a structured `normalized_input` payload
+- [x] **ING-02**: Video URLs in email are downloaded via yt-dlp and transcribed via whisper.cpp (subprocess with `Popen` + stderr drain to avoid M4 deadlock)
+- [x] **ING-03**: Article URLs are extracted via trafilatura with readability-lxml fallback
+- [x] **ING-04**: Pipeline starts and falls back to plain email text when yt-dlp / ffmpeg / whisper-cli are absent (`shutil.which()` pre-flight)
 
 ## DISTILL
 
-- [ ] **DIST-01**: Email content is distilled into a `mechanic_spec` JSON object via LM Studio `json_schema` structured output (constrained decoding, not prompt-only JSON)
-- [ ] **DIST-02**: `mechanic_spec` schema: `{kind, title, intent, inputs[], outputs[], content{}}` — max 2 nesting levels
+- [x] **DIST-01**: Email content is distilled into a `mechanic_spec` JSON object via LM Studio `json_schema` structured output (constrained decoding, not prompt-only JSON)
+- [x] **DIST-02**: `mechanic_spec` schema: `{kind, title, intent, inputs[], outputs[], content{}}` — max 2 nesting levels
 - [ ] **DIST-03**: `mechanic.kind` enum (wizard, calculator, drill, scorer, generator) is defined in `packages/config_contract/` as the shared source of truth for DISTILL, BUILD, and the validator
 
 ## PLAN
 
-- [ ] **PLAN-01**: PLAN stage decides `new_module` vs. `extend_module` vs. `upgrade_state_only` given the SPA manifest and new `mechanic_spec`
-- [ ] **PLAN-02**: Emails semantically unrelated to existing modules trigger a new SPA rather than a forced merge
+- [x] **PLAN-01**: PLAN stage decides `new_module` vs. `extend_module` vs. `upgrade_state_only` given the SPA manifest and new `mechanic_spec`
+- [x] **PLAN-02**: Emails semantically unrelated to existing modules trigger a new SPA rather than a forced merge
 
 ## BUILD
 
@@ -72,7 +72,7 @@
 ## Config & Dependencies
 
 - [ ] **CONF-01**: `pipeline_version` flag added to `packages/config_contract/`; v1 is the default; both pipeline paths coexist
-- [ ] **CONF-02**: New pip deps added to `apps/workflow_engine/requirements.txt`: yt-dlp, pywhispercpp, trafilatura, sentence-transformers, faiss-cpu, gitpython, jsonschema
+- [x] **CONF-02**: New pip deps added to `apps/workflow_engine/requirements.txt`: yt-dlp, pywhispercpp, trafilatura, sentence-transformers, faiss-cpu, gitpython, jsonschema
 
 ---
 

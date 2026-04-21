@@ -41,7 +41,7 @@ See `.planning/milestones/v1.1-ROADMAP.md` for full phase details and `.planning
 
 - [x] **Phase 14: Foundation** - mechanic enum, manifest schema, config contract extension, SPA shell skeleton, profile.json bootstrap
 - [x] **Phase 15: INGEST** - content extractors, ingest.py, yt-dlp + whisper.cpp + trafilatura wrappers, shutil.which pre-flights (completed 2026-04-20)
-- [ ] **Phase 16: DISTILL + PLAN** - prompt builders, distill.py, plan.py, mechanic_spec schema, structured LM output
+- [x] **Phase 16: DISTILL + PLAN** - prompt builders, distill.py, plan.py, mechanic_spec schema, structured LM output (completed 2026-04-21)
 - [ ] **Phase 17: BUILD + Validator** - validator.py TDD-first, build.py, Alpine exemplars per kind, retry loop
 - [ ] **Phase 18: INTEGRATE + Orchestrator** - integrate.py, orchestrator wiring, pipeline_version flag, window.AI() proxy, .gitignore audit
 - [ ] **Phase 19: End-to-End + Hardening** - integration tests, rollback tests, v1 regression, browser smoke test
@@ -92,10 +92,10 @@ See `.planning/milestones/v1.1-ROADMAP.md` for full phase details and `.planning
   4. An email whose content is semantically unrelated to all existing modules results in `new_module` decision, not a forced merge
   5. The raw email body is not present in any object passed from DISTILL stage onward — only `mechanic_spec` crosses the stage boundary
 **Plans**: 4 plans
-- [ ] 16-01-PLAN.md — schemas/ package (Pydantic discriminated union + DISTILL_SCHEMA) + lm_studio.chat_json schema kwarg (DIST-02, PIPE-04)
-- [ ] 16-02-PLAN.md — distill.py + tests: json_schema structured output, retry-once, DistillFailed (DIST-01, DIST-02, PIPE-03)
-- [ ] 16-03-PLAN.md — plan.py + tests: cosine similarity routing + LM judge on ambiguous (PLAN-01, PLAN-02)
-- [ ] 16-04-PLAN.md — orchestrator wiring: v2 branch for DISTILL+PLAN (PIPE-03, PIPE-04)
+- [x] 16-01-PLAN.md — schemas/ package (Pydantic discriminated union + DISTILL_SCHEMA) + lm_studio.chat_json schema kwarg (DIST-02, PIPE-04)
+- [x] 16-02-PLAN.md — distill.py + tests: json_schema structured output, retry-once, DistillFailed (DIST-01, DIST-02, PIPE-03)
+- [x] 16-03-PLAN.md — plan.py + tests: cosine similarity routing + LM judge on ambiguous (PLAN-01, PLAN-02)
+- [x] 16-04-PLAN.md — orchestrator wiring: v2 branch for DISTILL+PLAN (PIPE-03, PIPE-04)
 
 ### Phase 17: BUILD + Validator
 **Goal**: A `mechanic_spec` deterministically produces a valid, self-contained Alpine/Tailwind HTML module that passes all validator checks; invalid output triggers an automatic retry that terminates on repeated failure
@@ -107,7 +107,11 @@ See `.planning/milestones/v1.1-ROADMAP.md` for full phase details and `.planning
   3. BUILD output uses Alpine.js CDN with `<script defer>` (v3.x pinned URL) and Tailwind Play CDN (v3.4.x pinned URL); validator confirms both tags are present
   4. HTML is returned from the LM as a JSON-escaped string and base64-encoded in Python post-extraction; `finish_reason == "length"` causes an immediate abort with an error, not a silent truncation; `max_tokens` is set to at least 6000
   5. Each of the 5 module kinds has a known-good Alpine v3 exemplar injected into the BUILD prompt; failed validation triggers retry up to `MAX_RETRIES = 3`; retry aborts early if error on attempt N matches error on attempt N-1
-**Plans**: TBD
+**Plans**: 4 plans
+- [ ] 17-01-PLAN.md — validator.py TDD: test_validator.py (RED) + validate_module implementation (GREEN) (VAL-01..07)
+- [ ] 17-02-PLAN.md — lm_studio.py extension: add chat_json_with_meta returning (dict, finish_reason) tuple (BUILD-04)
+- [ ] 17-03-PLAN.md — BUILD_SCHEMA in schemas/json_schema.py + exemplars.py with five kind-specific Alpine/Tailwind constants (BUILD-02, BUILD-05)
+- [ ] 17-04-PLAN.md — build.py TDD: test_build.py (RED) + build() + BuildFailed implementation (GREEN) (BUILD-01..05, VAL-07)
 
 ### Phase 18: INTEGRATE + Orchestrator
 **Goal**: Valid modules are written to disk and committed atomically, the orchestrator routes v1/v2 emails to the correct pipeline, and HTTPS-deployed SPAs can reach the LM Studio endpoint via proxy
@@ -154,7 +158,7 @@ See `.planning/milestones/v1.1-ROADMAP.md` for full phase details and `.planning
 | 13. End-to-End Verification + Milestone Close | v1.1 | 2/2 | Complete | 2026-04-20 |
 | 14. Foundation | v2.0 | 3/3 | Complete | 2026-04-20 |
 | 15. INGEST | v2.0 | 3/3 | Complete    | 2026-04-20 |
-| 16. DISTILL + PLAN | v2.0 | 0/4 | Planned | - |
-| 17. BUILD + Validator | v2.0 | 0/? | Not started | - |
+| 16. DISTILL + PLAN | v2.0 | 4/4 | Complete    | 2026-04-21 |
+| 17. BUILD + Validator | v2.0 | 0/4 | Not started | - |
 | 18. INTEGRATE + Orchestrator | v2.0 | 0/? | Not started | - |
 | 19. End-to-End + Hardening | v2.0 | 0/? | Not started | - |
