@@ -4,7 +4,7 @@ import time
 from pathlib import Path
 from typing import Any
 
-from . import apply_changes, build_and_deploy, git_ops, ingest, lm_studio, notify, prompt, site_bootstrap, site_index, topic_curator
+from . import apply_changes, build_and_deploy, distill, git_ops, ingest, lm_studio, notify, plan as _plan_stage, prompt, site_bootstrap, site_index, topic_curator
 from .config import Config, InboxConfig
 from .logging_setup import get
 from .state import ProcessedLog, file_lock
@@ -49,6 +49,30 @@ def _process_locked(
         normalized_input = ingest.ingest(email)
         log.info("ingest source_type=%s source_url=%s",
                  normalized_input["source_type"], normalized_input["source_url"])
+
+        if getattr(inbox, "pipeline_version", "v1") == "v2":
+            # DISTILL stage
+            try:
+                spec = distill.distill(normalized_input, cfg.lm_studio)
+            except distill.DistillFailed as e:
+                log.error("DISTILL failed for %s: %s", mid, e)
+                _reply_failure(cfg, inbox, email, f"DISTILL failed: {e}")
+                processed.record(mid, inbox.slug, outcome="distill_failed", error=str(e))
+                return
+
+            if spec is None:
+                # D-13/D-17: informational email — upgrade_state_only, skip BUILD
+                log.info("DISTILL returned null mechanic for %s; routing to upgrade_state_only", mid)
+                processed.record(mid, inbox.slug, outcome="upgrade_state_only")
+                return
+
+            # PLAN stage
+            routing = _plan_stage.plan(spec, site_dir, cfg.lm_studio)
+            log.info("PLAN routing=%s for %s (kind=%s module_id=%s)", routing, mid, spec.kind, spec.module_id)
+            # Phase 17/18 will hook BUILD + INTEGRATE here using spec + routing
+            processed.record(mid, inbox.slug, outcome=f"v2_planned_{routing}")
+            return
+        # v1 path falls through unchanged below
 
         new_topic = topic_curator.update_topic(
             site_dir=site_dir, idx=idx, email=email,
