@@ -1,18 +1,35 @@
-"""DISTILL_SCHEMA dict — passed as the schema kwarg to chat_json."""
+"""DISTILL_SCHEMA and BUILD_SCHEMA dicts — passed as the schema kwarg to chat_json."""
 from __future__ import annotations
+
+import copy
 
 from .envelope import MechanicSpec
 
+# Hoist $defs to root so that $ref pointers (#/$defs/...) within the embedded
+# MechanicSpec schema resolve correctly when jsonschema.validate() uses this
+# as the document root.
+_spec_schema = copy.deepcopy(MechanicSpec.model_json_schema())
+_spec_defs = _spec_schema.pop("$defs", {})
+
 DISTILL_SCHEMA: dict = {
     "type": "object",
+    "$defs": _spec_defs,
     "properties": {
         "mechanic": {
             "oneOf": [
-                MechanicSpec.model_json_schema(),
+                _spec_schema,
                 {"type": "null"},
             ]
         },
         "skip_reason": {"type": "string"},
     },
     "required": ["mechanic"],
+}
+
+BUILD_SCHEMA: dict = {
+    "type": "object",
+    "properties": {
+        "html": {"type": "string"},
+    },
+    "required": ["html"],
 }
