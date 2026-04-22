@@ -43,7 +43,7 @@ See `.planning/milestones/v1.1-ROADMAP.md` for full phase details and `.planning
 - [x] **Phase 15: INGEST** - content extractors, ingest.py, yt-dlp + whisper.cpp + trafilatura wrappers, shutil.which pre-flights (completed 2026-04-20)
 - [x] **Phase 16: DISTILL + PLAN** - prompt builders, distill.py, plan.py, mechanic_spec schema, structured LM output (completed 2026-04-21)
 - [x] **Phase 17: BUILD + Validator** - validator.py TDD-first, build.py, Alpine exemplars per kind, retry loop (completed 2026-04-21)
-- [ ] **Phase 18: INTEGRATE + Orchestrator** - integrate.py, orchestrator wiring, pipeline_version flag, window.AI() proxy, .gitignore audit
+- [x] **Phase 18: INTEGRATE + Orchestrator** - integrate.py, orchestrator wiring, pipeline_version flag, window.AI() proxy, .gitignore audit (completed 2026-04-22)
 - [ ] **Phase 19: End-to-End + Hardening** - integration tests, rollback tests, v1 regression, browser smoke test
 
 ---
@@ -124,11 +124,11 @@ See `.planning/milestones/v1.1-ROADMAP.md` for full phase details and `.planning
   4. `window.AI()` calls from HTTPS-deployed SPAs route through the Python proxy endpoint in the workflow engine and reach LM Studio; the proxy is not invoked for `http://localhost` serving
   5. Generated modules are served inside `<iframe sandbox="allow-scripts">`; the SPA shell sets a restrictive Content-Security-Policy; `x-html` usage in any generated module is rejected by the validator (enforcing `x-text` only)
 **Plans**: 5 plans
-- [ ] 18-01-PLAN.md — Validator SEC-01: ban x-html directive (TDD)
-- [ ] 18-02-PLAN.md — integrate.py: atomic write + manifest upsert + git init + startup_assert_gitignore (TDD)
-- [ ] 18-03-PLAN.md — /api/ai proxy + listener wiring + duplicate handler cleanup
-- [ ] 18-04-PLAN.md — shell.html: CSP meta + HTTPS-aware window.AI()
-- [ ] 18-05-PLAN.md — Orchestrator v2 wiring + PIPE-02 verification tests
+- [x] 18-01-PLAN.md — Validator SEC-01: ban x-html directive (TDD)
+- [x] 18-02-PLAN.md — integrate.py: atomic write + manifest upsert + git init + startup_assert_gitignore (TDD)
+- [x] 18-03-PLAN.md — /api/ai proxy + listener wiring + duplicate handler cleanup
+- [x] 18-04-PLAN.md — shell.html: CSP meta + HTTPS-aware window.AI()
+- [x] 18-05-PLAN.md — Orchestrator v2 wiring + PIPE-02 verification tests
 **UI hint**: yes
 
 ### Phase 19: End-to-End + Hardening
@@ -165,5 +165,5 @@ See `.planning/milestones/v1.1-ROADMAP.md` for full phase details and `.planning
 | 15. INGEST | v2.0 | 3/3 | Complete    | 2026-04-20 |
 | 16. DISTILL + PLAN | v2.0 | 4/4 | Complete    | 2026-04-21 |
 | 17. BUILD + Validator | v2.0 | 4/4 | Complete    | 2026-04-21 |
-| 18. INTEGRATE + Orchestrator | v2.0 | 0/? | Not started | - |
+| 18. INTEGRATE + Orchestrator | v2.0 | 5/5 | Complete    | 2026-04-22 |
 | 19. End-to-End + Hardening | v2.0 | 0/? | Not started | - |

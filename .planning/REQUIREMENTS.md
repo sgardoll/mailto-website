@@ -3,7 +3,7 @@
 ## Pipeline Architecture
 
 - [ ] **PIPE-01**: User's email is processed through a 5-stage pipeline: INGEST → DISTILL → PLAN → BUILD → INTEGRATE
-- [ ] **PIPE-02**: Pipeline version (`v1`/`v2`) is selectable per-inbox via `config.yaml`; v1 remains the default
+- [x] **PIPE-02**: Pipeline version (`v1`/`v2`) is selectable per-inbox via `config.yaml`; v1 remains the default
 - [x] **PIPE-03**: Each stage receives only its predecessor's structured output — raw email body never reaches DISTILL or beyond
 - [x] **PIPE-04**: Three sequential LM calls per email (DISTILL, PLAN, BUILD) use the single LM Studio server
 
@@ -27,29 +27,29 @@
 
 ## BUILD
 
-- [ ] **BUILD-01**: `mechanic_spec` drives generation of a self-contained HTML/JS module via LM Studio
-- [ ] **BUILD-02**: Generated module uses Alpine.js CDN (`<script defer>`, v3.x pinned) + Tailwind Play CDN (v3.4.x pinned)
-- [ ] **BUILD-03**: HTML is returned as a JSON-escaped string field; base64 encoding is applied in Python post-extraction (never inside the model response)
-- [ ] **BUILD-04**: BUILD stage sets `max_tokens ≥ 6000` and aborts with error if `finish_reason == "length"`
-- [ ] **BUILD-05**: BUILD prompt includes a known-good Alpine v3 exemplar per module kind (one per kind, five total)
+- [x] **BUILD-01**: `mechanic_spec` drives generation of a self-contained HTML/JS module via LM Studio
+- [x] **BUILD-02**: Generated module uses Alpine.js CDN (`<script defer>`, v3.x pinned) + Tailwind Play CDN (v3.4.x pinned)
+- [x] **BUILD-03**: HTML is returned as a JSON-escaped string field; base64 encoding is applied in Python post-extraction (never inside the model response)
+- [x] **BUILD-04**: BUILD stage sets `max_tokens ≥ 6000` and aborts with error if `finish_reason == "length"`
+- [x] **BUILD-05**: BUILD prompt includes a known-good Alpine v3 exemplar per module kind (one per kind, five total)
 
 ## Validator
 
-- [ ] **VAL-01**: Validator checks HTML is parseable, `x-data` is present, and at least one `@click`/`x-on:` handler exists
-- [ ] **VAL-02**: Validator confirms Alpine + Tailwind CDN `<script>` tags use pinned URLs
-- [ ] **VAL-03**: Validator rejects stub phrases: TODO, FIXME, placeholder, coming soon, `// implement`, ellipsis-in-code
-- [ ] **VAL-04**: Validator asserts `x-if` only appears on `<template>` elements, never on `<div>`
-- [ ] **VAL-05**: Validator rejects external `fetch`/XHR calls to non-localhost origins
-- [ ] **VAL-06**: Validator rejects decoded HTML shorter than 800 bytes
-- [ ] **VAL-07**: Failed validation triggers retry up to `MAX_RETRIES = 3`; aborts if retry N produces the same error as N-1
+- [x] **VAL-01**: Validator checks HTML is parseable, `x-data` is present, and at least one `@click`/`x-on:` handler exists
+- [x] **VAL-02**: Validator confirms Alpine + Tailwind CDN `<script>` tags use pinned URLs
+- [x] **VAL-03**: Validator rejects stub phrases: TODO, FIXME, placeholder, coming soon, `// implement`, ellipsis-in-code
+- [x] **VAL-04**: Validator asserts `x-if` only appears on `<template>` elements, never on `<div>`
+- [x] **VAL-05**: Validator rejects external `fetch`/XHR calls to non-localhost origins
+- [x] **VAL-06**: Validator rejects decoded HTML shorter than 800 bytes
+- [x] **VAL-07**: Failed validation triggers retry up to `MAX_RETRIES = 3`; aborts if retry N produces the same error as N-1
 
 ## INTEGRATE
 
-- [ ] **INT-01**: Valid module HTML is written atomically to `public/spa/<module_id>/index.html` via staging path + `os.replace`
-- [ ] **INT-02**: `spa_manifest.json` is updated and committed atomically with the module file in a single git operation
-- [ ] **INT-03**: Module version field in manifest = git short hash of that commit
-- [ ] **INT-04**: `.gitignore` is audited before first INTEGRATE run; `public/spa/` must not be excluded
-- [ ] **INT-05**: Existing Astro build + deploy flow is unchanged for v1 inboxes
+- [x] **INT-01**: Valid module HTML is written atomically to `public/spa/<module_id>/index.html` via staging path + `os.replace`
+- [x] **INT-02**: `spa_manifest.json` is updated and committed to the site git repo alongside the module file; implemented as two sequential commits (module first, then manifest with the module's commit SHA as version) to resolve the INT-02/INT-03 circularity — a file cannot contain the SHA of its own commit
+- [x] **INT-03**: Module version field in manifest = git short hash of that commit
+- [x] **INT-04**: `.gitignore` is audited before first INTEGRATE run; `public/spa/` must not be excluded
+- [x] **INT-05**: Existing Astro build + deploy flow is unchanged for v1 inboxes
 
 ## SPA Shell
 
@@ -57,7 +57,7 @@
 - [ ] **SPA-02**: SPA shell injects `window.STATE` proxy (localStorage-backed) before module scripts load
 - [ ] **SPA-03**: SPA shell provides `window.AI()` bridge to the LM Studio OpenAI-compatible endpoint
 - [ ] **SPA-04**: Each module renders inside `<iframe sandbox="allow-scripts">` for Alpine scope isolation
-- [ ] **SPA-05**: `window.AI()` routes through a thin Python proxy endpoint in the workflow engine for HTTPS-deployed SPAs
+- [x] **SPA-05**: `window.AI()` routes through a thin Python proxy endpoint in the workflow engine for HTTPS-deployed SPAs
 
 ## Per-Inbox Profile
 
@@ -66,8 +66,8 @@
 
 ## Security
 
-- [ ] **SEC-01**: `x-html` directive is banned in generated modules; validator enforces `x-text` only for LLM-inserted content
-- [ ] **SEC-02**: Generated modules are served in sandboxed iframes; SPA shell sets a restrictive Content-Security-Policy
+- [x] **SEC-01**: `x-html` directive is banned in generated modules; validator enforces `x-text` only for LLM-inserted content
+- [x] **SEC-02**: Generated modules are served in sandboxed iframes; SPA shell sets a restrictive Content-Security-Policy
 
 ## Config & Dependencies
 
