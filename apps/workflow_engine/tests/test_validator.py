@@ -113,6 +113,32 @@ def test_x_if_on_template_passes():
 
 
 # ---------------------------------------------------------------------------
+# SEC-01: x-html directive ban
+# ---------------------------------------------------------------------------
+
+
+def test_x_html_directive_rejected():
+    """Any module containing x-html must be rejected (XSS risk)."""
+    html = VALID_HTML.replace(
+        "<p x-text=\"count\"></p>",
+        '<p x-text="count"></p><div x-html="foo"></div>',
+    )
+    errors = validator.validate_module(html)
+    assert errors, "Expected errors list to be non-empty"
+    assert any("x-html" in e for e in errors)
+
+
+def test_x_text_allowed():
+    """x-text does not trigger the x-html ban — regression guard."""
+    html = VALID_HTML.replace(
+        "<p x-text=\"count\"></p>",
+        '<p x-text="count"></p><span x-text="foo"></span>',
+    )
+    errors = validator.validate_module(html)
+    assert not any("x-html" in e for e in errors)
+
+
+# ---------------------------------------------------------------------------
 # VAL-03: Stub phrases (full HTML scan, case-insensitive)
 # ---------------------------------------------------------------------------
 

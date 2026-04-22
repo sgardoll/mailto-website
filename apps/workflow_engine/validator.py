@@ -60,6 +60,7 @@ class _Inspector(HTMLParser):
         self.script_texts: list[str] = []
         self._in_script: bool = False
         self._script_buf: list[str] = []
+        self.has_x_html: bool = False
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         attr_dict = dict(attrs)
@@ -67,6 +68,8 @@ class _Inspector(HTMLParser):
             self.has_x_data = True
         if tag == "div" and "x-if" in attr_dict:
             self.x_if_on_div = True
+        if "x-html" in attr_dict:
+            self.has_x_html = True
         for key in attr_dict:
             if key in ("@click", "@input", "@change") or key.startswith("x-on:"):
                 self.has_event_handler = True
@@ -130,6 +133,10 @@ def validate_module(html: str) -> list[str]:
     # VAL-04: x-if on div
     if inspector.x_if_on_div:
         errors.append("x-if used on <div> element (must be on <template>)")
+
+    # SEC-01: x-html directive ban
+    if inspector.has_x_html:
+        errors.append("x-html directive is banned (use x-text for LLM-inserted content)")
 
     # VAL-02: Alpine CDN (must have @version in path)
     if not any(_ALPINE_CDN_RE.search(u) for u in inspector.cdn_src_urls):
