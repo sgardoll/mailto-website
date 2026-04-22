@@ -1,6 +1,8 @@
 <!doctype html>
 <html lang="en">
   <head>
+    <meta http-equiv="Content-Security-Policy"
+          content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdn.tailwindcss.com; connect-src 'self' http://localhost:1234; frame-src 'self'">
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>SPA Shell</title>
@@ -18,20 +20,22 @@
 
     <script>
       (function() {
-        var ENDPOINT = 'http://localhost:1234/v1/chat/completions';
+        var ENDPOINT = window.location.protocol === 'https:'
+          ? '/api/ai'
+          : 'http://localhost:1234/v1/chat/completions';
         window.AI = async function(messages, opts) {
           var body = Object.assign({ messages: messages }, opts || {});
           var res = await fetch(ENDPOINT, {
             method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': 'Bearer lm-studio'
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(body)
           });
           return res.json();
         };
         console.debug('[AI] bridge ready \u2014 endpoint: ' + ENDPOINT);
+        if (window.location.protocol === 'https:') {
+          console.debug('[AI] HTTPS detected \u2014 routing via /api/ai proxy');
+        }
       })();
     </script>
 
