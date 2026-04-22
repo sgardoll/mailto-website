@@ -42,7 +42,7 @@ See `.planning/milestones/v1.1-ROADMAP.md` for full phase details and `.planning
 - [x] **Phase 14: Foundation** - mechanic enum, manifest schema, config contract extension, SPA shell skeleton, profile.json bootstrap
 - [x] **Phase 15: INGEST** - content extractors, ingest.py, yt-dlp + whisper.cpp + trafilatura wrappers, shutil.which pre-flights (completed 2026-04-20)
 - [x] **Phase 16: DISTILL + PLAN** - prompt builders, distill.py, plan.py, mechanic_spec schema, structured LM output (completed 2026-04-21)
-- [ ] **Phase 17: BUILD + Validator** - validator.py TDD-first, build.py, Alpine exemplars per kind, retry loop
+- [x] **Phase 17: BUILD + Validator** - validator.py TDD-first, build.py, Alpine exemplars per kind, retry loop (completed 2026-04-21)
 - [ ] **Phase 18: INTEGRATE + Orchestrator** - integrate.py, orchestrator wiring, pipeline_version flag, window.AI() proxy, .gitignore audit
 - [ ] **Phase 19: End-to-End + Hardening** - integration tests, rollback tests, v1 regression, browser smoke test
 
@@ -108,10 +108,10 @@ See `.planning/milestones/v1.1-ROADMAP.md` for full phase details and `.planning
   4. HTML is returned from the LM as a JSON-escaped string and base64-encoded in Python post-extraction; `finish_reason == "length"` causes an immediate abort with an error, not a silent truncation; `max_tokens` is set to at least 6000
   5. Each of the 5 module kinds has a known-good Alpine v3 exemplar injected into the BUILD prompt; failed validation triggers retry up to `MAX_RETRIES = 3`; retry aborts early if error on attempt N matches error on attempt N-1
 **Plans**: 4 plans
-- [ ] 17-01-PLAN.md — validator.py TDD: test_validator.py (RED) + validate_module implementation (GREEN) (VAL-01..07)
-- [ ] 17-02-PLAN.md — lm_studio.py extension: add chat_json_with_meta returning (dict, finish_reason) tuple (BUILD-04)
-- [ ] 17-03-PLAN.md — BUILD_SCHEMA in schemas/json_schema.py + exemplars.py with five kind-specific Alpine/Tailwind constants (BUILD-02, BUILD-05)
-- [ ] 17-04-PLAN.md — build.py TDD: test_build.py (RED) + build() + BuildFailed implementation (GREEN) (BUILD-01..05, VAL-07)
+- [x] 17-01-PLAN.md — validator.py TDD: test_validator.py (RED) + validate_module implementation (GREEN) (VAL-01..07)
+- [x] 17-02-PLAN.md — lm_studio.py extension: add chat_json_with_meta returning (dict, finish_reason) tuple (BUILD-04)
+- [x] 17-03-PLAN.md — BUILD_SCHEMA in schemas/json_schema.py + exemplars.py with five kind-specific Alpine/Tailwind constants (BUILD-02, BUILD-05)
+- [x] 17-04-PLAN.md — build.py TDD: test_build.py (RED) + build() + BuildFailed implementation (GREEN) (BUILD-01..05, VAL-07)
 
 ### Phase 18: INTEGRATE + Orchestrator
 **Goal**: Valid modules are written to disk and committed atomically, the orchestrator routes v1/v2 emails to the correct pipeline, and HTTPS-deployed SPAs can reach the LM Studio endpoint via proxy
@@ -123,7 +123,12 @@ See `.planning/milestones/v1.1-ROADMAP.md` for full phase details and `.planning
   3. Sending an email to a v1-configured inbox triggers the v1 pipeline unchanged; sending to a v2-configured inbox triggers the 5-stage pipeline — both paths run from the same orchestrator entry point, gated by `pipeline_version` from `config.yaml`
   4. `window.AI()` calls from HTTPS-deployed SPAs route through the Python proxy endpoint in the workflow engine and reach LM Studio; the proxy is not invoked for `http://localhost` serving
   5. Generated modules are served inside `<iframe sandbox="allow-scripts">`; the SPA shell sets a restrictive Content-Security-Policy; `x-html` usage in any generated module is rejected by the validator (enforcing `x-text` only)
-**Plans**: TBD
+**Plans**: 5 plans
+- [ ] 18-01-PLAN.md — Validator SEC-01: ban x-html directive (TDD)
+- [ ] 18-02-PLAN.md — integrate.py: atomic write + manifest upsert + git init + startup_assert_gitignore (TDD)
+- [ ] 18-03-PLAN.md — /api/ai proxy + listener wiring + duplicate handler cleanup
+- [ ] 18-04-PLAN.md — shell.html: CSP meta + HTTPS-aware window.AI()
+- [ ] 18-05-PLAN.md — Orchestrator v2 wiring + PIPE-02 verification tests
 **UI hint**: yes
 
 ### Phase 19: End-to-End + Hardening
@@ -159,6 +164,6 @@ See `.planning/milestones/v1.1-ROADMAP.md` for full phase details and `.planning
 | 14. Foundation | v2.0 | 3/3 | Complete | 2026-04-20 |
 | 15. INGEST | v2.0 | 3/3 | Complete    | 2026-04-20 |
 | 16. DISTILL + PLAN | v2.0 | 4/4 | Complete    | 2026-04-21 |
-| 17. BUILD + Validator | v2.0 | 0/4 | Not started | - |
+| 17. BUILD + Validator | v2.0 | 4/4 | Complete    | 2026-04-21 |
 | 18. INTEGRATE + Orchestrator | v2.0 | 0/? | Not started | - |
 | 19. End-to-End + Hardening | v2.0 | 0/? | Not started | - |
