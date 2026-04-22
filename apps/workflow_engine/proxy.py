@@ -25,6 +25,7 @@ class ProxyHandler(BaseHTTPRequestHandler):
     def do_POST(self) -> None:
         if self.path != "/api/ai":
             self.send_response(404)
+            self.send_header("Content-Length", "0")
             self.end_headers()
             return
         length = int(self.headers.get("Content-Length", 0))
