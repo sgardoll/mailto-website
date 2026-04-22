@@ -11,7 +11,7 @@ from typing import Any
 from imap_tools import MailBox, AND, OR, MailMessage
 
 from . import config as cfg_mod
-from . import dispatcher, orchestrator
+from . import dispatcher, orchestrator, proxy as _proxy_mod
 from .logging_setup import get, setup
 from .state import ProcessedLog
 
@@ -24,31 +24,6 @@ _health_state = {
     "last_email_check": None,
 }
 _start_time = None
-
-
-class _HealthHandler(BaseHTTPRequestHandler):
-    def do_GET(self):
-        if self.path == "/health":
-            if _start_time:
-                _health_state["uptime_seconds"] = int(time.time() - _start_time)
-            self.send_response(200)
-            self.send_header("Content-Type", "application/json")
-            self.end_headers()
-            self.wfile.write(json.dumps(_health_state).encode())
-        else:
-            self.send_response(404)
-            self.end_headers()
-
-    def log_message(self, format, *args):
-        pass
-
-
-def _start_health_server(port: int = 8899) -> threading.Thread:
-    server = HTTPServer(("127.0.0.1", port), _HealthHandler)
-    thread = threading.Thread(target=server.serve_forever, daemon=True)
-    thread.start()
-    log.info("Health check endpoint running on http://127.0.0.1:%d/health", port)
-    return thread
 
 
 class _HealthHandler(BaseHTTPRequestHandler):
@@ -188,6 +163,8 @@ def main() -> None:
     p.add_argument("--config", type=Path, default=None)
     p.add_argument("--log-level", default="INFO")
     p.add_argument("--health-port", type=int, default=8899, help="Health check port (default: 8899)")
+    p.add_argument("--proxy-port", type=int, default=8900,
+                   help="AI proxy port (default: 8900)")
     args = p.parse_args()
     setup(level=args.log_level, log_file=cfg_mod.STATE_DIR / "listener.log")
     cfg = cfg_mod.load(args.config)
@@ -198,6 +175,7 @@ def main() -> None:
     _health_state["status"] = "running"
     _health_state["inboxes_loaded"] = len(cfg.inboxes)
     _start_health_server(args.health_port)
+    _proxy_mod.start_proxy_server(args.proxy_port)
     if args.once:
         n = run_once(cfg)
         log.info("processed %d message(s)", n)
