@@ -8,7 +8,7 @@ import pytest
 
 from apps.workflow_engine import orchestrator, distill, ingest, lm_studio, \
     site_bootstrap, site_index, topic_curator, apply_changes, build_and_deploy, \
-    git_ops, notify
+    build as build_mod, integrate as integrate_mod, git_ops, notify
 import apps.workflow_engine.plan as _plan_stage_mod
 from packages.config_contract import (
     Config, InboxConfig, ImapConfig, SmtpConfig, LmStudioConfig,
@@ -76,6 +76,12 @@ def _neutralise(monkeypatch, tmp_path):
     monkeypatch.setattr(build_and_deploy, "deploy", MagicMock())
     monkeypatch.setattr(git_ops, "commit_and_push", MagicMock(return_value="abc1234"))
     monkeypatch.setattr(notify, "send", MagicMock())
+    # v2 stage mocks: default happy-path stubs so v2 tests don't need LM Studio
+    monkeypatch.setattr(build_mod, "build", MagicMock(
+        return_value={"html_b64": "aGk=", "kind": "calculator", "attempts": 1}
+    ))
+    monkeypatch.setattr(integrate_mod, "startup_assert_gitignore", MagicMock())
+    monkeypatch.setattr(integrate_mod, "integrate", MagicMock(return_value="abc1234"))
 
 
 EMAIL = {"body": "hi", "subject": "s", "from": "a@b.com", "message_id": "m1"}
@@ -173,7 +179,7 @@ def test_pipe_03_spec_has_no_body_field(monkeypatch, tmp_path):
         assert forbidden not in spec_dict, f"Unexpected field in spec passed to plan: {forbidden}"
 
 
-def test_v2_happy_path_records_v2_planned_outcome(monkeypatch, tmp_path):
+def test_v2_happy_path_records_ok_outcome(monkeypatch, tmp_path):
     _neutralise(monkeypatch, tmp_path)
     monkeypatch.setattr(distill, "distill", MagicMock(return_value=CALCULATOR_SPEC))
     monkeypatch.setattr(_plan_stage_mod, "plan", MagicMock(return_value="new_module"))
@@ -182,4 +188,4 @@ def test_v2_happy_path_records_v2_planned_outcome(monkeypatch, tmp_path):
     orchestrator._process_locked(_make_cfg(tmp_path), _make_inbox("v2"), EMAIL, processed, mid="m1")
 
     outcomes = [c.kwargs.get("outcome") for c in processed.record.call_args_list]
-    assert any(o and o.startswith("v2_planned_") for o in outcomes), outcomes
+    assert "ok" in outcomes, outcomes

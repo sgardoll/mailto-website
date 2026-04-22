@@ -4,7 +4,7 @@ import time
 from pathlib import Path
 from typing import Any
 
-from . import apply_changes, build_and_deploy, distill, git_ops, ingest, lm_studio, notify, plan as _plan_stage, prompt, site_bootstrap, site_index, topic_curator
+from . import apply_changes, build, build_and_deploy, distill, git_ops, ingest, integrate, lm_studio, notify, plan as _plan_stage, prompt, site_bootstrap, site_index, topic_curator
 from .config import Config, InboxConfig
 from .logging_setup import get
 from .state import ProcessedLog, file_lock
@@ -43,6 +43,7 @@ def _process_locked(
     processed: ProcessedLog, mid: str,
 ) -> None:
     site_dir = site_bootstrap.ensure_site(inbox)
+    integrate.startup_assert_gitignore(site_dir)
     idx = site_index.build(site_dir, inbox_slug=inbox.slug, site_name=inbox.site_name or inbox.slug)
 
     try:
@@ -69,8 +70,41 @@ def _process_locked(
             # PLAN stage
             routing = _plan_stage.plan(spec, site_dir, cfg.lm_studio)
             log.info("PLAN routing=%s for %s (kind=%s module_id=%s)", routing, mid, spec.kind, spec.module_id)
-            # Phase 17/18 will hook BUILD + INTEGRATE here using spec + routing
-            processed.record(mid, inbox.slug, outcome=f"v2_planned_{routing}")
+
+            # upgrade_state_only: no module write needed
+            if routing == "upgrade_state_only":
+                processed.record(mid, inbox.slug, outcome="upgrade_state_only", module_id=spec.module_id)
+                return
+
+            # BUILD stage
+            try:
+                build_result = build.build(spec, cfg.lm_studio)
+            except build.BuildFailed as e:
+                log.error("BUILD failed for %s: %s", mid, e)
+                _reply_failure(cfg, inbox, email, f"BUILD failed: {e}")
+                processed.record(mid, inbox.slug, outcome="build_failed", error=str(e))
+                return
+
+            # INTEGRATE stage
+            try:
+                sha = integrate.integrate(spec, build_result["html_b64"], site_dir, push=False)
+            except integrate.IntegrateFailed as e:
+                log.error("INTEGRATE failed for %s: %s", mid, e)
+                _reply_failure(cfg, inbox, email, f"INTEGRATE failed: {e}")
+                processed.record(mid, inbox.slug, outcome="integrate_failed", error=str(e))
+                return
+
+            log.info("v2 pipeline complete for %s: module_id=%s routing=%s sha=%s",
+                     mid, spec.module_id, routing, sha)
+            # Note: v2 does not call _reply_success — log is sufficient per CONTEXT.md silence;
+            # reply-success for v2 deferred to avoid inbox spam on every module integration.
+            processed.record(
+                mid, inbox.slug, outcome="ok",
+                routing=routing,
+                module_id=spec.module_id,
+                kind=spec.kind.value,
+                commit=sha,
+            )
             return
         # v1 path falls through unchanged below
 
