@@ -7,6 +7,22 @@ import urllib.request
 
 import yaml
 
+from apps.workflow_engine import secrets as keychain_secrets
+
+# (wizard_state_key, nested_section_key, nested_field_name, keychain_account)
+# Maps every wizard-managed secret to where it lives in wizard state, in the
+# emitted YAML section, and in the OS keychain.
+_KEYCHAIN_SECRETS = (
+    ('sg-key_passphrase', 'siteground', 'key_passphrase',
+     keychain_secrets.ACCOUNT_SITEGROUND_KEY_PASSPHRASE),
+    ('sg-password', 'siteground', 'password',
+     keychain_secrets.ACCOUNT_SITEGROUND_PASSWORD),
+    ('ssh-password', 'ssh_sftp', 'password',
+     keychain_secrets.ACCOUNT_SSH_SFTP_PASSWORD),
+    ('vercel_api_token', 'vercel', 'api_token',
+     keychain_secrets.ACCOUNT_VERCEL_API_TOKEN),
+)
+
 DEFAULTS = {
     'gmail_folder': 'INBOX',
     'lms_base_url': 'http://localhost:1234/v1',
@@ -383,8 +399,44 @@ def _normalize_inboxes_for_output(wizard_state: dict) -> list[dict]:
     return built['inboxes']
 
 
-def build_final_outputs(wizard_state: dict) -> tuple[str, str]:
-    """Return the authoritative final .env and apps/workflow_engine/config.yaml content."""
+def _apply_secret_policy(wizard_state: dict, config: dict, *, persist: bool) -> None:
+    """Replace plaintext secrets in the config with keychain sentinels.
+
+    When `persist=True`, non-empty plaintext values are written to the OS
+    keychain before being replaced. When `persist=False` (preview), nothing
+    is written but the emitted YAML still shows sentinels so plaintext never
+    leaks into previews or on-disk files without the user hitting the
+    commit button.
+
+    A blank field means "keep whatever's already in the keychain" when a
+    stored secret exists — letting users re-run the wizard without
+    retyping credentials that haven't changed.
+    """
+    for state_key, section_key, field_name, account in _KEYCHAIN_SECRETS:
+        section = config.get(section_key)
+        if not isinstance(section, dict) or field_name not in section:
+            continue
+        section_value = section.get(field_name) or ''
+        if keychain_secrets.is_sentinel(section_value):
+            continue
+        submitted = section_value if section_value else (wizard_state.get(state_key) or '')
+        if submitted:
+            if persist:
+                keychain_secrets.set(account, submitted)
+            section[field_name] = keychain_secrets.sentinel(account)
+        elif keychain_secrets.has(account):
+            section[field_name] = keychain_secrets.sentinel(account)
+        else:
+            section[field_name] = ''
+
+
+def build_final_outputs(wizard_state: dict, *, persist_secrets: bool = False) -> tuple[str, str]:
+    """Return the authoritative final .env and apps/workflow_engine/config.yaml content.
+
+    Pass `persist_secrets=True` only at the `/write-config` commit point; the
+    preview renderer calls this with `persist_secrets=False` so viewing the
+    preview does not side-effect the OS keychain.
+    """
     env_str = f"GMAIL_APP_PASSWORD={wizard_state.get('gmail_app_password', '').strip()}\n"
     config = {
         'git_branch': _normalized_runtime_value(wizard_state, 'git_branch'),
@@ -396,6 +448,8 @@ def build_final_outputs(wizard_state: dict) -> tuple[str, str]:
     section_key, section = _provider_section_from_state(wizard_state)
     if section_key and section is not None:
         config[section_key] = section
+
+    _apply_secret_policy(wizard_state, config, persist=persist_secrets)
 
     config['inboxes'] = _normalize_inboxes_for_output(wizard_state)
     yaml_str = yaml.dump(config, default_flow_style=False, sort_keys=False, allow_unicode=True)
@@ -523,7 +577,21 @@ def hydrate_wizard_state(env_values: dict, config_values: dict) -> dict:
         'dry_run': config.get('dry_run', RUNTIME_DEFAULTS['dry_run']),
     }
 
+    def _secret_from_section(raw_value: object) -> tuple[str, bool]:
+        """Return (plaintext_for_state, is_stored_in_keychain).
+
+        Sentinel values never leak into wizard_state — the input field stays
+        blank and a `_stored` flag signals the UI to show "saved" indicator.
+        """
+        if keychain_secrets.is_sentinel(raw_value):
+            return '', True
+        return (raw_value or ''), False
+
     if provider == 'siteground':
+        passphrase_val, passphrase_stored = _secret_from_section(
+            provider_section.get('key_passphrase', ''))
+        password_val, password_stored = _secret_from_section(
+            provider_section.get('password', ''))
         state.update({
             'sg-host': provider_section.get('host', ''),
             'sg-port': provider_section.get('port', 18765),
@@ -532,22 +600,30 @@ def hydrate_wizard_state(env_values: dict, config_values: dict) -> dict:
             # existing_key_path lets validation know a key is already configured.
             'sg-ssh_private_key': '',
             'sg-existing_key_path': provider_section.get('key_path', ''),
-            'sg-password': provider_section.get('password', ''),
-            'sg-key_passphrase': provider_section.get('key_passphrase', ''),
+            'sg-password': password_val,
+            'sg-password_stored': password_stored,
+            'sg-key_passphrase': passphrase_val,
+            'sg-key_passphrase_stored': passphrase_stored,
             'sg-remote_base_path': provider_section.get('base_remote_path', ''),
         })
     elif provider == 'ssh_sftp':
+        ssh_password_val, ssh_password_stored = _secret_from_section(
+            provider_section.get('password', ''))
         state.update({
             'ssh-host': provider_section.get('host', ''),
             'ssh-port': provider_section.get('port', 22),
             'ssh-username': provider_section.get('user', ''),
             'ssh-ssh_key_path': provider_section.get('key_path', ''),
-            'ssh-password': provider_section.get('password', ''),
+            'ssh-password': ssh_password_val,
+            'ssh-password_stored': ssh_password_stored,
             'ssh-remote_base_path': provider_section.get('base_remote_path', ''),
         })
     elif provider == 'vercel':
+        vercel_token_val, vercel_token_stored = _secret_from_section(
+            provider_section.get('api_token', ''))
         state.update({
-            'vercel_api_token': provider_section.get('api_token', ''),
+            'vercel_api_token': vercel_token_val,
+            'vercel_api_token_stored': vercel_token_stored,
             'vercel_project_id': provider_section.get('project_id', ''),
         })
 

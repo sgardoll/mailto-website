@@ -55,7 +55,8 @@
       .nav-item { font-size: 14px; font-weight: 600; line-height: 1.4; color: var(--color-accent); text-decoration: none; padding: 4px 8px; border-bottom: 2px solid transparent; }
       .nav-item[aria-current="page"] { border-bottom-color: var(--color-accent); }
       .container { max-width: 960px; margin: 0 auto; padding: 16px; }
-      #module-frame { width: 100%; min-height: 300px; border: none; }
+      #module-frame { width: 100%; min-height: calc(100vh - 80px); border: none; display: block; }
+      .container { max-width: 100%; padding: 0; }
       .empty { color: var(--color-muted); font-size: 14px; }
     </style>
   </head>

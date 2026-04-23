@@ -42,6 +42,14 @@ def load(path: Path | None = None) -> Config:
             f"No config at {config_path}. Copy apps/workflow_engine/config.example.yaml "
             f"to apps/workflow_engine/config.yaml and fill it in."
         )
+    # Load .env so `${GMAIL_APP_PASSWORD}`-style references in config.yaml
+    # resolve regardless of how the engine was invoked. Existing environment
+    # values win (override=False) so CI / shell exports still work.
+    try:
+        from dotenv import load_dotenv
+        load_dotenv(REPO_ROOT / ".env", override=False)
+    except ImportError:
+        pass
     raw = yaml.safe_load(config_path.read_text()) or {}
     cfg = load_config(raw)
     # Inject runtime paths

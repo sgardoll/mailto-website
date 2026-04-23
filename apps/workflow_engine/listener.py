@@ -58,6 +58,7 @@ def _email_dict(msg: MailMessage) -> dict[str, Any]:
         "to": msg.to,
         "subject": msg.subject or "",
         "date": msg.date_str,
+        "body": msg.text or msg.html or "",
         "text": msg.text or "",
         "html": msg.html or "",
         "headers": {k.lower(): (v[0] if isinstance(v, (list, tuple)) and v else v)

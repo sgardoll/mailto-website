@@ -6,9 +6,9 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from apps.workflow_engine import orchestrator, distill, ingest, lm_studio, \
-    site_bootstrap, site_index, topic_curator, apply_changes, build_and_deploy, \
-    build as build_mod, integrate as integrate_mod, git_ops, notify
+from apps.workflow_engine import orchestrator, distill, ingest, \
+    site_bootstrap, site_index, build_and_deploy, \
+    build as build_mod, integrate as integrate_mod, notify
 import apps.workflow_engine.plan as _plan_stage_mod
 from packages.config_contract import (
     Config, InboxConfig, ImapConfig, SmtpConfig, LmStudioConfig,
@@ -49,13 +49,8 @@ def _make_cfg(tmp_path: Path) -> Config:
     )
 
 
-def _make_inbox(pipeline_version: str = "v1") -> InboxConfig:
-    return InboxConfig(
-        slug="test",
-        address="a@b.com",
-        site_name="Test",
-        pipeline_version=pipeline_version,
-    )
+def _make_inbox() -> InboxConfig:
+    return InboxConfig(slug="test", address="a@b.com", site_name="Test")
 
 
 def _neutralise(monkeypatch, tmp_path):
@@ -69,12 +64,8 @@ def _neutralise(monkeypatch, tmp_path):
         "source_type": "text",
         "source_url": None,
     })
-    monkeypatch.setattr(topic_curator, "update_topic", MagicMock(return_value="topic"))
-    monkeypatch.setattr(lm_studio, "chat_json", MagicMock(return_value={"rationale": "ok", "operations": []}))
-    monkeypatch.setattr(apply_changes, "apply", MagicMock(return_value=[]))
     monkeypatch.setattr(build_and_deploy, "build", MagicMock())
     monkeypatch.setattr(build_and_deploy, "deploy", MagicMock())
-    monkeypatch.setattr(git_ops, "commit_and_push", MagicMock(return_value="abc1234"))
     monkeypatch.setattr(notify, "send", MagicMock())
     # v2 stage mocks: default happy-path stubs so v2 tests don't need LM Studio
     monkeypatch.setattr(build_mod, "build", MagicMock(
@@ -90,20 +81,6 @@ EMAIL = {"body": "hi", "subject": "s", "from": "a@b.com", "message_id": "m1"}
 # ---------------------------------------------------------------------------
 # Tests
 # ---------------------------------------------------------------------------
-
-
-def test_v1_inbox_skips_distill_and_plan(monkeypatch, tmp_path):
-    _neutralise(monkeypatch, tmp_path)
-    distill_mock = MagicMock(return_value=CALCULATOR_SPEC)
-    plan_mock = MagicMock(return_value="new_module")
-    monkeypatch.setattr(distill, "distill", distill_mock)
-    monkeypatch.setattr(_plan_stage_mod, "plan", plan_mock)
-
-    processed = MagicMock()
-    orchestrator._process_locked(_make_cfg(tmp_path), _make_inbox("v1"), EMAIL, processed, mid="m1")
-
-    distill_mock.assert_not_called()
-    plan_mock.assert_not_called()
 
 
 def test_v2_happy_path_calls_distill_then_plan_in_order(monkeypatch, tmp_path):
@@ -122,7 +99,7 @@ def test_v2_happy_path_calls_distill_then_plan_in_order(monkeypatch, tmp_path):
     monkeypatch.setattr(_plan_stage_mod, "plan", fake_plan)
 
     processed = MagicMock()
-    orchestrator._process_locked(_make_cfg(tmp_path), _make_inbox("v2"), EMAIL, processed, mid="m1")
+    orchestrator._process_locked(_make_cfg(tmp_path), _make_inbox(), EMAIL, processed, mid="m1")
 
     assert call_order == ["distill", "plan"]
 
@@ -134,7 +111,7 @@ def test_v2_informational_skips_plan_records_upgrade_state_only(monkeypatch, tmp
     monkeypatch.setattr(_plan_stage_mod, "plan", plan_mock)
 
     processed = MagicMock()
-    orchestrator._process_locked(_make_cfg(tmp_path), _make_inbox("v2"), EMAIL, processed, mid="m1")
+    orchestrator._process_locked(_make_cfg(tmp_path), _make_inbox(), EMAIL, processed, mid="m1")
 
     plan_mock.assert_not_called()
     # Check that processed.record was called with outcome="upgrade_state_only"
@@ -149,7 +126,7 @@ def test_v2_distill_failure_calls_reply_failure_records_distill_failed(monkeypat
     monkeypatch.setattr(orchestrator, "_reply_failure", reply_mock)
 
     processed = MagicMock()
-    orchestrator._process_locked(_make_cfg(tmp_path), _make_inbox("v2"), EMAIL, processed, mid="m1")
+    orchestrator._process_locked(_make_cfg(tmp_path), _make_inbox(), EMAIL, processed, mid="m1")
 
     reply_mock.assert_called_once()
     outcomes = [c.kwargs.get("outcome") for c in processed.record.call_args_list]
@@ -171,7 +148,7 @@ def test_pipe_03_spec_has_no_body_field(monkeypatch, tmp_path):
     monkeypatch.setattr(_plan_stage_mod, "plan", fake_plan)
 
     processed = MagicMock()
-    orchestrator._process_locked(_make_cfg(tmp_path), _make_inbox("v2"), EMAIL, processed, mid="m1")
+    orchestrator._process_locked(_make_cfg(tmp_path), _make_inbox(), EMAIL, processed, mid="m1")
 
     assert len(captured_specs) == 1
     spec_dict = captured_specs[0].model_dump()
@@ -185,7 +162,7 @@ def test_v2_happy_path_records_ok_outcome(monkeypatch, tmp_path):
     monkeypatch.setattr(_plan_stage_mod, "plan", MagicMock(return_value="new_module"))
 
     processed = MagicMock()
-    orchestrator._process_locked(_make_cfg(tmp_path), _make_inbox("v2"), EMAIL, processed, mid="m1")
+    orchestrator._process_locked(_make_cfg(tmp_path), _make_inbox(), EMAIL, processed, mid="m1")
 
     outcomes = [c.kwargs.get("outcome") for c in processed.record.call_args_list]
     assert "ok" in outcomes, outcomes

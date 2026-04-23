@@ -7,9 +7,11 @@ from unittest.mock import MagicMock, call
 
 import pytest
 
-from apps.workflow_engine import orchestrator, ingest, topic_curator, \
-    site_bootstrap, site_index, lm_studio, apply_changes, build_and_deploy, \
-    git_ops, notify
+from apps.workflow_engine import orchestrator, ingest, \
+    site_bootstrap, site_index, build_and_deploy, notify, \
+    distill, build as build_mod, integrate as integrate_mod
+import apps.workflow_engine.plan as _plan_stage_mod
+from apps.workflow_engine.schemas.envelope import MechanicSpec
 from packages.config_contract import (
     Config, InboxConfig, ImapConfig, SmtpConfig, LmStudioConfig,
 )
@@ -34,40 +36,24 @@ def _make_inbox() -> InboxConfig:
     return InboxConfig(slug="test", address="a@b.com", site_name="Test")
 
 
+CALCULATOR_SPEC = MechanicSpec.model_validate({
+    "kind": "calculator", "title": "T", "intent": "i",
+    "inputs": ["x"], "outputs": ["y"],
+    "content": {"kind": "calculator", "formula_description": "y=x", "variables": [{"name": "x", "unit": "", "default": 1}], "unit": ""},
+})
+
+
 def _neutralise(monkeypatch, tmp_path):
     monkeypatch.setattr(site_bootstrap, "ensure_site", lambda inbox: tmp_path / "site")
     monkeypatch.setattr(site_index, "build", lambda *a, **kw: MagicMock(topic=""))
-    monkeypatch.setattr(topic_curator, "update_topic", MagicMock(return_value="topic"))
-    monkeypatch.setattr(lm_studio, "chat_json", MagicMock(return_value={"rationale": "ok", "operations": []}))
-    monkeypatch.setattr(apply_changes, "apply", MagicMock(return_value=[]))
+    monkeypatch.setattr(integrate_mod, "startup_assert_gitignore", MagicMock())
+    monkeypatch.setattr(distill, "distill", MagicMock(return_value=CALCULATOR_SPEC))
+    monkeypatch.setattr(_plan_stage_mod, "plan", MagicMock(return_value="new_module"))
+    monkeypatch.setattr(build_mod, "build", MagicMock(return_value={"html_b64": "aGk=", "kind": "calculator", "attempts": 1}))
+    monkeypatch.setattr(integrate_mod, "integrate", MagicMock(return_value="abc1234"))
     monkeypatch.setattr(build_and_deploy, "build", MagicMock())
     monkeypatch.setattr(build_and_deploy, "deploy", MagicMock())
-    monkeypatch.setattr(git_ops, "commit_and_push", MagicMock(return_value="abc1234"))
     monkeypatch.setattr(notify, "send", MagicMock())
-
-
-def test_ingest_called_before_topic_curator(monkeypatch, tmp_path):
-    parent = MagicMock()
-    _neutralise(monkeypatch, tmp_path)
-
-    def _ingest_side_effect(email):
-        parent.ingest(email)
-        return {"body": "b", "subject": "s", "sender": "a@b",
-                "source_type": "text", "source_url": None}
-    monkeypatch.setattr(ingest, "ingest", _ingest_side_effect)
-
-    def _topic_side_effect(**kwargs):
-        parent.topic(**kwargs)
-        return "t"
-    monkeypatch.setattr(topic_curator, "update_topic", _topic_side_effect)
-
-    processed = MagicMock()
-    email = {"body": "hi", "subject": "s", "from": "a@b.com", "message_id": "m1"}
-    orchestrator._process_locked(_make_cfg(tmp_path), _make_inbox(), email, processed, mid="m1")
-
-    assert parent.ingest.call_count == 1
-    names = [c[0] for c in parent.mock_calls]
-    assert names.index("ingest") < names.index("topic")
 
 
 def test_ingest_log_line_emitted(monkeypatch, tmp_path, caplog):

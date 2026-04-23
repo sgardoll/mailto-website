@@ -11,6 +11,14 @@ from .envelope import MechanicSpec
 _spec_schema = copy.deepcopy(MechanicSpec.model_json_schema())
 _spec_defs = _spec_schema.pop("$defs", {})
 
+# LM Studio's structured-output mode only emits fields listed in "required".
+# Pydantic omits `kind` from required because it has a default, but the
+# discriminated-union validator needs it present in the JSON. Force it.
+_CONTENT_DEFS = {"CalculatorContent", "WizardContent", "DrillContent", "ScorerContent", "GeneratorContent"}
+for _name, _def in _spec_defs.items():
+    if _name in _CONTENT_DEFS and "kind" not in _def.get("required", []):
+        _def.setdefault("required", []).insert(0, "kind")
+
 DISTILL_SCHEMA: dict = {
     "type": "object",
     "$defs": _spec_defs,

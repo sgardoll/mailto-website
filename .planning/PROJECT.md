@@ -10,10 +10,10 @@ The model operates under two prime directives enforced in code: **fold in, don't
 
 Email an idea. Get a website. No CMS, no editor, no dashboard — just send mail to a plus-alias and watch the site evolve. The wizard collapses all setup friction into a five-step browser flow with server-side validation, atomic file writes, and one-click deploy.
 
-## Current State (v1.1 shipped 2026-04-20)
+## Current State (v2.0 in progress — Phase 15 complete 2026-04-21)
 
-- **13 phases, ~6,400 LOC Python + ~2,250 additional LOC for v1.1 (Python: 4,100; HTML/CSS/JS: 2,530)**
-- **92 automated tests** covering validator, builder, preview/write, deploy
+- **15 phases complete** — v1.1 shipped + v2.0 INGEST stage done
+- **107 automated tests** (92 setup_wizard + 15 new workflow_engine) covering validator, builder, preview/write, deploy, ingest
 - **Bounded context separation** — `apps/setup-wizard/`, `apps/workflow-engine/`, `packages/config-contract/`, `packages/site-template/`, `runtime/`
 - **DeployProvider adapter pattern** with SiteGround + Vercel implementations
 - **Workflow engine SSH deploy** with systemd service and health check endpoint
@@ -93,6 +93,12 @@ The five-step wizard collapses all setup into a browser-based flow with server-s
 - ✓ SSH key passphrase support — v1.0 stretch, required for SiteGround-generated encrypted keys
 - ✓ One-click SiteGround deploy from success screen — v1.0 stretch, replaces "run `./scripts/run-workflow.sh` manually" with an in-wizard bootstrap → npm install → build → SFTP deploy flow per inbox
 
+### Validated (v2.0)
+
+- ✓ v2.0 pip dependency manifest (CONF-02) — Phase 15
+- ✓ ingest(email) normalises plain-text/video/article emails (ING-01, ING-02, ING-03, ING-04) — Phase 15
+- ✓ ingest() wired into orchestrator._process_locked before topic_curator (ING-01) — Phase 15
+
 ### Active (v1.2)
 
 - [ ] Live credential validation (IMAP/SMTP/SSH probe)
@@ -148,4 +154,4 @@ This document evolves at phase transitions and milestone boundaries.
 - **Astro template in `framework/site-template/`** is the single source of truth for site structure; `workflow/site_bootstrap.ensure_site` copies it per inbox.
 
 ---
-*Last updated: 2026-04-20 — v1.1 milestone shipped (Runtime/Setup Separation + Deploy Contract Alignment)*
+*Last updated: 2026-04-21 — Phase 15 complete (v2.0 INGEST stage: ingest.py module + orchestrator wiring)*

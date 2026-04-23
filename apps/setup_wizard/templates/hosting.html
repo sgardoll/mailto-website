@@ -82,24 +82,40 @@
             <div class="field-group">
                 <label for="sg-key_passphrase">Key passphrase</label>
                 <div class="field-row">
-                    <input id="sg-key_passphrase" name="sg-key_passphrase" type="password" autocomplete="off"
+                    <input id="sg-key_passphrase" name="sg-key_passphrase" type="password" autocomplete="new-password"
+                           data-secret="1"
+                           data-stored="{% if sg_key_passphrase_stored %}1{% else %}0{% endif %}"
                            aria-describedby="sg-key_passphrase-help sg-key_passphrase-error" />
                     <button type="button" class="toggle-visibility" data-target="sg-key_passphrase"
                             aria-label="Show passphrase" aria-pressed="false">Show</button>
                 </div>
-                <small id="sg-key_passphrase-help" class="help-text">Passphrase for the private key above. Leave blank if the key has no passphrase.</small>
+                <small id="sg-key_passphrase-help" class="help-text">
+                    {% if sg_key_passphrase_stored %}
+                        Saved in macOS Keychain. Leave blank to keep the stored passphrase, or type a new one to replace it.
+                    {% else %}
+                        Passphrase for the private key above. Leave blank if the key has no passphrase.
+                    {% endif %}
+                </small>
                 <span id="sg-key_passphrase-error" class="error" hidden aria-live="polite"></span>
             </div>
 
             <div class="field-group">
                 <label for="sg-password">Password</label>
                 <div class="field-row">
-                    <input id="sg-password" name="sg-password" type="password" autocomplete="off"
+                    <input id="sg-password" name="sg-password" type="password" autocomplete="new-password"
+                           data-secret="1"
+                           data-stored="{% if sg_password_stored %}1{% else %}0{% endif %}"
                            aria-describedby="sg-password-help sg-password-error" />
                     <button type="button" class="toggle-visibility" data-target="sg-password"
                             aria-label="Show Password" aria-pressed="false">Show</button>
                 </div>
-                <small id="sg-password-help" class="help-text">SSH password. Leave blank if using a key file. — Only one of key path or password is required.</small>
+                <small id="sg-password-help" class="help-text">
+                    {% if sg_password_stored %}
+                        Saved in macOS Keychain. Leave blank to keep the stored password, or type a new one to replace it.
+                    {% else %}
+                        SSH password. Leave blank if using a key file. — Only one of key path or password is required.
+                    {% endif %}
+                </small>
                 <span id="sg-password-error" class="error" hidden aria-live="polite"></span>
             </div>
 
@@ -161,12 +177,20 @@
             <div class="field-group">
                 <label for="ssh-password">Password</label>
                 <div class="field-row">
-                    <input id="ssh-password" name="ssh-password" type="password" autocomplete="off"
+                    <input id="ssh-password" name="ssh-password" type="password" autocomplete="new-password"
+                           data-secret="1"
+                           data-stored="{% if ssh_password_stored %}1{% else %}0{% endif %}"
                            aria-describedby="ssh-password-help ssh-password-error" />
                     <button type="button" class="toggle-visibility" data-target="ssh-password"
                             aria-label="Show Password" aria-pressed="false">Show</button>
                 </div>
-                <small id="ssh-password-help" class="help-text">SSH password. Leave blank if using a key file. — Only one of key path or password is required.</small>
+                <small id="ssh-password-help" class="help-text">
+                    {% if ssh_password_stored %}
+                        Saved in macOS Keychain. Leave blank to keep the stored password, or type a new one to replace it.
+                    {% else %}
+                        SSH password. Leave blank if using a key file. — Only one of key path or password is required.
+                    {% endif %}
+                </small>
                 <span id="ssh-password-error" class="error" hidden aria-live="polite"></span>
             </div>
 
@@ -188,7 +212,9 @@
             <div class="field-group">
                 <label for="vercel-api-token">API token</label>
                 <div class="field-row">
-                    <input id="vercel-api-token" name="vercel_api_token" type="password" autocomplete="off"
+                    <input id="vercel-api-token" name="vercel_api_token" type="password" autocomplete="new-password"
+                           data-secret="1"
+                           data-stored="{% if vercel_api_token_stored %}1{% else %}0{% endif %}"
                            aria-describedby="vercel-api-token-help vercel-api-token-error" />
                     <button type="button" class="toggle-visibility" data-target="vercel-api-token"
                             aria-label="Show API token" aria-pressed="false">Show</button>

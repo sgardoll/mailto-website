@@ -36,3 +36,5 @@ runtime/state/**/profile.json
 apps/runtime/state/siteground.key
 apps/apps/workflow_engine/config.yaml
 apps/workflow_engine/config.yaml
+/.playwright-mcp
+/.claude

@@ -27,24 +27,53 @@ def _server_alive(base_url: str, timeout_s: float = 2.0) -> bool:
         return False
 
 
-def _model_loaded(base_url: str, model: str) -> bool:
+def _loaded_models(lms_cli_path: str) -> list[str]:
+    """Return identifiers of models currently held in memory by LM Studio.
+
+    Uses `lms ps --json`, which reports only in-memory models (the OpenAI
+    `/v1/models` endpoint returns all discoverable models, not just loaded
+    ones, so it can't be used for this).
+    """
+    if not shutil.which(lms_cli_path):
+        return []
     try:
-        r = httpx.get(f"{base_url.rstrip('/')}/models", timeout=5.0)
-        if r.status_code != 200:
-            return False
-        data = r.json().get("data", [])
-        return any(m.get("id") == model for m in data)
-    except (httpx.HTTPError, OSError, ValueError):
-        return False
+        r = subprocess.run(
+            [lms_cli_path, "ps", "--json"],
+            capture_output=True, text=True, timeout=10,
+        )
+        if r.returncode != 0:
+            return []
+        data = json.loads(r.stdout or "[]")
+        return [m.get("identifier") or m.get("modelKey") for m in data if m.get("identifier") or m.get("modelKey")]
+    except (subprocess.TimeoutExpired, json.JSONDecodeError, OSError):
+        return []
 
 
 def ensure_running(cfg: LmStudioConfig) -> None:
-    """Best-effort: bring up LM Studio's server and ensure the model is loaded."""
-    if _model_loaded(cfg.base_url, cfg.model):
+    """Ensure an LM is usable. Mutates cfg.model if a fallback model is chosen.
+
+    Resilience policy: rather than failing when the configured model can't be
+    loaded (memory pressure, model removed, etc.), fall back to whatever is
+    already loaded in memory. Only try to load the configured model if nothing
+    is loaded at all.
+    """
+    loaded = _loaded_models(cfg.lms_cli_path) if _server_alive(cfg.base_url) else []
+
+    if cfg.model in loaded:
         return
+
+    if loaded:
+        log.warning(
+            "Configured model %r is not loaded in LM Studio; falling back to %r (already in memory).",
+            cfg.model, loaded[0],
+        )
+        cfg.model = loaded[0]
+        return
+
+    # Nothing loaded — start server and load configured model.
     if not cfg.autostart:
         if _server_alive(cfg.base_url):
-            log.warning("Server alive but model %s not loaded; not autostarting.", cfg.model)
+            log.warning("Server alive but no model loaded; not autostarting.")
             return
         raise LmStudioUnavailable(
             f"LM Studio not reachable at {cfg.base_url} and autostart is off."
@@ -66,18 +95,56 @@ def ensure_running(cfg: LmStudioConfig) -> None:
             time.sleep(1)
         else:
             raise LmStudioUnavailable("LM Studio server did not come up in 30s.")
-    if not _model_loaded(cfg.base_url, cfg.model):
-        log.info("Loading model %s via `%s load`...", cfg.model, cfg.lms_cli_path)
-        subprocess.run(
-            [cfg.lms_cli_path, "load", cfg.model, "--yes"],
-            check=False, capture_output=True, text=True,
+    log.info("Loading model %s via `%s load`...", cfg.model, cfg.lms_cli_path)
+    load = subprocess.run(
+        [cfg.lms_cli_path, "load", cfg.model, "--yes"],
+        capture_output=True, text=True,
+    )
+    for _ in range(60):
+        if cfg.model in _loaded_models(cfg.lms_cli_path):
+            return
+        time.sleep(1)
+    # Load failed (likely memory). Try any model that might have loaded meanwhile.
+    fallback = _loaded_models(cfg.lms_cli_path)
+    if fallback:
+        log.warning(
+            "Could not load %r (stderr: %s); falling back to %r.",
+            cfg.model, load.stderr.strip()[:200], fallback[0],
         )
-        for _ in range(60):
-            if _model_loaded(cfg.base_url, cfg.model):
-                break
-            time.sleep(1)
-        else:
-            raise LmStudioUnavailable(f"Model {cfg.model} did not load in 60s.")
+        cfg.model = fallback[0]
+        return
+    raise LmStudioUnavailable(
+        f"Model {cfg.model} did not load in 60s and nothing else is loaded either. "
+        f"Load any model manually in LM Studio and retry. Last loader stderr: {load.stderr.strip()[:200]}"
+    )
+
+
+def _is_model_load_failure(e: Exception) -> bool:
+    """True if an OpenAI error looks like a 'model unavailable / crashed' failure."""
+    s = str(e).lower()
+    return (
+        "failed to load model" in s
+        or "insufficient system resources" in s
+        or "model has crashed" in s
+        or "channel error" in s
+        or "model not found" in s
+    )
+
+
+def _try_load(cfg: LmStudioConfig, model: str, wait_s: int = 60) -> bool:
+    """Try to load a specific model via lms CLI. Returns True if it ended up loaded."""
+    if not shutil.which(cfg.lms_cli_path):
+        return False
+    log.info("Attempting to load %r via `%s load`...", model, cfg.lms_cli_path)
+    subprocess.run(
+        [cfg.lms_cli_path, "load", model, "--yes"],
+        capture_output=True, text=True,
+    )
+    for _ in range(wait_s):
+        if model in _loaded_models(cfg.lms_cli_path):
+            return True
+        time.sleep(1)
+    return False
 
 
 def make_client(cfg: LmStudioConfig) -> OpenAI:
@@ -116,26 +183,7 @@ def chat_json(
         response_format = {"type": "json_object"}
 
     log.info("Calling %s (temp=%s, max_tokens=%s, schema=%s)", cfg.model, cfg.temperature, cfg.max_tokens, schema is not None)
-    try:
-        completion = client.chat.completions.create(
-            model=cfg.model,
-            messages=messages,  # type: ignore[arg-type]
-            temperature=cfg.temperature,
-            max_tokens=cfg.max_tokens,
-            response_format=response_format,
-        )
-    except Exception as e:
-        # Some LM Studio models reject response_format=json_object and only
-        # accept 'text' or 'json_schema'. Fall back to text + lenient parse.
-        if "response_format" not in str(e):
-            raise
-        log.info("Model rejected json_object response_format; retrying as text")
-        completion = client.chat.completions.create(
-            model=cfg.model,
-            messages=messages,  # type: ignore[arg-type]
-            temperature=cfg.temperature,
-            max_tokens=cfg.max_tokens,
-        )
+    completion = _call_with_fallbacks(cfg, client, messages, response_format)
     text = completion.choices[0].message.content or "{}"
     return _parse_json_lenient(text)
 
@@ -168,29 +216,61 @@ def chat_json_with_meta(
         response_format = {"type": "json_object"}
 
     log.info("Calling %s (temp=%s, max_tokens=%s, schema=%s)", cfg.model, cfg.temperature, cfg.max_tokens, schema is not None)
-    try:
-        completion = client.chat.completions.create(
-            model=cfg.model,
-            messages=messages,  # type: ignore[arg-type]
-            temperature=cfg.temperature,
-            max_tokens=cfg.max_tokens,
-            response_format=response_format,
-        )
-    except Exception as e:
-        # Some LM Studio models reject response_format=json_object and only
-        # accept 'text' or 'json_schema'. Fall back to text + lenient parse.
-        if "response_format" not in str(e):
-            raise
-        log.info("Model rejected json_object response_format; retrying as text")
-        completion = client.chat.completions.create(
-            model=cfg.model,
-            messages=messages,  # type: ignore[arg-type]
-            temperature=cfg.temperature,
-            max_tokens=cfg.max_tokens,
-        )
+    completion = _call_with_fallbacks(cfg, client, messages, response_format)
     finish_reason = completion.choices[0].finish_reason or "stop"
     text = completion.choices[0].message.content or "{}"
     return _parse_json_lenient(text), finish_reason
+
+
+def _call_with_fallbacks(cfg: LmStudioConfig, client: OpenAI, messages: list, response_format: dict):
+    """Call chat.completions.create with two fallbacks:
+
+    1. If the model rejects the response_format (some local models do), retry
+       without it and rely on lenient JSON parsing.
+    2. If the model can't be loaded (e.g. memory pressure), switch to whatever
+       LM Studio has already loaded and retry.
+    """
+    def _do(model: str, rf: dict | None):
+        kwargs = dict(
+            model=model,
+            messages=messages,
+            temperature=cfg.temperature,
+            max_tokens=cfg.max_tokens,
+        )
+        if rf is not None:
+            kwargs["response_format"] = rf
+        return client.chat.completions.create(**kwargs)
+
+    original = cfg.model
+    try:
+        return _do(cfg.model, response_format)
+    except Exception as e:
+        if "response_format" in str(e) and not _is_model_load_failure(e):
+            log.info("Model rejected json_object response_format; retrying as text")
+            return _do(cfg.model, None)
+        if not _is_model_load_failure(e):
+            raise
+
+        log.warning("Model %r failed (%s); attempting recovery.", cfg.model, str(e)[:200])
+        # Recovery step 1: try to load the configured model (it may have been
+        # unloaded or crashed — reloading it is usually the right fix).
+        if _try_load(cfg, original):
+            cfg.model = original
+            try:
+                return _do(cfg.model, response_format)
+            except Exception as e2:
+                if not _is_model_load_failure(e2):
+                    raise
+                log.warning("Retry with %r still failed (%s).", original, str(e2)[:200])
+
+        # Recovery step 2: use any *other* model that happens to be loaded
+        # (excluding the one that just crashed to avoid a loop).
+        loaded = [m for m in _loaded_models(cfg.lms_cli_path) if m != original]
+        if loaded:
+            log.warning("Falling back to %r already in memory.", loaded[0])
+            cfg.model = loaded[0]
+            return _do(cfg.model, response_format)
+        raise
 
 
 def _parse_json_lenient(text: str) -> dict[str, Any]:

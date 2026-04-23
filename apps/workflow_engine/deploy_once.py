@@ -103,6 +103,9 @@ def main() -> None:
         for r in failed:
             log.error("Inbox %s failed: %s", r["slug"], r["error"])
         sys.exit(1)
+    log.info("Deploy complete — starting listener")
+    from . import listener as _listener
+    _listener.run_idle(cfg)
 
 
 if __name__ == "__main__":

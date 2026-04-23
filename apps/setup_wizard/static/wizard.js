@@ -404,6 +404,20 @@
         var select = document.getElementById('hosting-provider');
         if (!select) return;
 
+        // Defeat browser/OS password-manager autofill: browsers routinely ignore
+        // autocomplete="off" on password inputs. Clear every [data-secret] field
+        // after the page settles so any silently filled value from a previous
+        // run does not round-trip into config.yaml. Runs twice — once on load
+        // and again after a short delay — because some password managers fill
+        // asynchronously.
+        function clearSecretInputs() {
+            document.querySelectorAll('#wizard-form input[data-secret="1"]').forEach(function(el) {
+                el.value = '';
+            });
+        }
+        clearSecretInputs();
+        setTimeout(clearSecretInputs, 250);
+
         // Wire show/hide toggles for password fields in hosting step
         document.querySelectorAll('#wizard-form .toggle-visibility').forEach(function(btn) {
             btn.addEventListener('click', function() {

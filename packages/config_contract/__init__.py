@@ -152,7 +152,6 @@ class InboxConfig:
     remote_path: str = ""
     hosting_provider: str = ""
     allowed_senders: list[str] = field(default_factory=list)
-    pipeline_version: str = "v1"  # "v1" or "v2" — per-inbox pipeline selector (CONF-01)
 
     def __post_init__(self):
         if not self.slug:
@@ -238,9 +237,15 @@ def validate_config(raw: dict) -> list[str]:
 # ── Loader ────────────────────────────────────────────────────────────────────
 
 def _expand(value: Any) -> Any:
-    """Expand environment variables in string values."""
+    """Expand environment variables and keychain sentinels in string values."""
     if isinstance(value, str):
-        return os.path.expandvars(value)
+        expanded = os.path.expandvars(value)
+        if expanded.startswith("keychain://"):
+            # Local import to keep the contract package free of a hard keyring
+            # dependency at import time.
+            from apps.workflow_engine import secrets as _secrets
+            return _secrets.resolve(expanded)
+        return expanded
     if isinstance(value, dict):
         return {k: _expand(v) for k, v in value.items()}
     if isinstance(value, list):

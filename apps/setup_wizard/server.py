@@ -22,7 +22,7 @@ except ImportError:
 
 import apps.setup_wizard.builder as builder
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
+REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 
 app = Flask(__name__, template_folder='templates', static_folder='static')
 
@@ -145,7 +145,16 @@ def step_lmstudio():
 
 @app.route('/step/hosting')
 def step_hosting():
-    return render_template('hosting.html', port=_port, active_step='hosting', completed_steps=['gmail', 'lmstudio'])
+    return render_template(
+        'hosting.html',
+        port=_port,
+        active_step='hosting',
+        completed_steps=['gmail', 'lmstudio'],
+        sg_key_passphrase_stored=bool(_wizard_state.get('sg-key_passphrase_stored')),
+        sg_password_stored=bool(_wizard_state.get('sg-password_stored')),
+        ssh_password_stored=bool(_wizard_state.get('ssh-password_stored')),
+        vercel_api_token_stored=bool(_wizard_state.get('vercel_api_token_stored')),
+    )
 
 
 @app.route('/step/inboxes')
@@ -425,7 +434,7 @@ def write_config():
             "error": "existing config files detected — set overwrite_confirmed to proceed",
         }), 409
 
-    env_str, yaml_str = builder.build_final_outputs(_wizard_state)
+    env_str, yaml_str = builder.build_final_outputs(_wizard_state, persist_secrets=True)
     _write_config_pair(env_path, env_str, config_path, yaml_str)
     return jsonify({"ok": True, "next_step": "/step/done"})
 

@@ -26,6 +26,14 @@ _STUB_PHRASES = [
     r"//\s*implement",
 ]
 _STUB_RE = re.compile("|".join(_STUB_PHRASES), re.IGNORECASE)
+# HTML attributes that legitimately contain stub-like words (e.g. the
+# `placeholder` attribute on form inputs). These are stripped before the stub
+# scan so the attribute usage doesn't trigger a false positive.
+_ATTR_STRIP_RE = re.compile(
+    r'\b(placeholder|aria-placeholder)\s*=\s*"[^"]*"|'
+    r"\b(placeholder|aria-placeholder)\s*=\s*'[^']*'",
+    re.IGNORECASE,
+)
 _ELLIPSIS_RE = re.compile(r"\.\.\.")
 
 # Alpine CDN must have @semver in path; Tailwind CDN is a fixed literal (no version in path).
@@ -106,8 +114,11 @@ def validate_module(html: str) -> list[str]:
     if len(html.encode("utf-8")) < 800:
         errors.append("HTML shorter than 800 bytes")
 
-    # VAL-03: stub phrase scan on the full HTML (except ellipsis — see below)
-    if _STUB_RE.search(html):
+    # VAL-03: stub phrase scan on the full HTML (except ellipsis — see below).
+    # Strip legitimate HTML attributes like `placeholder="..."` first so they
+    # don't produce false positives.
+    scan_html = _ATTR_STRIP_RE.sub("", html)
+    if _STUB_RE.search(scan_html):
         errors.append(
             "Stub phrase detected (TODO/FIXME/placeholder/coming soon/implement)"
         )
