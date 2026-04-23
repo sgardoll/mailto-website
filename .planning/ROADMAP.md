@@ -140,7 +140,11 @@ See `.planning/milestones/v1.1-ROADMAP.md` for full phase details and `.planning
   2. Sending a rollback trigger (reverting the last git commit) removes the module from the manifest and the SPA shell no longer navigates to it on refresh
   3. An email sent to a v1 inbox produces the same output as it did before v2.0 — no regressions in the v1 pipeline path
   4. All automated tests (validator unit tests, ingest unit tests, integration tests) pass in CI without a running LM Studio server; tests that require LM Studio are clearly marked and skipped in CI
-**Plans**: TBD
+**Plans**: 4 plans
+- [ ] 19-01-PLAN.md — Test harness (conftest.py + pytest.ini + requires_lm marker) + rollback_module() in integrate.py + jsonschema verify
+- [ ] 19-02-PLAN.md — test_e2e_pipeline.py: real-LM end-to-end test marked requires_lm (SC1)
+- [ ] 19-03-PLAN.md — test_browser_smoke.py: Playwright SPA shell smoke test + fixture assets (SC1 browser portion)
+- [ ] 19-04-PLAN.md — v1 regression gate + VERIFICATION.md + REQUIREMENTS.md close-out + milestone close (SC2/SC3/SC4)
 
 ---
 
