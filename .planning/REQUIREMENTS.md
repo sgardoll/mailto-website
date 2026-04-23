@@ -2,7 +2,7 @@
 
 ## Pipeline Architecture
 
-- [ ] **PIPE-01**: User's email is processed through a 5-stage pipeline: INGEST → DISTILL → PLAN → BUILD → INTEGRATE
+- [x] **PIPE-01**: User's email is processed through a 5-stage pipeline: INGEST → DISTILL → PLAN → BUILD → INTEGRATE
 - [x] **PIPE-02**: Pipeline version (`v1`/`v2`) is selectable per-inbox via `config.yaml`; v1 remains the default
 - [x] **PIPE-03**: Each stage receives only its predecessor's structured output — raw email body never reaches DISTILL or beyond
 - [x] **PIPE-04**: Three sequential LM calls per email (DISTILL, PLAN, BUILD) use the single LM Studio server
@@ -18,7 +18,7 @@
 
 - [x] **DIST-01**: Email content is distilled into a `mechanic_spec` JSON object via LM Studio `json_schema` structured output (constrained decoding, not prompt-only JSON)
 - [x] **DIST-02**: `mechanic_spec` schema: `{kind, title, intent, inputs[], outputs[], content{}}` — max 2 nesting levels
-- [ ] **DIST-03**: `mechanic.kind` enum (wizard, calculator, drill, scorer, generator) is defined in `packages/config_contract/` as the shared source of truth for DISTILL, BUILD, and the validator
+- [x] **DIST-03**: `mechanic.kind` enum (wizard, calculator, drill, scorer, generator) is defined in `packages/config_contract/` as the shared source of truth for DISTILL, BUILD, and the validator
 
 ## PLAN
 
@@ -53,16 +53,16 @@
 
 ## SPA Shell
 
-- [ ] **SPA-01**: SPA shell provides hash-based module navigation populated from `spa_manifest.json`
-- [ ] **SPA-02**: SPA shell injects `window.STATE` proxy (localStorage-backed) before module scripts load
-- [ ] **SPA-03**: SPA shell provides `window.AI()` bridge to the LM Studio OpenAI-compatible endpoint
-- [ ] **SPA-04**: Each module renders inside `<iframe sandbox="allow-scripts">` for Alpine scope isolation
+- [x] **SPA-01**: SPA shell provides hash-based module navigation populated from `spa_manifest.json`
+- [x] **SPA-02**: SPA shell injects `window.STATE` proxy (localStorage-backed) before module scripts load
+- [x] **SPA-03**: SPA shell provides `window.AI()` bridge to the LM Studio OpenAI-compatible endpoint
+- [x] **SPA-04**: Each module renders inside `<iframe sandbox="allow-scripts">` for Alpine scope isolation
 - [x] **SPA-05**: `window.AI()` routes through a thin Python proxy endpoint in the workflow engine for HTTPS-deployed SPAs
 
 ## Per-Inbox Profile
 
-- [ ] **PROF-01**: `profile.json` (`{schema_version, inbox_slug, state{}}`) is created in `runtime/state/<slug>/` at site bootstrap
-- [ ] **PROF-02**: `profile.json` is not committed with the site git tree
+- [x] **PROF-01**: `profile.json` (`{schema_version, inbox_slug, state{}}`) is created in `runtime/state/<slug>/` at site bootstrap
+- [x] **PROF-02**: `profile.json` is not committed with the site git tree
 
 ## Security
 
@@ -71,7 +71,7 @@
 
 ## Config & Dependencies
 
-- [ ] **CONF-01**: `pipeline_version` flag added to `packages/config_contract/`; v1 is the default; both pipeline paths coexist
+- [x] **CONF-01**: `pipeline_version` flag added to `packages/config_contract/`; v1 is the default; both pipeline paths coexist
 - [x] **CONF-02**: New pip deps added to `apps/workflow_engine/requirements.txt`: yt-dlp, pywhispercpp, trafilatura, sentence-transformers, faiss-cpu, gitpython, jsonschema
 
 ---

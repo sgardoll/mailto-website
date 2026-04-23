@@ -4,7 +4,7 @@
 
 - ✅ **v1.0 Onboarding Wizard + SiteGround Deploy** — Phases 1-4 (shipped 2026-04-20)
 - ✅ **v1.1 Runtime/Setup Separation + Deploy Contract Alignment** — Phases 5-13 (shipped 2026-04-20)
-- 🔲 **v2.0 Interactive SPA Pipeline** — Phases 14-19 (in progress)
+- ✅ **v2.0 Interactive SPA Pipeline** — Phases 14-19 (shipped 2026-04-24)
 
 ## Phases
 
@@ -44,7 +44,7 @@ See `.planning/milestones/v1.1-ROADMAP.md` for full phase details and `.planning
 - [x] **Phase 16: DISTILL + PLAN** - prompt builders, distill.py, plan.py, mechanic_spec schema, structured LM output (completed 2026-04-21)
 - [x] **Phase 17: BUILD + Validator** - validator.py TDD-first, build.py, Alpine exemplars per kind, retry loop (completed 2026-04-21)
 - [x] **Phase 18: INTEGRATE + Orchestrator** - integrate.py, orchestrator wiring, pipeline_version flag, window.AI() proxy, .gitignore audit (completed 2026-04-22)
-- [ ] **Phase 19: End-to-End + Hardening** - integration tests, rollback tests, v1 regression, browser smoke test
+- [x] **Phase 19: End-to-End + Hardening** - integration tests, rollback tests, v1 regression, browser smoke test (completed 2026-04-24)
 
 ---
 
@@ -144,7 +144,7 @@ See `.planning/milestones/v1.1-ROADMAP.md` for full phase details and `.planning
 - [x] 19-01-PLAN.md — Test harness (conftest.py + pytest.ini + requires_lm marker) + rollback_module() in integrate.py + jsonschema verify
 - [x] 19-02-PLAN.md — test_e2e_pipeline.py: real-LM end-to-end test marked requires_lm (SC1)
 - [x] 19-03-PLAN.md — test_browser_smoke.py: Playwright SPA shell smoke test + fixture assets (SC1 browser portion)
-- [ ] 19-04-PLAN.md — v1 regression gate + VERIFICATION.md + REQUIREMENTS.md close-out + milestone close (SC2/SC3/SC4)
+- [x] 19-04-PLAN.md — v1 regression gate + VERIFICATION.md + REQUIREMENTS.md close-out + milestone close (SC2/SC3/SC4)
 
 ---
 
@@ -170,4 +170,4 @@ See `.planning/milestones/v1.1-ROADMAP.md` for full phase details and `.planning
 | 16. DISTILL + PLAN | v2.0 | 4/4 | Complete    | 2026-04-21 |
 | 17. BUILD + Validator | v2.0 | 4/4 | Complete    | 2026-04-21 |
 | 18. INTEGRATE + Orchestrator | v2.0 | 5/5 | Complete    | 2026-04-22 |
-| 19. End-to-End + Hardening | v2.0 | 0/? | Not started | - |
+| 19. End-to-End + Hardening | v2.0 | 4/4 | Complete | 2026-04-24 |
