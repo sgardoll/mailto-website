@@ -16,7 +16,7 @@ from pathlib import Path
 import pytest
 
 from apps.workflow_engine import integrate
-from apps.workflow_engine.integrate import IntegrateFailed, startup_assert_gitignore
+from apps.workflow_engine.integrate import IntegrateFailed, RollbackFailed, startup_assert_gitignore
 from apps.workflow_engine.schemas.envelope import MechanicSpec
 from packages.config_contract import MechanicKind
 
@@ -182,3 +182,72 @@ def test_startup_assert_gitignore_raises_on_public_root(tmp_path):
 
     with pytest.raises(RuntimeError):
         startup_assert_gitignore(tmp_path)
+
+
+# ---------------------------------------------------------------------------
+# rollback_module() tests (D-11 — mocked git)
+# ---------------------------------------------------------------------------
+
+from unittest.mock import MagicMock
+
+
+def _seed_manifest_with_module(site_dir: Path, module_id: str = "calc_1") -> None:
+    """Helper: pre-populate manifest + module dir for rollback tests."""
+    manifest_path = site_dir / "public" / "spa" / "spa_manifest.json"
+    manifest_path.write_text(json.dumps({
+        "schema_version": "1",
+        "modules": [
+            {"module_id": module_id, "kind": "calculator", "title": "X", "version": "abc1234"},
+        ],
+    }))
+    module_dir = site_dir / "public" / "spa" / module_id
+    module_dir.mkdir(parents=True, exist_ok=True)
+    (module_dir / "index.html").write_text("<!doctype html><html></html>")
+
+
+def test_rollback_module_removes_module_dir_and_manifest_entry(site_dir, monkeypatch):
+    """D-11: rollback removes manifest entry + deletes module directory."""
+    _seed_manifest_with_module(site_dir, "calc_1")
+    monkeypatch.setattr(
+        integrate, "commit_and_push", MagicMock(return_value="deadbee1234567")
+    )
+
+    integrate.rollback_module("calc_1", site_dir, push=False)
+
+    # Module directory gone
+    assert not (site_dir / "public" / "spa" / "calc_1").exists(), \
+        "rollback should delete public/spa/calc_1/"
+
+    # Manifest entry removed
+    manifest = json.loads((site_dir / "public" / "spa" / "spa_manifest.json").read_text())
+    module_ids = [m["module_id"] for m in manifest["modules"]]
+    assert "calc_1" not in module_ids, \
+        "rollback should remove the module_id from manifest"
+
+
+def test_rollback_module_raises_when_commit_returns_none(site_dir, monkeypatch):
+    """D-11: RollbackFailed raised when commit_and_push returns None."""
+    _seed_manifest_with_module(site_dir, "calc_1")
+    monkeypatch.setattr(
+        integrate, "commit_and_push", MagicMock(return_value=None)
+    )
+
+    with pytest.raises(RollbackFailed):
+        integrate.rollback_module("calc_1", site_dir, push=False)
+
+
+def test_rollback_module_calls_commit_and_push_with_correct_args(site_dir, monkeypatch):
+    """D-09/D-10: commit message + paths + branch + push flag are correct."""
+    _seed_manifest_with_module(site_dir, "calc_1")
+    mock_commit = MagicMock(return_value="deadbee1234567")
+    monkeypatch.setattr(integrate, "commit_and_push", mock_commit)
+
+    integrate.rollback_module("calc_1", site_dir, push=False)
+
+    assert mock_commit.call_count == 1
+    call_kwargs = mock_commit.call_args.kwargs
+    assert call_kwargs["message"] == "[calc_1] rollback module"
+    assert call_kwargs["branch"] == "main"
+    assert call_kwargs["push"] is False
+    assert "public/spa/spa_manifest.json" in call_kwargs["paths"]
+    assert "public/spa/calc_1/" in call_kwargs["paths"]

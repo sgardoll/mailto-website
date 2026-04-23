@@ -12,6 +12,7 @@ from __future__ import annotations
 import base64
 import json
 import os
+import shutil
 import subprocess
 import tempfile
 from pathlib import Path
@@ -24,6 +25,10 @@ log = get("integrate")
 
 
 class IntegrateFailed(RuntimeError):
+    pass
+
+
+class RollbackFailed(RuntimeError):
     pass
 
 
@@ -137,3 +142,47 @@ def integrate(
     # the module commit is what matters for INT-03.
 
     return sha_module[:7]
+
+
+def rollback_module(
+    module_id: str,
+    site_dir: Path,
+    *,
+    push: bool = True,
+) -> None:
+    """Inverse of integrate(): remove module entry from manifest, delete module
+    directory, commit the manifest change. Raises RollbackFailed if nothing was
+    committed (e.g. module already absent).
+
+    D-09/D-10: signature `(module_id, site_dir, *, push=True)`. The `push=True`
+    default matches D-09 — note this differs from `integrate()` which defaults
+    to `push=False`.
+    """
+    _ensure_git_repo(site_dir)
+
+    manifest_path = site_dir / "public" / "spa" / "spa_manifest.json"
+    if manifest_path.exists():
+        manifest = json.loads(manifest_path.read_text())
+        modules = manifest.get("modules", [])
+        manifest["modules"] = [m for m in modules if m.get("module_id") != module_id]
+        _atomic_write(manifest_path, json.dumps(manifest, indent=2).encode())
+
+    module_dir = site_dir / "public" / "spa" / module_id
+    if module_dir.exists():
+        shutil.rmtree(module_dir)
+
+    sha = commit_and_push(
+        site_dir,
+        message=f"[{module_id}] rollback module",
+        branch="main",
+        paths=[
+            "public/spa/spa_manifest.json",
+            f"public/spa/{module_id}/",
+        ],
+        push=push,
+    )
+    if sha is None:
+        raise RollbackFailed(
+            f"nothing committed for rollback of {module_id!r} — "
+            "module may already be absent from manifest and disk"
+        )
