@@ -155,6 +155,43 @@ def make_client(cfg: LmStudioConfig) -> OpenAI:
     )
 
 
+_OPENAI_SAMPLING_KEYS = ("temperature", "top_p", "presence_penalty")
+_EXTRA_BODY_SAMPLING_KEYS = ("top_k", "min_p", "repetition_penalty")
+
+
+def _sampling_for(cfg: LmStudioConfig, task: str | None) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Build (openai_kwargs, extra_body) for this call.
+
+    - OpenAI-native kwargs (temperature, top_p, presence_penalty) go on the
+      top-level create() call.
+    - Vendor knobs (top_k, min_p, repetition_penalty) and enable_thinking go
+      in extra_body so LM Studio / vLLM / llama.cpp servers receive them.
+    - Per-task overrides shallow-merge over base cfg; None values are skipped.
+    """
+    merged: dict[str, Any] = {"temperature": cfg.temperature}
+    for key in _OPENAI_SAMPLING_KEYS[1:] + _EXTRA_BODY_SAMPLING_KEYS:
+        val = getattr(cfg, key, None)
+        if val is not None:
+            merged[key] = val
+    enable_thinking = cfg.enable_thinking
+
+    overrides = (cfg.task_overrides or {}).get(task) if task else None
+    if overrides:
+        for key in _OPENAI_SAMPLING_KEYS + _EXTRA_BODY_SAMPLING_KEYS:
+            if key in overrides and overrides[key] is not None:
+                merged[key] = overrides[key]
+        if "enable_thinking" in overrides:
+            enable_thinking = overrides["enable_thinking"]
+
+    openai_kwargs = {k: merged[k] for k in _OPENAI_SAMPLING_KEYS if k in merged}
+    extra_body: dict[str, Any] = {
+        k: merged[k] for k in _EXTRA_BODY_SAMPLING_KEYS if k in merged
+    }
+    if enable_thinking is not None:
+        extra_body.setdefault("chat_template_kwargs", {})["enable_thinking"] = enable_thinking
+    return openai_kwargs, extra_body
+
+
 def chat_json(
     cfg: LmStudioConfig,
     *,
@@ -162,6 +199,7 @@ def chat_json(
     user: str,
     schema: dict | None = None,
     schema_hint: str | None = None,
+    task: str | None = None,
 ) -> dict[str, Any]:
     """Run a chat completion expected to return JSON. Robustly extracts the JSON object."""
     ensure_running(cfg)
@@ -182,8 +220,12 @@ def chat_json(
     else:
         response_format = {"type": "json_object"}
 
-    log.info("Calling %s (temp=%s, max_tokens=%s, schema=%s)", cfg.model, cfg.temperature, cfg.max_tokens, schema is not None)
-    completion = _call_with_fallbacks(cfg, client, messages, response_format)
+    sampling, extra_body = _sampling_for(cfg, task)
+    log.info(
+        "Calling %s (task=%s, sampling=%s, extra_body=%s, schema=%s)",
+        cfg.model, task, sampling, extra_body, schema is not None,
+    )
+    completion = _call_with_fallbacks(cfg, client, messages, response_format, sampling, extra_body)
     text = completion.choices[0].message.content or "{}"
     return _parse_json_lenient(text)
 
@@ -195,6 +237,7 @@ def chat_json_with_meta(
     user: str,
     schema: dict | None = None,
     schema_hint: str | None = None,
+    task: str | None = None,
 ) -> tuple[dict[str, Any], str]:
     """Like chat_json but also returns finish_reason as the second tuple element."""
     ensure_running(cfg)
@@ -215,14 +258,25 @@ def chat_json_with_meta(
     else:
         response_format = {"type": "json_object"}
 
-    log.info("Calling %s (temp=%s, max_tokens=%s, schema=%s)", cfg.model, cfg.temperature, cfg.max_tokens, schema is not None)
-    completion = _call_with_fallbacks(cfg, client, messages, response_format)
+    sampling, extra_body = _sampling_for(cfg, task)
+    log.info(
+        "Calling %s (task=%s, sampling=%s, extra_body=%s, schema=%s)",
+        cfg.model, task, sampling, extra_body, schema is not None,
+    )
+    completion = _call_with_fallbacks(cfg, client, messages, response_format, sampling, extra_body)
     finish_reason = completion.choices[0].finish_reason or "stop"
     text = completion.choices[0].message.content or "{}"
     return _parse_json_lenient(text), finish_reason
 
 
-def _call_with_fallbacks(cfg: LmStudioConfig, client: OpenAI, messages: list, response_format: dict):
+def _call_with_fallbacks(
+    cfg: LmStudioConfig,
+    client: OpenAI,
+    messages: list,
+    response_format: dict,
+    sampling: dict[str, Any],
+    extra_body: dict[str, Any],
+):
     """Call chat.completions.create with two fallbacks:
 
     1. If the model rejects the response_format (some local models do), retry
@@ -231,12 +285,14 @@ def _call_with_fallbacks(cfg: LmStudioConfig, client: OpenAI, messages: list, re
        LM Studio has already loaded and retry.
     """
     def _do(model: str, rf: dict | None):
-        kwargs = dict(
+        kwargs: dict[str, Any] = dict(
             model=model,
             messages=messages,
-            temperature=cfg.temperature,
             max_tokens=cfg.max_tokens,
+            **sampling,
         )
+        if extra_body:
+            kwargs["extra_body"] = extra_body
         if rf is not None:
             kwargs["response_format"] = rf
         return client.chat.completions.create(**kwargs)

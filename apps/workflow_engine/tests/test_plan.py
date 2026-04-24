@@ -137,7 +137,7 @@ def test_judge_receives_no_raw_body(monkeypatch, tmp_path):
 
     captured_user: list[str] = []
 
-    def fake_chat_json(cfg, *, system, user, schema=None, schema_hint=None):
+    def fake_chat_json(cfg, *, system, user, schema=None, schema_hint=None, task=None):
         captured_user.append(user)
         return {"decision": "new_module", "rationale": "ok"}
 

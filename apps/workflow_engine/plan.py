@@ -108,7 +108,7 @@ def _lm_judge(
         },
         indent=2,
     )
-    raw = lm_studio.chat_json(lm_cfg, system=system, user=user)
+    raw = lm_studio.chat_json(lm_cfg, system=system, user=user, task="plan")
     decision = raw.get("decision", "new_module")
     rationale = raw.get("rationale", "")
     if decision not in ("new_module", "extend_module", "upgrade_state_only"):

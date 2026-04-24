@@ -140,7 +140,7 @@ def test_schema_kwarg_passed_to_chat_json_with_meta(monkeypatch):
 
     captured: list[dict] = []
 
-    def fake(cfg, *, system, user, schema=None, schema_hint=None):
+    def fake(cfg, *, system, user, schema=None, schema_hint=None, task=None):
         captured.append({"schema": schema})
         return ({"html": VALID_HTML}, "stop")
 
@@ -155,7 +155,7 @@ def test_exemplar_selection_by_kind(monkeypatch):
 
     captured_system: list[str] = []
 
-    def fake(cfg, *, system, user, schema=None, schema_hint=None):
+    def fake(cfg, *, system, user, schema=None, schema_hint=None, task=None):
         captured_system.append(system)
         return ({"html": VALID_HTML}, "stop")
 
@@ -201,7 +201,7 @@ def test_build_failed_carries_errors_and_attempts(monkeypatch):
 def test_max_tokens_enforced_internally(monkeypatch):
     captured_cfgs: list = []
 
-    def fake(cfg, *, system, user, schema=None, schema_hint=None):
+    def fake(cfg, *, system, user, schema=None, schema_hint=None, task=None):
         captured_cfgs.append(cfg)
         return ({"html": VALID_HTML}, "stop")
 

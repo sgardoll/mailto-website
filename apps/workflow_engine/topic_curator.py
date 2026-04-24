@@ -17,7 +17,7 @@ def update_topic(
 ) -> str:
     user = prompt.topic_prompt_user(idx, email)
     sys = prompt.system_for("topic_curation")
-    result = lm_studio.chat_json(lm_cfg, system=sys, user=user)
+    result = lm_studio.chat_json(lm_cfg, system=sys, user=user, task="topic_curation")
     new_topic = (result.get("topic_md") or "").strip() or idx.topic
     if dry_run:
         log.info("[dry-run] new topic:\n%s", new_topic)
