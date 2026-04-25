@@ -192,11 +192,15 @@ def _try_load(cfg: LmStudioConfig, model: str, wait_s: int = 60) -> bool:
             return False
     args = _load_args(cfg, model)
     log.info("Attempting to load %r via: %s", model, " ".join(args))
-    subprocess.run(args, capture_output=True, text=True)
+    load = subprocess.run(args, capture_output=True, text=True)
     for _ in range(wait_s):
         if model in _loaded_models(cfg.lms_cli_path):
             return True
         time.sleep(1)
+    log.warning(
+        "Could not load %r within %ds (stderr: %s).",
+        model, wait_s, load.stderr.strip()[:200],
+    )
     return False
 
 
