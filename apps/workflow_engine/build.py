@@ -53,9 +53,22 @@ def build(spec: MechanicSpec, lm_cfg) -> dict[str, Any]:
     prev_errors: frozenset[str] | None = None
 
     for attempt in range(1, MAX_RETRIES + 1):
-        raw, finish_reason = lm_studio.chat_json_with_meta(
-            lm_cfg, system=system, user=user, schema=BUILD_SCHEMA, task="build"
-        )
+        try:
+            raw, finish_reason = lm_studio.chat_json_with_meta(
+                lm_cfg, system=system, user=user, schema=BUILD_SCHEMA, task="build"
+            )
+        except ValueError as e:
+            # Model emitted malformed JSON (JSONDecodeError is a ValueError).
+            # Treat as a build failure and retry with feedback.
+            log.warning("BUILD attempt %d: model returned malformed JSON: %s", attempt, e)
+            if attempt >= MAX_RETRIES:
+                raise BuildFailed([f"malformed JSON after {MAX_RETRIES} attempts: {e}"], attempt)
+            user = (
+                user
+                + f"\n\nPrevious attempt returned malformed JSON: {e}\n"
+                + "Please return a single valid JSON object only — no thinking, no prose, no truncation."
+            )
+            continue
         if finish_reason == "length":
             raise BuildFailed(["finish_reason=length: output truncated"], attempt)
         html = raw.get("html", "")

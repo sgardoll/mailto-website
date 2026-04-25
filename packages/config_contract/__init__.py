@@ -127,6 +127,11 @@ class LmStudioConfig:
     # under LM Studio's resource guardrails. Default on — this is the safety
     # net that prevents another freeze/reboot.
     estimate_before_load: bool = True
+    # The user's originally-configured model. Captured by load_config() and
+    # never mutated. ensure_running() mutates `model` when falling back to a
+    # different in-memory model, but `preferred_model` keeps the original so
+    # later calls always try the user's choice first.
+    preferred_model: str | None = None
     # Per-task sampling overrides. Key = task name (e.g. "topic_curation",
     # "synthesis", "build", "distill", "plan"). Value = dict with any subset of
     # the sampling fields above (including enable_thinking). Shallow-merged
@@ -300,10 +305,14 @@ def load_config(raw: dict) -> Config:
     if errors:
         raise ValueError("; ".join(errors))
 
+    lm_studio_cfg = LmStudioConfig(**(raw.get("lm_studio") or {}))
+    # Snapshot the user-configured model before any runtime mutation.
+    if lm_studio_cfg.preferred_model is None:
+        lm_studio_cfg.preferred_model = lm_studio_cfg.model
     return Config(
         imap=ImapConfig(**raw["imap"]),
         smtp=SmtpConfig(**raw["smtp"]),
-        lm_studio=LmStudioConfig(**(raw.get("lm_studio") or {})),
+        lm_studio=lm_studio_cfg,
         siteground=SiteGroundConfig(**(raw.get("siteground") or {})),
         ssh_sftp=SshSftpConfig(**(raw.get("ssh_sftp") or {})),
         vercel=VercelConfig(**(raw.get("vercel") or {})),
