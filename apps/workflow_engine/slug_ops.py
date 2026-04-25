@@ -6,6 +6,7 @@ is a no-op for the already-removed parts.
 """
 from __future__ import annotations
 
+import dataclasses
 import json
 import shutil
 from dataclasses import dataclass, field
@@ -91,9 +92,9 @@ def _build_provider_config(cfg: cfg_mod.Config, ib: Any) -> dict:
     provider_name = ib.hosting_provider or "siteground"
     provider_block: dict = {}
     if provider_name == "siteground" and cfg.siteground is not None:
-        provider_block = cfg.siteground.model_dump() if hasattr(cfg.siteground, "model_dump") else dict(cfg.siteground.__dict__)
+        provider_block = dataclasses.asdict(cfg.siteground)
     elif provider_name == "vercel" and getattr(cfg, "vercel", None) is not None:
-        provider_block = cfg.vercel.model_dump() if hasattr(cfg.vercel, "model_dump") else dict(cfg.vercel.__dict__)
+        provider_block = dataclasses.asdict(cfg.vercel)
     provider_block.update({
         "slug": ib.slug,
         "site_url": ib.site_url or "",
