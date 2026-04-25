@@ -49,6 +49,45 @@ def _loaded_models(lms_cli_path: str) -> list[str]:
         return []
 
 
+def _load_args(cfg: LmStudioConfig, model: str) -> list[str]:
+    """Build the `lms load` argv. Adds optional --gpu, -c, --ttl when set."""
+    args = [cfg.lms_cli_path, "load", model, "--yes"]
+    if cfg.context_length is not None:
+        args += ["-c", str(cfg.context_length)]
+    if cfg.gpu_offload is not None:
+        args += ["--gpu", cfg.gpu_offload]
+    if cfg.ttl_seconds is not None:
+        args += ["--ttl", str(cfg.ttl_seconds)]
+    return args
+
+
+class LmStudioEstimateRefused(LmStudioUnavailable):
+    """Raised when `lms load --estimate-only` says the model won't fit."""
+
+
+def _estimate_load(cfg: LmStudioConfig, model: str) -> tuple[bool, str]:
+    """Run `lms load --estimate-only` and parse its plain-text output.
+
+    Returns (will_fit, summary). On any error, returns (True, "") so the caller
+    falls through to the real load — we don't want a flaky estimator to block
+    legitimate loads.
+    """
+    if not shutil.which(cfg.lms_cli_path):
+        return True, ""
+    args = _load_args(cfg, model) + ["--estimate-only"]
+    try:
+        r = subprocess.run(args, capture_output=True, text=True, timeout=30)
+    except (subprocess.TimeoutExpired, OSError):
+        return True, ""
+    out = (r.stdout or "") + (r.stderr or "")
+    summary = out.strip()
+    # `lms load --estimate-only` ends with a sentence containing
+    # "will fail to load" when guardrails would reject it.
+    if "will fail to load" in summary.lower():
+        return False, summary
+    return True, summary
+
+
 def ensure_running(cfg: LmStudioConfig) -> None:
     """Ensure an LM is usable. Mutates cfg.model if a fallback model is chosen.
 
@@ -95,11 +134,19 @@ def ensure_running(cfg: LmStudioConfig) -> None:
             time.sleep(1)
         else:
             raise LmStudioUnavailable("LM Studio server did not come up in 30s.")
-    log.info("Loading model %s via `%s load`...", cfg.model, cfg.lms_cli_path)
-    load = subprocess.run(
-        [cfg.lms_cli_path, "load", cfg.model, "--yes"],
-        capture_output=True, text=True,
-    )
+    if cfg.estimate_before_load:
+        will_fit, summary = _estimate_load(cfg, cfg.model)
+        if not will_fit:
+            raise LmStudioEstimateRefused(
+                f"Refusing to load {cfg.model!r}: LM Studio resource estimate "
+                f"says it won't fit. Lower context_length or gpu_offload, or "
+                f"choose a smaller model.\n{summary}"
+            )
+        if summary:
+            log.info("Load estimate for %s:\n%s", cfg.model, summary)
+    args = _load_args(cfg, cfg.model)
+    log.info("Loading model via: %s", " ".join(args))
+    load = subprocess.run(args, capture_output=True, text=True)
     for _ in range(60):
         if cfg.model in _loaded_models(cfg.lms_cli_path):
             return
@@ -135,11 +182,17 @@ def _try_load(cfg: LmStudioConfig, model: str, wait_s: int = 60) -> bool:
     """Try to load a specific model via lms CLI. Returns True if it ended up loaded."""
     if not shutil.which(cfg.lms_cli_path):
         return False
-    log.info("Attempting to load %r via `%s load`...", model, cfg.lms_cli_path)
-    subprocess.run(
-        [cfg.lms_cli_path, "load", model, "--yes"],
-        capture_output=True, text=True,
-    )
+    if cfg.estimate_before_load:
+        will_fit, summary = _estimate_load(cfg, model)
+        if not will_fit:
+            log.warning(
+                "Refusing to reload %r: estimate says it won't fit.\n%s",
+                model, summary,
+            )
+            return False
+    args = _load_args(cfg, model)
+    log.info("Attempting to load %r via: %s", model, " ".join(args))
+    subprocess.run(args, capture_output=True, text=True)
     for _ in range(wait_s):
         if model in _loaded_models(cfg.lms_cli_path):
             return True
@@ -214,7 +267,7 @@ def chat_json(
             "type": "json_schema",
             "json_schema": {
                 "schema": schema,
-                "strict": True,
+                "strict": False,
             },
         }
     else:
@@ -252,7 +305,7 @@ def chat_json_with_meta(
             "type": "json_schema",
             "json_schema": {
                 "schema": schema,
-                "strict": True,
+                "strict": False,
             },
         }
     else:

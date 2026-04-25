@@ -92,6 +92,28 @@ class VercelProvider:
             errors.append("Vercel: project_id is required")
         return errors
 
+    def delete(self, config: dict) -> None:
+        token = config.get("api_token", "").strip()
+        project_id = config.get("project_id", "").strip()
+        team_id = config.get("team_id", "").strip()
+        if not token or not project_id:
+            raise DeployFailed("Vercel delete: api_token and project_id required")
+        qs = f"?teamId={team_id}" if team_id else ""
+        url = f"{VERCEL_API}/v9/projects/{project_id}{qs}"
+        req = Request(url, headers={"Authorization": f"Bearer {token}"}, method="DELETE")
+        try:
+            with urlopen(req, timeout=60) as resp:
+                resp.read()
+            log.info("Vercel project %s deleted", project_id)
+        except HTTPError as e:
+            body = e.read().decode("utf-8", errors="replace")
+            if e.code == 404:
+                log.info("Vercel project %s already gone", project_id)
+                return
+            raise DeployFailed(f"Vercel API error {e.code}: {body}") from e
+        except URLError as e:
+            raise DeployFailed(f"Vercel API unreachable: {e.reason}") from e
+
     def _create_deployment(
         self, token: str, project_id: str, team_id: str, files: list[dict], slug: str
     ) -> str:

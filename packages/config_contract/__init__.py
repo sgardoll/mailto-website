@@ -117,6 +117,16 @@ class LmStudioConfig:
     # Qwen3.6 / Gemma 4 thinking-mode toggle. Sent as
     # extra_body.chat_template_kwargs.enable_thinking. None = server default.
     enable_thinking: bool | None = None
+    # Model-load parameters passed to `lms load`. None = LM Studio default,
+    # which on a Mac with a 26B+ model and a 32k–256k default window can
+    # exhaust unified memory and freeze the system. Always pin these.
+    context_length: int | None = None       # `-c` / KV-cache token budget
+    gpu_offload: str | None = None          # `--gpu` ("max", "off", or 0..1)
+    ttl_seconds: int | None = None          # `--ttl` auto-unload idle timeout
+    # Refuse to load if `lms load --estimate-only` reports the model won't fit
+    # under LM Studio's resource guardrails. Default on — this is the safety
+    # net that prevents another freeze/reboot.
+    estimate_before_load: bool = True
     # Per-task sampling overrides. Key = task name (e.g. "topic_curation",
     # "synthesis", "build", "distill", "plan"). Value = dict with any subset of
     # the sampling fields above (including enable_thinking). Shallow-merged

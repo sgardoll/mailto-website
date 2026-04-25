@@ -136,6 +136,20 @@ class SiteGroundProvider:
             errors.append("SiteGround: key_path or password is required")
         return errors
 
+    def delete(self, config: dict) -> None:
+        sg = _parse_config(config)
+        slug = sg.get("slug", "")
+        if not slug:
+            raise DeployFailed("SiteGround delete: slug missing from config")
+        remote_root = sg["base_remote_path"].rstrip("/") + "/" + slug
+        log.info("Deleting remote site %s@%s:%s", sg["user"], sg["host"], remote_root)
+        client, sftp = _open_sftp(sg)
+        try:
+            _rmtree_sftp(sftp, remote_root)
+        finally:
+            sftp.close()
+            client.close()
+
 
 def _parse_config(config: dict) -> dict:
     """Extract and validate SiteGround config from the provider section."""
@@ -224,6 +238,27 @@ def _list_remote_files(sftp: paramiko.SFTPClient, root: str) -> set[str]:
                 out.add(full[len(root) + 1:])
     _walk(root)
     return out
+
+
+def _rmtree_sftp(sftp: paramiko.SFTPClient, path: str) -> None:
+    """Recursively remove path on the remote. Silent on FileNotFoundError."""
+    try:
+        entries = sftp.listdir_attr(path)
+    except FileNotFoundError:
+        return
+    for e in entries:
+        full = f"{path}/{e.filename}"
+        if stat.S_ISDIR(e.st_mode or 0):
+            _rmtree_sftp(sftp, full)
+        else:
+            try:
+                sftp.remove(full)
+            except OSError:
+                pass
+    try:
+        sftp.rmdir(path)
+    except (OSError, FileNotFoundError):
+        pass
 
 
 def _run(cmd: list[str], *, cwd: Path, env: dict | None = None) -> None:

@@ -46,7 +46,7 @@ def test_schema_provided_uses_json_schema(monkeypatch):
         "type": "json_schema",
         "json_schema": {
             "schema": schema,
-            "strict": True,
+            "strict": False,
         },
     }
 
