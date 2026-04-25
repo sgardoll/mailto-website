@@ -1,6 +1,6 @@
 import atexit, os, signal, socket, subprocess, sys, tempfile, threading, time, webbrowser
 from pathlib import Path
-from flask import Flask, jsonify, render_template, request
+from flask import Flask, jsonify, redirect, render_template, request, url_for
 import yaml
 try:
     from dotenv import dotenv_values
@@ -31,6 +31,12 @@ _port = None
 _wizard_state = {}
 # True after _try_prefill() has been called once.
 _prefilled = False
+
+# Service launch state for POST /api/launch + GET /api/services polling.
+_service_procs: list[subprocess.Popen] = []
+_launch_lock = threading.Lock()
+_launch_state = "idle"  # idle | launching | running | error
+_launch_error: str | None = None
 
 # Deploy state for POST /deploy + GET /deploy-status polling.
 _deploy_lock = threading.Lock()
@@ -100,6 +106,21 @@ def wait_for_port(port: int, timeout: float = 5.0) -> None:
     raise RuntimeError(f"Port {port} not reachable after {timeout}s")
 
 
+def _service_up(port: int) -> bool:
+    """Return True when a local TCP service is accepting connections."""
+    try:
+        with socket.create_connection(('127.0.0.1', port), timeout=0.3):
+            return True
+    except OSError:
+        return False
+
+
+def _config_files_exist() -> bool:
+    env_path = REPO_ROOT / '.env'
+    config_path = REPO_ROOT / 'apps' / 'workflow_engine' / 'config.yaml'
+    return env_path.exists() and config_path.exists()
+
+
 def check_write_permission(project_root: Path) -> bool:
     """Return True if *project_root* is writable by the current process."""
     return os.access(project_root, os.W_OK)
@@ -130,12 +151,108 @@ def _shutdown_server() -> None:
 
 
 def _cleanup() -> None:
+    for proc in list(_service_procs):
+        if proc.poll() is None:
+            try:
+                proc.terminate()
+            except OSError:
+                pass
     print("\nSetup wizard exited cleanly.", flush=True)
+
+
+def _launch_worker() -> None:
+    global _launch_state, _launch_error
+
+    try:
+        env = os.environ.copy()
+        env_path = REPO_ROOT / '.env'
+        if env_path.exists():
+            env.update({k: v for k, v in dotenv_values(str(env_path)).items() if v is not None})
+
+        python_path = REPO_ROOT / '.venv' / 'bin' / 'python'
+        listener_proc = subprocess.Popen(
+            [str(python_path), '-m', 'apps.workflow_engine.listener'],
+            cwd=str(REPO_ROOT),
+            env=env,
+        )
+        _service_procs.append(listener_proc)
+
+        site_dir = REPO_ROOT / 'packages' / 'site-template'
+        if not (site_dir / 'node_modules').exists():
+            subprocess.run(['npm', 'install'], cwd=str(site_dir), env=env, check=True)
+
+        astro_proc = subprocess.Popen(
+            ['npm', 'run', 'dev'],
+            cwd=str(site_dir),
+            env=env,
+        )
+        _service_procs.append(astro_proc)
+
+        with _launch_lock:
+            _launch_state = "running"
+            _launch_error = None
+    except Exception as e:
+        for proc in list(_service_procs):
+            if proc.poll() is None:
+                try:
+                    proc.terminate()
+                except OSError:
+                    pass
+        with _launch_lock:
+            _launch_state = "error"
+            _launch_error = f"{type(e).__name__}: {e}"
 
 
 @app.route('/')
 def index():
+    if _config_files_exist():
+        return redirect(url_for('ready'))
     return render_template('index.html', port=_port, active_step='gmail', completed_steps=[])
+
+
+@app.route('/step/gmail')
+def step_gmail():
+    return render_template('index.html', port=_port, active_step='gmail', completed_steps=[])
+
+
+@app.route('/ready')
+def ready():
+    return render_template('ready.html', port=_port, active_step='preview', completed_steps=['gmail', 'lmstudio', 'hosting', 'inboxes', 'preview'])
+
+
+@app.route('/launch-status')
+def launch_status():
+    return render_template('launch_status.html', port=_port)
+
+
+@app.route('/api/launch', methods=['POST'])
+def api_launch():
+    global _launch_state, _launch_error
+
+    with _launch_lock:
+        if _launch_state == "idle":
+            _launch_state = "launching"
+            _launch_error = None
+            threading.Thread(target=_launch_worker, daemon=True).start()
+        return jsonify({"ok": _launch_state != "error", "launch_status": _launch_state, "launch_error": _launch_error})
+
+
+@app.route('/api/services')
+def api_services():
+    with _launch_lock:
+        status = _launch_state
+        error = _launch_error
+
+    listener_url = 'http://127.0.0.1:8899/'
+    astro_url = 'http://localhost:4321/'
+    return jsonify({
+        "launch_status": status,
+        "launch_error": error,
+        "services": {
+            "listener": {"up": _service_up(8899), "url": listener_url},
+            "astro": {"up": _service_up(4321), "url": astro_url},
+        },
+    })
 
 
 @app.route('/step/lmstudio')

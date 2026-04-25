@@ -1140,3 +1140,56 @@
     initDoneStep();
 
 })();
+
+
+// ── Service launcher ───────────────────────────────────────────────────────
+
+(function() {
+    'use strict';
+
+    function initLaunchButton() {
+        var launchBtn = document.getElementById('launch-btn');
+        if (!launchBtn) return;
+
+        var launchError = document.getElementById('launch-error');
+
+        launchBtn.addEventListener('click', function() {
+            launchBtn.disabled = true;
+            launchBtn.textContent = 'Launching...';
+            if (launchError) {
+                launchError.textContent = '';
+                launchError.hidden = true;
+            }
+
+            fetch('/api/launch', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'}
+            })
+            .then(function(r) { return r.json().then(function(d) { return {status: r.status, data: d}; }); })
+            .then(function(result) {
+                if (result.data.ok) {
+                    window.location.href = '/launch-status';
+                    return;
+                }
+
+                launchBtn.disabled = false;
+                launchBtn.textContent = 'Launch Services';
+                if (launchError) {
+                    launchError.textContent = result.data.launch_error || 'Services failed to launch.';
+                    launchError.hidden = false;
+                }
+            })
+            .catch(function() {
+                launchBtn.disabled = false;
+                launchBtn.textContent = 'Launch Services';
+                if (launchError) {
+                    launchError.textContent = 'Network error. Check the wizard server and try again.';
+                    launchError.hidden = false;
+                }
+            });
+        });
+    }
+
+    initLaunchButton();
+
+})();

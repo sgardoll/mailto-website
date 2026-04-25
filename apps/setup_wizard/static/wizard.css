@@ -12,16 +12,51 @@ body {
     padding: 0 16px;
 }
 
-h1 { font-size: 24px; font-weight: 600; line-height: 1.2; margin-bottom: 16px; }
+h1 { font-size: 24px; font-weight: 600; line-height: 1.2; margin: 0 0 16px; }
 h2 { font-size: 20px; font-weight: 600; line-height: 1.2; margin-bottom: 16px; }
 label { font-size: 14px; font-weight: 600; line-height: 1.4; display: block; margin-bottom: 4px; }
+
+.wizard-header {
+    margin-bottom: 32px;
+}
+.brand-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 18px;
+}
+.brand-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    color: #111827;
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1;
+    text-decoration: none;
+}
+.brand-mark {
+    display: block;
+    width: 74px;
+    height: 40px;
+    object-fit: contain;
+}
+.brand-name {
+    white-space: nowrap;
+}
+.brand-row h1 {
+    margin: 0;
+    text-align: right;
+}
 
 /* Stepper indicator (Variant A2 — icon nodes + check badge) */
 .stepper {
     display: flex;
     align-items: center;
     width: 100%;
-    margin-bottom: 32px;
+    margin-bottom: 0;
     padding: 0;
     list-style: none;
 }
@@ -674,4 +709,63 @@ select:focus {
     border-color: #111827;
     color: #111827;
     box-shadow: 0 0 0 3px rgba(17, 24, 39, 0.06);
+}
+
+.services-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin: 18px 0 0;
+}
+.service-row {
+    background-color: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    padding: 14px 16px;
+}
+.service-row-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+.service-name {
+    font-size: 15px;
+    font-weight: 700;
+    color: #0f172a;
+}
+.service-badge {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background-color: #e2e8f0;
+    color: #475569;
+}
+.service-badge[data-state="up"] {
+    background-color: #dcfce7;
+    color: #15803d;
+}
+.service-link {
+    display: inline-block;
+    margin-top: 8px;
+    font-size: 13px;
+    color: #15803d;
+    word-break: break-all;
+}
+
+@media (max-width: 520px) {
+    body {
+        margin-top: 28px;
+    }
+    .brand-row {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 12px;
+    }
+    .brand-row h1 {
+        text-align: left;
+    }
 }

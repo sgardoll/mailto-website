@@ -208,7 +208,7 @@ def test_max_tokens_enforced_internally(monkeypatch):
     monkeypatch.setattr(lm_studio, "chat_json_with_meta", fake)
 
     from packages.config_contract import LmStudioConfig
-    low_cfg = LmStudioConfig(max_tokens=512)
+    low_cfg = LmStudioConfig(max_tokens=512, build_strategy="single")
     build_mod.build(_make_spec(), low_cfg)
     assert len(captured_cfgs) == 1
     assert captured_cfgs[0].max_tokens >= 8000

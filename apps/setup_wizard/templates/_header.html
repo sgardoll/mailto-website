@@ -1,0 +1,12 @@
+<header class="wizard-header">
+    <div class="brand-row">
+        <a class="brand-link" href="{{ url_for('index') }}" aria-label="mailto.website setup">
+            <img class="brand-mark" src="{{ url_for('static', filename='brand-mark.png') }}" alt="" width="74" height="40">
+            <span class="brand-name">mailto.website</span>
+        </a>
+        <h1>{{ page_title|default('Setup Wizard') }}</h1>
+    </div>
+    {% if show_stepper|default(true) %}
+    {% include '_stepper.html' %}
+    {% endif %}
+</header>

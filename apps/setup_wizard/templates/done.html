@@ -8,10 +8,7 @@
 </head>
 <body>
 
-<header>
-    <h1>Setup Wizard</h1>
-    {% include '_stepper.html' %}
-</header>
+{% include '_header.html' %}
 
 <main>
 
@@ -73,10 +70,14 @@
         </div>
         {% endif %}
 
+        <div class="success-next-action">
+            <p><strong>Next step:</strong> launch the listener and site preview.</p>
+            <button id="launch-btn" class="btn-primary" type="button">Launch Services</button>
+            <p id="launch-error" class="error-text" hidden aria-live="polite"></p>
+        </div>
+
         <p class="help-text">
-            Once deployed, run <code>./scripts/run-workflow.sh</code> from your project root
-            to start the email listener — it watches your Gmail inbox and auto-publishes new
-            posts to the site{{ 's' if inboxes|length > 1 else '' }} on arrival.
+            For headless use, <code>./scripts/run-workflow.sh</code> still starts the email listener without the browser status screen.
         </p>
 
         <p class="help-text">
