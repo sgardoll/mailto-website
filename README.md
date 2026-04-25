@@ -118,11 +118,10 @@
 
 ```bash
 git clone <repo> && cd mailto-website
-python3 -m venv .venv && .venv/bin/pip install -r apps/workflow_engine/requirements.txt
-./scripts/setup.sh
+./scripts/dev.sh
 ```
 
-That last command opens [`http://localhost:7331`](http://localhost:7331). The wizard takes you the rest of the way.
+That one command creates the Python environment, opens the wizard, skips setup when config already exists, and launches the listener plus site preview from a browser status screen.
 
 <br />
 
@@ -164,15 +163,23 @@ The model operates under two prime directives, enforced in code:
 
 ## ✦ Quick start
 
-After the wizard, the listener is yours to run however you like:
+Use the single developer entry point:
 
 ```bash
-./scripts/run-workflow.sh             # foreground, persistent IMAP IDLE — best for first try
+./scripts/dev.sh
+```
+
+It creates `.venv` when needed, installs the Python requirements, opens the wizard for first-time setup, and takes returning users straight to a launch screen for the listener dashboard and Astro site preview.
+
+For headless/background use after setup:
+
+```bash
+./scripts/run-workflow.sh             # foreground, persistent IMAP IDLE
 ./scripts/install-launchd.sh          # macOS background service
 ./scripts/install-systemd-user.sh     # Linux background service
 ```
 
-A health endpoint runs on `http://127.0.0.1:8899/health` so you can confirm the listener is alive and which inboxes it's watching.
+The listener dashboard runs at `http://127.0.0.1:8899/`, with health details at `http://127.0.0.1:8899/health`.
 
 <br />
 
@@ -188,7 +195,6 @@ A health endpoint runs on `http://127.0.0.1:8899/health` so you can confirm the 
 | **Vercel** | ✓ | API token; static-only host. The listener has to live elsewhere (your laptop, a VPS) and pushes to Vercel via API |
 | **Generic SSH/SFTP** | manual | `python -m apps.workflow_engine.deploy_once` for now |
 
-> _Netlify and GitHub Pages were dropped: both are static-only hosts that cannot run the IMAP listener, and the local-listener-pushes-to-static-host model adds nothing on top of Vercel for that use case._
 
 <br />
 
@@ -199,13 +205,13 @@ A health endpoint runs on `http://127.0.0.1:8899/health` so you can confirm the 
 ## ✦ Project layout
 
 ```
-apps/setup_wizard/         Flask wizard you just used. Five steps + done screen.
+apps/setup_wizard/         Flask wizard you just used. Five steps + service launch screens.
 apps/workflow_engine/      Python pipeline. IMAP listener → dispatcher → orchestrator → deploy.
 packages/site-template/    Astro 5 template. Copied to runtime/sites/<slug>/ on first email.
 packages/config_contract/  Typed config schema shared by wizard + engine.
 runtime/sites/<slug>/      One evolving site per inbox. LM-owned after bootstrap.
 runtime/state/             listener.log, processed.jsonl, SSH keys.
-scripts/                   setup.sh (wizard), run-workflow.sh (foreground), install-* (services).
+scripts/                   dev.sh (wizard + launcher), run-workflow.sh (foreground), install-* (services).
 docs/SETUP.md              Manual config path if you'd rather edit YAML directly.
 ```
 
@@ -235,7 +241,7 @@ docs/SETUP.md              Manual config path if you'd rather edit YAML directly
 
 ```bash
 tail -f runtime/state/listener.log              # live pipeline log
-curl -s localhost:8899/health                   # is the listener alive? which inboxes?
+curl -s http://127.0.0.1:8899/health            # is the listener alive? which inboxes?
 cat runtime/state/processed.jsonl | tail        # last N messages and their outcomes
 ```
 

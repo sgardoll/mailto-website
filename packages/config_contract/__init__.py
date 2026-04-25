@@ -137,6 +137,12 @@ class LmStudioConfig:
     # the sampling fields above (including enable_thinking). Shallow-merged
     # over the base config for that call only.
     task_overrides: dict[str, dict[str, Any]] = field(default_factory=dict)
+    # BUILD stage strategy.
+    #   "multi" (default): deterministic skeleton + per-region fill calls. Robust
+    #     under small local models that mode-collapse on a single ~5KB JSON-string emit.
+    #   "single": legacy one-shot build with validator-feedback retries. Faster
+    #     when the active model can reliably emit the full module in one call.
+    build_strategy: str = "multi"
 
 
 @dataclass

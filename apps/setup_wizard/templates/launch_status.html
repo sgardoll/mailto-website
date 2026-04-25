@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Service Status</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='wizard.css') }}">
+</head>
+<body>
+
+{% set show_stepper = false %}
+{% include '_header.html' %}
+
+<main>
+    <section class="form-section" aria-labelledby="launch-status-heading">
+        <h2 id="launch-status-heading">Launching services</h2>
+
+        <div class="services-list" aria-live="polite">
+            <div class="service-row" data-service="listener">
+                <div class="service-row-head">
+                    <span class="service-name">Listener + Dashboard</span>
+                    <span class="service-badge" data-state="starting">starting…</span>
+                </div>
+                <a class="service-link" href="http://127.0.0.1:8899/" target="_blank" rel="noopener noreferrer" hidden>http://127.0.0.1:8899/</a>
+            </div>
+
+            <div class="service-row" data-service="astro">
+                <div class="service-row-head">
+                    <span class="service-name">Site Preview</span>
+                    <span class="service-badge" data-state="starting">starting…</span>
+                </div>
+                <a class="service-link" href="http://localhost:4321/" target="_blank" rel="noopener noreferrer" hidden>http://localhost:4321/</a>
+            </div>
+        </div>
+
+        <p id="launch-error" class="error-text" hidden aria-live="polite"></p>
+    </section>
+</main>
+
+<footer>
+    <button id="exit-btn" class="btn-exit" type="button">Exit Setup</button>
+</footer>
+
+<script>
+(function() {
+    'use strict';
+
+    var errorEl = document.getElementById('launch-error');
+
+    function updateService(name, service) {
+        var row = document.querySelector('[data-service="' + name + '"]');
+        if (!row) return;
+        var badge = row.querySelector('.service-badge');
+        var link = row.querySelector('.service-link');
+        var up = !!(service && service.up);
+        if (badge) {
+            badge.textContent = up ? 'live' : 'starting…';
+            badge.setAttribute('data-state', up ? 'up' : 'starting');
+        }
+        if (link && service && service.url) {
+            link.href = service.url;
+            link.textContent = service.url;
+            link.hidden = !up;
+        }
+    }
+
+    function pollServices() {
+        fetch('/api/services')
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                updateService('listener', data.services && data.services.listener);
+                updateService('astro', data.services && data.services.astro);
+
+                if (data.launch_error && errorEl) {
+                    errorEl.textContent = data.launch_error;
+                    errorEl.hidden = false;
+                }
+
+                setTimeout(pollServices, 2000);
+            })
+            .catch(function() {
+                setTimeout(pollServices, 2000);
+            });
+    }
+
+    var exitBtn = document.getElementById('exit-btn');
+    if (exitBtn) {
+        exitBtn.addEventListener('click', function() {
+            exitBtn.disabled = true;
+            exitBtn.textContent = 'Exiting...';
+            fetch('/exit', {method: 'POST', headers: {'Content-Type': 'application/json'}})
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    if (data.ok) {
+                        document.body.textContent = '';
+                        var msg = document.createElement('p');
+                        msg.textContent = 'Wizard shut down. You can close this tab.';
+                        document.body.appendChild(msg);
+                    }
+                })
+                .catch(function() {
+                    document.body.textContent = '';
+                    var msg = document.createElement('p');
+                    msg.textContent = 'Wizard exiting...';
+                    document.body.appendChild(msg);
+                });
+        });
+    }
+
+    pollServices();
+})();
+</script>
+</body>
+</html>

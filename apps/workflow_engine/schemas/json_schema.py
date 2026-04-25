@@ -41,3 +41,14 @@ BUILD_SCHEMA: dict = {
     },
     "required": ["html"],
 }
+
+# Used by the multi-step BUILD pipeline for per-region fill calls. Each call
+# emits only a small HTML snippet (~500-1500 bytes) for one labeled region,
+# so the model never has to produce the full ~5KB module in one shot.
+BUILD_REGION_SCHEMA: dict = {
+    "type": "object",
+    "properties": {
+        "snippet": {"type": "string"},
+    },
+    "required": ["snippet"],
+}

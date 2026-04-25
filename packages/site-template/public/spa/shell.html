@@ -86,7 +86,18 @@
     <header class="site-header">
       <h1>SPA Shell</h1>
       <nav id="nav"></nav>
+      <a id="listener-link" href="#" target="_blank" rel="noopener" style="margin-left:auto;font-size:14px;font-weight:600;color:var(--color-accent);text-decoration:none;display:none">Listener ↗</a>
     </header>
+    <script>
+      (function () {
+        var host = location.hostname;
+        if (host === 'localhost' || host === '127.0.0.1') {
+          var link = document.getElementById('listener-link');
+          link.href = 'http://127.0.0.1:8899/';
+          link.style.display = '';
+        }
+      })();
+    </script>
     <main class="container">
       <iframe
         id="module-frame"
