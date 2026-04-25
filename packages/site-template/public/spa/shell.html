@@ -20,22 +20,44 @@
 
     <script>
       (function() {
-        var ENDPOINT = window.location.protocol === 'https:'
-          ? '/api/ai'
-          : 'http://localhost:1234/v1/chat/completions';
+        var DEFAULT_HTTP_ENDPOINT = 'http://localhost:1234/v1/chat/completions';
+        var DEFAULT_HTTPS_ENDPOINT = '/api/ai';
+        // Resolve at first call so a site can ship an optional ai_config.json
+        // alongside spa_manifest.json to override the endpoint without editing
+        // this template. Missing/invalid config falls back to defaults.
+        var _endpointPromise = null;
+        function resolveEndpoint() {
+          if (_endpointPromise) return _endpointPromise;
+          var fallback = window.location.protocol === 'https:'
+            ? DEFAULT_HTTPS_ENDPOINT
+            : DEFAULT_HTTP_ENDPOINT;
+          _endpointPromise = fetch('ai_config.json')
+            .then(function(r) { return r.ok ? r.json() : null; })
+            .then(function(cfg) {
+              if (cfg && typeof cfg.endpoint === 'string' && cfg.endpoint) {
+                return cfg.endpoint;
+              }
+              return fallback;
+            })
+            .catch(function() { return fallback; });
+          return _endpointPromise;
+        }
         window.AI = async function(messages, opts) {
+          var endpoint = await resolveEndpoint();
           var body = Object.assign({ messages: messages }, opts || {});
-          var res = await fetch(ENDPOINT, {
+          var res = await fetch(endpoint, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(body)
           });
           return res.json();
         };
-        console.debug('[AI] bridge ready \u2014 endpoint: ' + ENDPOINT);
-        if (window.location.protocol === 'https:') {
-          console.debug('[AI] HTTPS detected \u2014 routing via /api/ai proxy');
-        }
+        resolveEndpoint().then(function(endpoint) {
+          console.debug('[AI] bridge ready \u2014 endpoint: ' + endpoint);
+          if (window.location.protocol === 'https:' && endpoint === DEFAULT_HTTPS_ENDPOINT) {
+            console.debug('[AI] HTTPS detected \u2014 routing via /api/ai proxy');
+          }
+        });
       })();
     </script>
 
