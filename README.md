@@ -195,7 +195,6 @@ The listener dashboard runs at `http://127.0.0.1:8899/`, with health details at 
 | **Vercel** | ✓ | API token; static-only host. The listener has to live elsewhere (your laptop, a VPS) and pushes to Vercel via API |
 | **Generic SSH/SFTP** | manual | `python -m apps.workflow_engine.deploy_once` for now |
 
-> _Netlify and GitHub Pages were dropped: both are static-only hosts that cannot run the IMAP listener, and the local-listener-pushes-to-static-host model adds nothing on top of Vercel for that use case._
 
 <br />
 
