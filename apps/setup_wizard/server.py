@@ -230,7 +230,8 @@ def api_launch():
     global _launch_state, _launch_error
 
     with _launch_lock:
-        if _launch_state == "idle":
+        if _launch_state in ("idle", "error"):
+            _service_procs.clear()
             _launch_state = "launching"
             _launch_error = None
             threading.Thread(target=_launch_worker, daemon=True).start()
