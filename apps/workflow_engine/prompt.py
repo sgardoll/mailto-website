@@ -34,6 +34,16 @@ SYSTEM_BASE = dedent("""\
 """)
 
 
+VOICE_RULE = dedent("""\
+    Write in the owner's voice, not about the owner. The incoming email body
+    is a sample of their voice — match its cadence, register, and the specific
+    words they use. Write as "I forwarded" / "I watched" / "I've been working
+    on" — never "the owner forwarded" or "the user watched". Do not soften
+    rough phrasing into corporate language. Do not hedge with "the email
+    suggests" or "it appears that"; state the point directly.
+""")
+
+
 def topic_prompt_user(idx: SiteIndex, email: dict) -> str:
     return json.dumps({
         "task": "topic_curation",
@@ -108,4 +118,4 @@ def synthesis_prompt_user(idx: SiteIndex, email: dict) -> str:
 
 
 def system_for(task: str) -> str:
-    return SYSTEM_BASE + f"\nCurrent task: {task}\n"
+    return SYSTEM_BASE + "\n" + VOICE_RULE + f"\nCurrent task: {task}\n"

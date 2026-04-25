@@ -135,7 +135,7 @@ def test_schema_kwarg_passed_to_chat_json(monkeypatch):
 
     captured_kwargs: list[dict] = []
 
-    def fake_chat_json(cfg, *, system, user, schema=None, schema_hint=None):
+    def fake_chat_json(cfg, *, system, user, schema=None, schema_hint=None, task=None):
         captured_kwargs.append({"schema": schema})
         return VALID_CALCULATOR_ENVELOPE
 

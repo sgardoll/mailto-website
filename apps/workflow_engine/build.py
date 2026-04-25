@@ -54,7 +54,7 @@ def build(spec: MechanicSpec, lm_cfg) -> dict[str, Any]:
 
     for attempt in range(1, MAX_RETRIES + 1):
         raw, finish_reason = lm_studio.chat_json_with_meta(
-            lm_cfg, system=system, user=user, schema=BUILD_SCHEMA
+            lm_cfg, system=system, user=user, schema=BUILD_SCHEMA, task="build"
         )
         if finish_reason == "length":
             raise BuildFailed(["finish_reason=length: output truncated"], attempt)

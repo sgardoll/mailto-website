@@ -107,6 +107,21 @@ class LmStudioConfig:
     temperature: float = 0.4
     max_tokens: int = 4096
     request_timeout_s: int = 600
+    # Optional sampling knobs. Passed through to the OpenAI-compatible server
+    # when set; omitted otherwise so the server keeps its default.
+    top_p: float | None = None
+    top_k: int | None = None
+    min_p: float | None = None
+    presence_penalty: float | None = None
+    repetition_penalty: float | None = None
+    # Qwen3.6 / Gemma 4 thinking-mode toggle. Sent as
+    # extra_body.chat_template_kwargs.enable_thinking. None = server default.
+    enable_thinking: bool | None = None
+    # Per-task sampling overrides. Key = task name (e.g. "topic_curation",
+    # "synthesis", "build", "distill", "plan"). Value = dict with any subset of
+    # the sampling fields above (including enable_thinking). Shallow-merged
+    # over the base config for that call only.
+    task_overrides: dict[str, dict[str, Any]] = field(default_factory=dict)
 
 
 @dataclass

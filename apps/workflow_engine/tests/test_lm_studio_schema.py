@@ -7,6 +7,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from apps.workflow_engine import lm_studio
+from packages.config_contract import LmStudioConfig
 
 
 def _fake_client(response_json: str = '{"a": 1}'):
@@ -17,8 +18,8 @@ def _fake_client(response_json: str = '{"a": 1}'):
     return fake_client
 
 
-def _cfg():
-    return MagicMock(model="m", temperature=0.4, max_tokens=1000)
+def _cfg(**overrides):
+    return LmStudioConfig(model="m", temperature=0.4, max_tokens=1000, **overrides)
 
 
 # ── schema=None uses json_object ──────────────────────────────────────────────

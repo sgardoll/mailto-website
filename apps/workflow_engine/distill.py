@@ -85,13 +85,13 @@ def _hand_crafted_fallback(ni: dict[str, Any], source_url: str | None) -> Mechan
 
 
 def _try_once(lm_cfg, system: str, user: str, source_url: str | None) -> MechanicSpec | None:
-    raw = lm_studio.chat_json(lm_cfg, system=system, user=user, schema=DISTILL_SCHEMA)
+    raw = lm_studio.chat_json(lm_cfg, system=system, user=user, schema=DISTILL_SCHEMA, task="distill")
     try:
         return _parse_and_validate(raw, source_url)
     except (JsonSchemaError, PydanticValidationError, ValueError) as e:
         log.warning("DISTILL validation failed: %s", e)
         user_retry = user + f"\n\nPrevious attempt failed: {e}\nPlease fix and retry."
-        raw2 = lm_studio.chat_json(lm_cfg, system=system, user=user_retry, schema=DISTILL_SCHEMA)
+        raw2 = lm_studio.chat_json(lm_cfg, system=system, user=user_retry, schema=DISTILL_SCHEMA, task="distill")
         try:
             return _parse_and_validate(raw2, source_url)
         except (JsonSchemaError, PydanticValidationError, ValueError) as e2:
