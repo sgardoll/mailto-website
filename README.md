@@ -1,5 +1,5 @@
 <div align="center">
-<img width="1239" alt="logo" src="https://github.com/sgardoll/thoughts-to-platform-builder/blob/f14477a4e53a2ba21835e20a41ef5b092faa143a/docs/v1.png" />
+<img width="1416" height="529" alt="v2-full-black-cropped" src="https://github.com/user-attachments/assets/10f4c64c-ab38-4143-91f0-6a8e2ad9eb6a" />
 
 ### Email an idea. Get a website.
 
