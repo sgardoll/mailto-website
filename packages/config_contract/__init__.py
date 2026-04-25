@@ -250,9 +250,10 @@ def validate_config(raw: dict) -> list[str]:
             if not ib.get("address"):
                 errors.append(f"Inbox {i}: missing 'address'")
             slug = ib.get("slug", "")
-            if slug in slugs:
+            if slug and slug in slugs:
                 errors.append(f"Inbox {i}: duplicate slug '{slug}'")
-            slugs.add(slug)
+            if slug:
+                slugs.add(slug)
 
             provider = ib.get("hosting_provider", "")
             if provider:
