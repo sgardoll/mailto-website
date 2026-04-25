@@ -477,13 +477,12 @@ def _call_with_fallbacks(
         # Recovery step 1: try to load the configured model (it may have been
         # unloaded or crashed — reloading it is usually the right fix).
         if _try_load(cfg, original):
-            cfg.model = original
             try:
                 return _do(cfg.model, response_format)
             except Exception as e2:
                 if not _is_model_load_failure(e2):
                     raise
-                log.warning("Retry with %r still failed (%s).", original, str(e2)[:200])
+                log.warning("Retry with %r still failed (%s).", cfg.model, str(e2)[:200])
 
         # Recovery step 2: use any *other* model that happens to be loaded
         # (excluding the one that just crashed to avoid a loop).
