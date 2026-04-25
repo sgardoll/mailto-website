@@ -108,6 +108,8 @@ def _build_single(spec: MechanicSpec, lm_cfg) -> dict[str, Any]:
                 lm_cfg, system=system, user=user, schema=BUILD_SCHEMA, task="build"
             )
         except ValueError as e:
+            # Model emitted malformed JSON (JSONDecodeError is a ValueError).
+            # Treat as a build failure and retry with feedback.
             log.warning("BUILD attempt %d: model returned malformed JSON: %s", attempt, e)
             if attempt >= MAX_RETRIES:
                 raise BuildFailed([f"malformed JSON after {MAX_RETRIES} attempts: {e}"], attempt)
