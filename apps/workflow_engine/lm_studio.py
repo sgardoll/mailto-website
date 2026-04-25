@@ -50,61 +50,198 @@ def _loaded_models(lms_cli_path: str) -> list[str]:
 
 
 def _load_args(cfg: LmStudioConfig, model: str) -> list[str]:
-    """Build the `lms load` argv. Adds optional --gpu, -c, --ttl when set."""
-    args = [cfg.lms_cli_path, "load", model, "--yes"]
-    if cfg.context_length is not None:
-        args += ["-c", str(cfg.context_length)]
-    if cfg.gpu_offload is not None:
-        args += ["--gpu", cfg.gpu_offload]
-    if cfg.ttl_seconds is not None:
-        args += ["--ttl", str(cfg.ttl_seconds)]
+    """Build the `lms load` argv using cfg defaults."""
+    return _load_args_at(cfg.lms_cli_path, model, cfg.context_length, cfg.gpu_offload, cfg.ttl_seconds)
+
+
+def _load_args_at(
+    cli: str, model: str, ctx: int | None, gpu: str | None, ttl: int | None
+) -> list[str]:
+    """Build `lms load` argv with explicit context_length / gpu / ttl overrides."""
+    args = [cli, "load", model, "--yes"]
+    if ctx is not None:
+        args += ["-c", str(ctx)]
+    if gpu is not None:
+        args += ["--gpu", gpu]
+    if ttl is not None:
+        args += ["--ttl", str(ttl)]
     return args
 
 
 class LmStudioEstimateRefused(LmStudioUnavailable):
-    """Raised when `lms load --estimate-only` says the model won't fit."""
+    """Raised when no (model, context) combo fits under LM Studio's guardrails."""
+
+
+# Below this context, distill/build prompts almost always overflow at runtime,
+# so loading the model only to fail on the first call is wasted work.
+_LOAD_CONTEXT_FLOOR = 2048
 
 
 def _estimate_load(cfg: LmStudioConfig, model: str) -> tuple[bool, str]:
-    """Run `lms load --estimate-only` and parse its plain-text output.
+    """Run `lms load --estimate-only` for cfg defaults. Kept for backward compat."""
+    return _estimate_load_at(cfg.lms_cli_path, model, cfg.context_length, cfg.gpu_offload, cfg.ttl_seconds)
 
-    Returns (will_fit, summary). On any error, returns (True, "") so the caller
-    falls through to the real load — we don't want a flaky estimator to block
-    legitimate loads.
+
+def _estimate_load_at(
+    cli: str, model: str, ctx: int | None, gpu: str | None, ttl: int | None
+) -> tuple[bool, str]:
+    """Run `lms load --estimate-only` for an explicit (model, ctx) combo.
+
+    Returns (will_fit, summary). On any tooling error, returns (True, "") so
+    the caller falls through to the real load — we don't want a flaky
+    estimator to block legitimate loads.
     """
-    if not shutil.which(cfg.lms_cli_path):
+    if not shutil.which(cli):
         return True, ""
-    args = _load_args(cfg, model) + ["--estimate-only"]
+    args = _load_args_at(cli, model, ctx, gpu, ttl) + ["--estimate-only"]
     try:
         r = subprocess.run(args, capture_output=True, text=True, timeout=30)
     except (subprocess.TimeoutExpired, OSError):
         return True, ""
-    out = (r.stdout or "") + (r.stderr or "")
-    summary = out.strip()
-    # `lms load --estimate-only` ends with a sentence containing
-    # "will fail to load" when guardrails would reject it.
+    summary = ((r.stdout or "") + (r.stderr or "")).strip()
     if "will fail to load" in summary.lower():
         return False, summary
     return True, summary
 
 
+def _list_downloaded_models(cli: str) -> list[tuple[str, int]]:
+    """Return [(modelKey, sizeBytes), ...] sorted by size DESCENDING.
+
+    Largest-first ordering means the smart-load fallback picks the biggest
+    model that still fits under guardrails — better answer quality than
+    auto-falling-back to a 1B model when a 4B would fit. Embedding-only
+    models are filtered out.
+    """
+    if not shutil.which(cli):
+        return []
+    try:
+        r = subprocess.run([cli, "ls", "--json"], capture_output=True, text=True, timeout=15)
+        if r.returncode != 0:
+            return []
+        data = json.loads(r.stdout or "[]")
+    except (subprocess.TimeoutExpired, json.JSONDecodeError, OSError):
+        return []
+    out: list[tuple[str, int]] = []
+    for m in data:
+        key = m.get("modelKey")
+        if not key:
+            continue
+        if (m.get("type") or "").lower() == "embedding":
+            continue
+        if "embed" in key.lower():
+            continue
+        out.append((key, int(m.get("sizeBytes") or 0)))
+    out.sort(key=lambda x: x[1], reverse=True)
+    return out
+
+
+def _candidate_contexts(start: int | None) -> list[int]:
+    """Decreasing context lengths to attempt.
+
+    Starts at the user's configured value (or 8192 default), then halves down
+    to `_LOAD_CONTEXT_FLOOR`. If the user explicitly chose a value below the
+    floor, that's the only candidate — we honour the user's intent rather than
+    silently raising it.
+    """
+    base = start or 8192
+    out = [base]
+    val = base
+    while val // 2 >= _LOAD_CONTEXT_FLOOR:
+        val //= 2
+        if val not in out:
+            out.append(val)
+    return out
+
+
+def _attempt_load(
+    cfg: LmStudioConfig, model: str, ctx: int, wait_s: int = 60, *, use_estimate: bool = True
+) -> bool:
+    """Estimate then load (model, ctx). Returns True iff model is in memory afterwards.
+
+    `use_estimate=False` skips the `--estimate-only` preflight. Used for the
+    user's preferred model — the estimator is conservative and false-rejects
+    models that actually load fine. The `context_length` cap still protects
+    against runaway loads regardless.
+    """
+    if use_estimate and cfg.estimate_before_load:
+        will_fit, summary = _estimate_load_at(
+            cfg.lms_cli_path, model, ctx, cfg.gpu_offload, cfg.ttl_seconds
+        )
+        if not will_fit:
+            log.info("skip %s @ ctx=%d (estimator: won't fit)", model, ctx)
+            return False
+        if summary:
+            log.debug("estimate %s @ ctx=%d:\n%s", model, ctx, summary)
+    args = _load_args_at(cfg.lms_cli_path, model, ctx, cfg.gpu_offload, cfg.ttl_seconds)
+    log.info("loading: %s", " ".join(args))
+    subprocess.run(args, capture_output=True, text=True)
+    for _ in range(wait_s):
+        if model in _loaded_models(cfg.lms_cli_path):
+            return True
+        time.sleep(1)
+    return False
+
+
+def _smart_load(cfg: LmStudioConfig, primary_model: str) -> str | None:
+    """Cascading fallback: primary model at decreasing contexts, then alternates.
+
+    Returns the model name that ended up loaded, or None if nothing fit.
+    Mutation of cfg.model is left to the caller so tests can assert behaviour.
+    """
+    contexts = _candidate_contexts(cfg.context_length)
+    log.info("smart-load: trying %s at contexts %s, then fallbacks", primary_model, contexts)
+
+    # Primary model: skip estimator. The user picked this model; honour the
+    # choice and let an actual load attempt decide. context_length cap keeps
+    # the load bounded regardless.
+    for ctx in contexts:
+        if _attempt_load(cfg, primary_model, ctx, use_estimate=False):
+            log.info("loaded primary %s at ctx=%d", primary_model, ctx)
+            return primary_model
+
+    log.warning(
+        "primary %s did not load at any ctx in %s; trying alternate downloaded models",
+        primary_model, contexts,
+    )
+    # Alternates: keep estimator on so we don't waste 30+ seconds attempting
+    # 25 models the estimator can quickly rule out.
+    for alt, size in _list_downloaded_models(cfg.lms_cli_path):
+        if alt == primary_model:
+            continue
+        for ctx in contexts:
+            if _attempt_load(cfg, alt, ctx):
+                log.warning(
+                    "fell back to %s (%.2f GB) at ctx=%d — primary %s did not load",
+                    alt, size / 1e9, ctx, primary_model,
+                )
+                return alt
+
+    return None
+
+
 def ensure_running(cfg: LmStudioConfig) -> None:
     """Ensure an LM is usable. Mutates cfg.model if a fallback model is chosen.
 
-    Resilience policy: rather than failing when the configured model can't be
-    loaded (memory pressure, model removed, etc.), fall back to whatever is
-    already loaded in memory. Only try to load the configured model if nothing
-    is loaded at all.
+    Resilience policy: prefer the user's originally-configured model
+    (`cfg.preferred_model`), then any in-memory alternate, then a smart-load
+    cascade. cfg.model is mutated to whatever ended up usable.
+
+    Without preferred_model tracking, once cfg.model gets mutated to an
+    in-memory alternate (e.g. a tiny Qwen variant the user manually loaded),
+    later runs would never reconsider the user's preferred big model — even
+    after the alternate gets unloaded.
     """
+    preferred = cfg.preferred_model or cfg.model
     loaded = _loaded_models(cfg.lms_cli_path) if _server_alive(cfg.base_url) else []
 
-    if cfg.model in loaded:
+    if preferred in loaded:
+        cfg.model = preferred
         return
 
     if loaded:
         log.warning(
-            "Configured model %r is not loaded in LM Studio; falling back to %r (already in memory).",
-            cfg.model, loaded[0],
+            "Preferred model %r is not loaded in LM Studio; falling back to %r (already in memory).",
+            preferred, loaded[0],
         )
         cfg.model = loaded[0]
         return
@@ -134,35 +271,15 @@ def ensure_running(cfg: LmStudioConfig) -> None:
             time.sleep(1)
         else:
             raise LmStudioUnavailable("LM Studio server did not come up in 30s.")
-    if cfg.estimate_before_load:
-        will_fit, summary = _estimate_load(cfg, cfg.model)
-        if not will_fit:
-            raise LmStudioEstimateRefused(
-                f"Refusing to load {cfg.model!r}: LM Studio resource estimate "
-                f"says it won't fit. Lower context_length or gpu_offload, or "
-                f"choose a smaller model.\n{summary}"
-            )
-        if summary:
-            log.info("Load estimate for %s:\n%s", cfg.model, summary)
-    args = _load_args(cfg, cfg.model)
-    log.info("Loading model via: %s", " ".join(args))
-    load = subprocess.run(args, capture_output=True, text=True)
-    for _ in range(60):
-        if cfg.model in _loaded_models(cfg.lms_cli_path):
-            return
-        time.sleep(1)
-    # Load failed (likely memory). Try any model that might have loaded meanwhile.
-    fallback = _loaded_models(cfg.lms_cli_path)
-    if fallback:
-        log.warning(
-            "Could not load %r (stderr: %s); falling back to %r.",
-            cfg.model, load.stderr.strip()[:200], fallback[0],
-        )
-        cfg.model = fallback[0]
+    loaded_model = _smart_load(cfg, preferred)
+    if loaded_model is not None:
+        cfg.model = loaded_model
         return
-    raise LmStudioUnavailable(
-        f"Model {cfg.model} did not load in 60s and nothing else is loaded either. "
-        f"Load any model manually in LM Studio and retry. Last loader stderr: {load.stderr.strip()[:200]}"
+    raise LmStudioEstimateRefused(
+        f"Could not load any downloaded model under LM Studio's resource "
+        f"guardrails. Tried {cfg.model!r} and all alternates at contexts "
+        f"down to {_LOAD_CONTEXT_FLOOR}. Raise the guardrails in LM Studio "
+        f"Settings → Hardware, free up GPU memory, or download a smaller model."
     )
 
 
@@ -179,29 +296,21 @@ def _is_model_load_failure(e: Exception) -> bool:
 
 
 def _try_load(cfg: LmStudioConfig, model: str, wait_s: int = 60) -> bool:
-    """Try to load a specific model via lms CLI. Returns True if it ended up loaded."""
+    """Recovery reload after a runtime crash. Routes through smart-load so a
+    crashed primary can degrade to a smaller context or fall back to an
+    alternate downloaded model.
+
+    Mutates cfg.model if smart-load picks an alternate. Returns True iff
+    *something* ended up loaded.
+    """
+    del wait_s  # smart-load owns its own per-attempt timeout
     if not shutil.which(cfg.lms_cli_path):
         return False
-    if cfg.estimate_before_load:
-        will_fit, summary = _estimate_load(cfg, model)
-        if not will_fit:
-            log.warning(
-                "Refusing to reload %r: estimate says it won't fit.\n%s",
-                model, summary,
-            )
-            return False
-    args = _load_args(cfg, model)
-    log.info("Attempting to load %r via: %s", model, " ".join(args))
-    load = subprocess.run(args, capture_output=True, text=True)
-    for _ in range(wait_s):
-        if model in _loaded_models(cfg.lms_cli_path):
-            return True
-        time.sleep(1)
-    log.warning(
-        "Could not load %r within %ds (stderr: %s).",
-        model, wait_s, load.stderr.strip()[:200],
-    )
-    return False
+    loaded_model = _smart_load(cfg, model)
+    if loaded_model is None:
+        return False
+    cfg.model = loaded_model
+    return True
 
 
 def make_client(cfg: LmStudioConfig) -> OpenAI:

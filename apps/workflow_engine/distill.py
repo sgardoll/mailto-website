@@ -85,14 +85,18 @@ def _hand_crafted_fallback(ni: dict[str, Any], source_url: str | None) -> Mechan
 
 
 def _try_once(lm_cfg, system: str, user: str, source_url: str | None) -> MechanicSpec | None:
-    raw = lm_studio.chat_json(lm_cfg, system=system, user=user, schema=DISTILL_SCHEMA, task="distill")
+    # The chat_json call must be INSIDE the try — if the model emits malformed
+    # JSON, _parse_json_lenient raises JSONDecodeError (a ValueError). If that
+    # escapes _try_once, it skips distill()'s 4-tier fallback chain including
+    # the hand-crafted Python safety net, and the whole orchestrator crashes.
     try:
+        raw = lm_studio.chat_json(lm_cfg, system=system, user=user, schema=DISTILL_SCHEMA, task="distill")
         return _parse_and_validate(raw, source_url)
     except (JsonSchemaError, PydanticValidationError, ValueError) as e:
         log.warning("DISTILL validation failed: %s", e)
         user_retry = user + f"\n\nPrevious attempt failed: {e}\nPlease fix and retry."
-        raw2 = lm_studio.chat_json(lm_cfg, system=system, user=user_retry, schema=DISTILL_SCHEMA, task="distill")
         try:
+            raw2 = lm_studio.chat_json(lm_cfg, system=system, user=user_retry, schema=DISTILL_SCHEMA, task="distill")
             return _parse_and_validate(raw2, source_url)
         except (JsonSchemaError, PydanticValidationError, ValueError) as e2:
             log.warning("DISTILL validation failed on retry: %s", e2)
