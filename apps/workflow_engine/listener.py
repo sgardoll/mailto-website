@@ -1,17 +1,17 @@
 """IMAP IDLE listener. Pulls new messages, hands them to the dispatcher."""
 from __future__ import annotations
 import argparse
-import json
 import time
 import threading
-from http.server import HTTPServer, BaseHTTPRequestHandler
 from pathlib import Path
 from typing import Any
 
 from imap_tools import MailBox, AND, OR, MailMessage
 
 from . import config as cfg_mod
+from . import dashboard as dashboard_mod
 from . import dispatcher, orchestrator, proxy as _proxy_mod
+from . import slug_ops
 from .logging_setup import get, setup
 from .state import ProcessedLog
 
@@ -26,29 +26,25 @@ _health_state = {
 _start_time = None
 
 
-class _HealthHandler(BaseHTTPRequestHandler):
-    def do_GET(self):
-        if self.path == "/health":
-            if _start_time:
-                _health_state["uptime_seconds"] = int(time.time() - _start_time)
-            self.send_response(200)
-            self.send_header("Content-Type", "application/json")
-            self.end_headers()
-            self.wfile.write(json.dumps(_health_state).encode())
-        else:
-            self.send_response(404)
-            self.end_headers()
-
-    def log_message(self, format, *args):
-        pass
+def _refresh_uptime():
+    if _start_time:
+        _health_state["uptime_seconds"] = int(time.time() - _start_time)
 
 
-def _start_health_server(port: int = 8899) -> threading.Thread:
-    server = HTTPServer(("127.0.0.1", port), _HealthHandler)
-    thread = threading.Thread(target=server.serve_forever, daemon=True)
-    thread.start()
-    log.info("Health check endpoint running on http://127.0.0.1:%d/health", port)
-    return thread
+def _start_dashboard_server(cfg: cfg_mod.Config, preferred_port: int) -> int:
+    """Start the dashboard (replaces the old health-only HTTP server)."""
+    # Keep uptime fresh — the dashboard reads _health_state by reference.
+    def _tick():
+        while True:
+            _refresh_uptime()
+            time.sleep(1)
+    threading.Thread(target=_tick, daemon=True, name="uptime-ticker").start()
+    _, port = dashboard_mod.start_dashboard(
+        cfg, _health_state,
+        preferred_port=preferred_port,
+        config_reload=lambda: cfg_mod.load(),
+    )
+    return port
 
 
 def _email_dict(msg: MailMessage) -> dict[str, Any]:
@@ -109,6 +105,9 @@ def run_once(cfg: cfg_mod.Config) -> int:
                 processed.record(mid, "(none)", outcome="no_inbox_match")
                 mb.flag(msg.uid, ["\\Seen"], True)
                 continue
+            if slug_ops.is_paused(cfg, ib.slug):
+                log.info("slug '%s' paused; leaving message unseen for later", ib.slug)
+                continue
             try:
                 orchestrator.process(cfg, ib, email, processed)
                 handled += 1
@@ -163,7 +162,8 @@ def main() -> None:
                    help="run synthesis but do not write, build, or deploy")
     p.add_argument("--config", type=Path, default=None)
     p.add_argument("--log-level", default="INFO")
-    p.add_argument("--health-port", type=int, default=8899, help="Health check port (default: 8899)")
+    p.add_argument("--dashboard-port", type=int, default=8899,
+                   help="Dashboard UI port (default: 8899; falls back if taken)")
     p.add_argument("--proxy-port", type=int, default=8900,
                    help="AI proxy port (default: 8900)")
     args = p.parse_args()
@@ -175,7 +175,7 @@ def main() -> None:
     _start_time = time.time()
     _health_state["status"] = "running"
     _health_state["inboxes_loaded"] = len(cfg.inboxes)
-    _start_health_server(args.health_port)
+    _start_dashboard_server(cfg, args.dashboard_port)
     _proxy_mod.start_proxy_server(args.proxy_port)
     if args.once:
         n = run_once(cfg)

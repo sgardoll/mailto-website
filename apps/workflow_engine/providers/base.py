@@ -57,6 +57,14 @@ class DeployProvider(Protocol):
         """
         ...
 
+    def delete(self, config: dict) -> None:
+        """Remove the deployed site at the remote target.
+
+        Best-effort: callers tolerate failure. Implementations should raise
+        on unrecoverable errors so callers can surface a warning.
+        """
+        ...
+
 
 @dataclass
 class BuildResult:

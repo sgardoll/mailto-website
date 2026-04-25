@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Listener Dashboard</title>
+    <link rel="stylesheet" href="/static/dashboard.css">
+</head>
+<body>
+
+<header>
+    <div>
+        <h1>Listener Dashboard</h1>
+        <p class="sub">Monitor and control active topics.</p>
+    </div>
+    <div id="health" class="health">–</div>
+</header>
+
+<main>
+    <div class="toolbar">
+        <h2 style="margin:0">Topics</h2>
+        <div style="display:flex;gap:12px;align-items:center">
+            <span id="last-refresh" class="muted"></span>
+            <button id="refresh" class="btn-ghost" type="button">Refresh</button>
+        </div>
+    </div>
+
+    <div id="slugs"></div>
+    <div id="empty" class="empty" hidden>
+        No topics configured. Run the setup wizard to add one.
+    </div>
+</main>
+
+<div id="log" class="log" aria-live="polite"></div>
+
+<dialog id="confirm">
+    <h3 id="confirm-title">Confirm</h3>
+    <p id="confirm-body"></p>
+    <form method="dialog">
+        <menu>
+            <button value="cancel" class="btn-ghost" type="submit">Cancel</button>
+            <button value="ok" class="btn-primary" type="submit">Confirm</button>
+        </menu>
+    </form>
+</dialog>
+
+<footer>
+    Auto-refreshes every 5s. Dashboard port:
+    <code id="port-hint">window.location.port</code>.
+</footer>
+
+<script src="/static/dashboard.js"></script>
+</body>
+</html>
