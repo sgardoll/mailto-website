@@ -42,9 +42,6 @@ def load(path: Path | None = None) -> Config:
             f"No config at {config_path}. Copy apps/workflow_engine/config.example.yaml "
             f"to apps/workflow_engine/config.yaml and fill it in."
         )
-    # Load .env so `${GMAIL_APP_PASSWORD}`-style references in config.yaml
-    # resolve regardless of how the engine was invoked. Existing environment
-    # values win (override=False) so CI / shell exports still work.
     try:
         from dotenv import load_dotenv
         load_dotenv(REPO_ROOT / ".env", override=False)
@@ -52,9 +49,26 @@ def load(path: Path | None = None) -> Config:
         pass
     raw = yaml.safe_load(config_path.read_text()) or {}
     cfg = load_config(raw)
-    # Inject runtime paths
     cfg.repo_root = REPO_ROOT
     cfg.sites_dir = SITES_DIR
     cfg.template_dir = TEMPLATE_DIR
     cfg.state_dir = STATE_DIR
     return cfg
+
+
+def save_inbox_model(slug: str, model: str | None) -> bool:
+    """Write per-inbox model override to config.yaml. Returns True on success."""
+    path = WORKFLOW_DIR / "config.yaml"
+    if not path.exists():
+        return False
+    raw = yaml.safe_load(path.read_text()) or {}
+    inboxes = raw.get("inboxes", [])
+    for ib in inboxes:
+        if ib.get("slug") == slug:
+            if model:
+                ib["model"] = model
+            else:
+                ib.pop("model", None)
+            path.write_text(yaml.safe_dump(raw, sort_keys=False))
+            return True
+    return False

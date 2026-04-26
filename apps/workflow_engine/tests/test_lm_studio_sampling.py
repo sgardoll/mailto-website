@@ -68,6 +68,20 @@ def test_task_override_shallow_merges_over_base():
     }
 
 
+def test_qwen_preset_disables_thinking_for_structured_json_tasks():
+    from packages.config_contract import _MODEL_PRESETS
+
+    assert _MODEL_PRESETS["qwen36"]["distill"]["enable_thinking"] is False
+    assert _MODEL_PRESETS["qwen36"]["build"]["enable_thinking"] is False
+
+
+def test_gemma_preset_disables_thinking_for_structured_json_tasks():
+    from packages.config_contract import _MODEL_PRESETS
+
+    assert _MODEL_PRESETS["gemma4"]["distill"]["enable_thinking"] is False
+    assert _MODEL_PRESETS["gemma4"]["build"]["enable_thinking"] is False
+
+
 def test_task_override_ignored_when_task_not_listed():
     cfg = LmStudioConfig(
         model="m", temperature=0.4, max_tokens=1000,

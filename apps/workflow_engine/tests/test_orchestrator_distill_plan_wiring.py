@@ -104,17 +104,16 @@ def test_v2_happy_path_calls_distill_then_plan_in_order(monkeypatch, tmp_path):
     assert call_order == ["distill", "plan"]
 
 
-def test_v2_informational_skips_plan_records_upgrade_state_only(monkeypatch, tmp_path):
+def test_v2_distill_always_returns_spec_so_plan_is_always_called(monkeypatch, tmp_path):
     _neutralise(monkeypatch, tmp_path)
-    monkeypatch.setattr(distill, "distill", MagicMock(return_value=None))
-    plan_mock = MagicMock(return_value="new_module")
+    monkeypatch.setattr(distill, "distill", MagicMock(return_value=CALCULATOR_SPEC))
+    plan_mock = MagicMock(return_value="upgrade_state_only")
     monkeypatch.setattr(_plan_stage_mod, "plan", plan_mock)
 
     processed = MagicMock()
     orchestrator._process_locked(_make_cfg(tmp_path), _make_inbox(), EMAIL, processed, mid="m1")
 
-    plan_mock.assert_not_called()
-    # Check that processed.record was called with outcome="upgrade_state_only"
+    plan_mock.assert_called_once()
     outcomes = [c.kwargs.get("outcome") for c in processed.record.call_args_list]
     assert "upgrade_state_only" in outcomes
 

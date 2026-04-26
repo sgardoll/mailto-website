@@ -33,7 +33,13 @@ class BuildResult:
 def build(site_dir: Path, *, inbox: InboxConfig) -> BuildResult:
     npm = shutil.which("npm")
     if not npm:
-        raise BuildFailed("npm not on PATH")
+        # Homebrew npm may not be on the subprocess PATH (e.g. when launched
+        # from launchd or a venv). Add the common Homebrew bin directory.
+        brew_npm = Path("/opt/homebrew/bin/npm")
+        if brew_npm.exists():
+            npm = str(brew_npm)
+        else:
+            raise BuildFailed("npm not on PATH")
     node_modules = site_dir / "node_modules"
     if not node_modules.exists():
         log.info("Installing site deps in %s ...", site_dir)

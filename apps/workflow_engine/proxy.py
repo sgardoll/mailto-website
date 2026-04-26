@@ -15,6 +15,8 @@ PROXY_TIMEOUT_SECONDS = 120
 
 
 class ProxyHandler(BaseHTTPRequestHandler):
+    allow_reuse_address = True
+    allow_reuse_address = True
     def do_OPTIONS(self) -> None:
         self.send_response(200)
         self.send_header("Access-Control-Allow-Origin", "*")

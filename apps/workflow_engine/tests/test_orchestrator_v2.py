@@ -203,3 +203,14 @@ def test_v2_startup_assert_gitignore_called(monkeypatch, tmp_path):
     orchestrator._process_locked(_make_cfg(tmp_path), _make_inbox(), EMAIL, processed, "m1")
 
     gitignore_spy.assert_called_once_with(expected_site_dir)
+
+
+def test_is_allowed_accepts_display_name_sender(tmp_path):
+    cfg = _make_cfg(tmp_path)
+    cfg.global_allowed_senders = ["sgardoll@gmail.com"]
+
+    assert orchestrator.is_allowed(
+        cfg,
+        _make_inbox(),
+        "Stuart Gardoll <sgardoll@gmail.com>",
+    )

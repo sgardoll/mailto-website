@@ -1,6 +1,7 @@
 # pyright: basic
 import json
 import re
+import shutil
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -27,11 +28,15 @@ DEFAULTS = {
     'gmail_folder': 'INBOX',
     'lms_base_url': 'http://localhost:1234/v1',
     'lms_model': 'google/gemma-4-26b-a4b',
-    'lms_temperature': 0.4,
+    'lms_temperature': 1.0,
     'lms_max_tokens': 4096,
-    'lms_cli_path': 'lms',
+    'lms_cli_path': shutil.which('lms') or 'lms',
     'autostart': True,
     'request_timeout_s': 600,
+    'context_length': 8192,
+    'gpu_offload': 'max',
+    'ttl_seconds': 1800,
+    'preset': '',
 }
 
 RUNTIME_DEFAULTS = {
@@ -83,6 +88,10 @@ def _build_base_config(form_data: dict) -> dict:
             'temperature': float(form_data.get('lms_temperature', DEFAULTS['lms_temperature'])),
             'max_tokens': int(form_data.get('lms_max_tokens', DEFAULTS['lms_max_tokens'])),
             'request_timeout_s': int(form_data.get('request_timeout_s', DEFAULTS['request_timeout_s'])),
+            'context_length': int(form_data.get('context_length', DEFAULTS['context_length'])),
+            'gpu_offload': form_data.get('gpu_offload', DEFAULTS['gpu_offload']),
+            'ttl_seconds': int(form_data.get('ttl_seconds', DEFAULTS['ttl_seconds'])),
+            'preset': form_data.get('preset', DEFAULTS['preset']),
         },
     }
 
@@ -562,6 +571,10 @@ def hydrate_wizard_state(env_values: dict, config_values: dict) -> dict:
         'lms_cli_path': lm_studio.get('lms_cli_path', DEFAULTS['lms_cli_path']),
         'autostart': lm_studio.get('autostart', DEFAULTS['autostart']),
         'request_timeout_s': lm_studio.get('request_timeout_s', DEFAULTS['request_timeout_s']),
+        'context_length': lm_studio.get('context_length', DEFAULTS['context_length']),
+        'gpu_offload': lm_studio.get('gpu_offload', DEFAULTS['gpu_offload']),
+        'ttl_seconds': lm_studio.get('ttl_seconds', DEFAULTS['ttl_seconds']),
+        'preset': lm_studio.get('preset', DEFAULTS['preset']),
         'hosting_provider': provider,
         'site_base_url': site_base_url,
         'inboxes': [

@@ -38,3 +38,4 @@ apps/apps/workflow_engine/config.yaml
 apps/workflow_engine/config.yaml
 /.playwright-mcp
 /.claude
+/runtime/sites

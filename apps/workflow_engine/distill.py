@@ -28,7 +28,7 @@ def distill(normalized_input: dict[str, Any], lm_cfg) -> MechanicSpec:
     """
     source_type = normalized_input.get("source_type", "text")
     system = _build_system_prompt(source_type)
-    user = _build_user_prompt(normalized_input)
+    user = _build_user_prompt(normalized_input, lm_cfg)
     source_url = normalized_input.get("source_url")
 
     # Attempt 1: normal prompt.
@@ -132,7 +132,9 @@ def _build_system_prompt(source_type: str) -> str:
         "Respond with a single JSON object describing an interactive mechanic derived from the content. "
         "kind must be one of: calculator, wizard, drill, scorer, generator. "
         "content.kind MUST match the outer kind field. "
-        "Prefer to produce a mechanic. Only set mechanic to null as an absolute last resort."
+        "Prefer to produce a mechanic. Only set mechanic to null as an absolute last resort. "
+        "DO NOT: output markdown code fences, include thinking/reasoning text outside the JSON, "
+        "use newlines inside string values, or emit anything other than valid JSON."
     )
 
 
@@ -154,12 +156,20 @@ def _build_forcing_system_prompt(source_type: str) -> str:
         "If it involves judging something, build a 'scorer'. "
         "kind must be one of: calculator, wizard, drill, scorer, generator. "
         "content.kind MUST match the outer kind field. "
-        "mechanic MUST NOT be null."
+        "mechanic MUST NOT be null. "
+        "DO NOT: output markdown code fences, include thinking/reasoning text outside the JSON, "
+        "use newlines inside string values, or emit anything other than valid JSON."
     )
 
 
-def _build_user_prompt(ni: dict[str, Any]) -> str:
-    body = (ni.get("body") or "")[:12000]
+def _build_user_prompt(ni: dict[str, Any], lm_cfg=None) -> str:
+    body = ni.get("body") or ""
+    context_len = getattr(lm_cfg, "context_length", None)
+    if isinstance(context_len, int) and context_len < 16384:
+        max_body = max(4000, context_len // 2)
+    else:
+        max_body = 12000
+    body = body[:max_body]
     lines = [
         f"Subject: {ni.get('subject', '')}",
         f"From: {ni.get('sender', '')}",

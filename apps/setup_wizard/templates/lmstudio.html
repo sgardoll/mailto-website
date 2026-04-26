@@ -22,7 +22,7 @@
             <label for="lms-base-url">LM Studio base URL</label>
             <div class="field-row">
                 <input id="lms-base-url" name="lms_base_url" type="url"
-                       value="http://localhost:1234/v1"
+                       value="{{ wizard_state.get('lms_base_url', 'http://localhost:1234/v1') }}"
                        aria-describedby="lms-base-url-help lms-base-url-error" />
             </div>
             <small id="lms-base-url-help" class="help-text">
@@ -32,31 +32,38 @@
             <span id="lms-base-url-error" class="error" hidden aria-live="polite"></span>
         </div>
 
-        <!-- Model Tag -->
+        <!-- Model Dropdown -->
         <div class="field-group">
-            <label for="lms-model">Model tag</label>
+            <label for="lms-model">Model</label>
             <div class="field-row">
-                <input id="lms-model" name="lms_model" type="text"
-                       value="google/gemma-4-26b-a4b"
-                       aria-describedby="lms-model-help lms-model-error" />
+                <select id="lms-model" name="lms_model"
+                        data-prefill="{{ wizard_state.get('lms_model', 'google/gemma-4-26b-a4b') }}"
+                        aria-describedby="lms-model-help lms-model-error">
+                    <option value="">Loading models…</option>
+                </select>
             </div>
             <small id="lms-model-help" class="help-text">
-                The model tag loaded in LM Studio. Must match the identifier shown in LM Studio.
+                Models available in your local LM Studio. Shown: all loaded or downloaded models.
             </small>
             <span id="lms-model-error" class="error" hidden aria-live="polite"></span>
         </div>
 
-        <!-- Temperature + Max Tokens (split row) -->
+        <!-- Model Preset (auto-selected based on model choice) -->
+        <input type="hidden" id="lms-preset" name="preset" value="{{ wizard_state.get('preset', '') }}" />
+
+        <!-- Temperature + Max Tokens + Context Length -->
         <div class="field-row-split">
             <div class="field-group">
                 <label for="lms-temperature">Temperature</label>
                 <div class="field-row">
                     <input id="lms-temperature" name="lms_temperature" type="number"
-                           min="0" max="2" step="0.01" value="0.4"
+                           min="0" max="2" step="0.01"
+                           value="{{ wizard_state.get('lms_temperature', 1.0) }}"
                            aria-describedby="lms-temperature-help lms-temperature-error" />
                 </div>
                 <small id="lms-temperature-help" class="help-text">
-                    Controls response randomness. 0.0 = deterministic, 2.0 = very random. Default: 0.4.
+                    <span class="recommended">Recommended: 1.0 for Gemma 4, 0.7 for Qwen 3.6.</span>
+                    Controls response randomness. 0.0 = deterministic, 2.0 = very random.
                 </small>
                 <span id="lms-temperature-error" class="error" hidden aria-live="polite"></span>
             </div>
@@ -64,14 +71,32 @@
                 <label for="lms-max-tokens">Max tokens</label>
                 <div class="field-row">
                     <input id="lms-max-tokens" name="lms_max_tokens" type="number"
-                           min="1" step="1" value="4096"
+                           min="1" step="1"
+                           value="{{ wizard_state.get('lms_max_tokens', 4096) }}"
                            aria-describedby="lms-max-tokens-help lms-max-tokens-error" />
                 </div>
                 <small id="lms-max-tokens-help" class="help-text">
-                    Maximum tokens the model will generate per response. Default: 4096.
+                    Generation cap per response. Recommended: 4096.
                 </small>
                 <span id="lms-max-tokens-error" class="error" hidden aria-live="polite"></span>
             </div>
+        </div>
+
+        <!-- Context Length -->
+        <div class="field-group">
+            <label for="lms-context-length">Context window (tokens)</label>
+            <div class="field-row">
+                <input id="lms-context-length" name="context_length" type="number"
+                       min="2048" max="131072" step="1"
+                       value="{{ wizard_state.get('context_length', 8192) }}"
+                       aria-describedby="lms-context-length-help lms-context-length-error" />
+            </div>
+            <small id="lms-context-length-help" class="help-text">
+                <span class="recommended">Recommended: 8192 for Gemma 4, 16384 for Qwen 3.6.</span>
+                KV-cache token budget. Larger = more context but more memory. Pinning this prevents
+                26B+ models from using their default 32K–256K window and exhausting unified memory.
+            </small>
+            <span id="lms-context-length-error" class="error" hidden aria-live="polite"></span>
         </div>
 
         <!-- CLI Path -->
@@ -79,11 +104,12 @@
             <label for="lms-cli-path">lms CLI path</label>
             <div class="field-row">
                 <input id="lms-cli-path" name="lms_cli_path" type="text"
-                       value="lms"
+                       value="{{ wizard_state.get('lms_cli_path', 'lms') }}"
                        aria-describedby="lms-cli-path-help lms-cli-path-error" />
             </div>
             <small id="lms-cli-path-help" class="help-text">
                 Path to the lms CLI binary. Use 'lms' if it is on your PATH.
+                On macOS, LM Studio commonly installs it at <code>~/.lmstudio/bin/lms</code>.
             </small>
             <span id="lms-cli-path-error" class="error" hidden aria-live="polite"></span>
         </div>
@@ -94,7 +120,8 @@
 
             <div class="field-group">
                 <div class="field-row">
-                    <input id="lms-autostart" name="autostart" type="checkbox" checked
+                    <input id="lms-autostart" name="autostart" type="checkbox"
+                           {% if wizard_state.get('autostart', True) %}checked{% endif %}
                            aria-describedby="lms-autostart-help" />
                     <label for="lms-autostart">Autostart LM Studio</label>
                 </div>
@@ -105,13 +132,41 @@
                 <label for="lms-request-timeout">Request timeout (seconds)</label>
                 <div class="field-row">
                     <input id="lms-request-timeout" name="request_timeout_s" type="number"
-                           min="1" step="1" value="600"
+                           min="1" step="1"
+                           value="{{ wizard_state.get('request_timeout_s', 600) }}"
                            aria-describedby="lms-request-timeout-help lms-request-timeout-error" />
                 </div>
                 <small id="lms-request-timeout-help" class="help-text">
                     Seconds to wait for a model response before timing out. Default: 600.
                 </small>
                 <span id="lms-request-timeout-error" class="error" hidden aria-live="polite"></span>
+            </div>
+
+            <div class="field-group">
+                <label for="lms-gpu-offload">GPU offload</label>
+                <div class="field-row">
+                    <select id="lms-gpu-offload" name="gpu_offload"
+                            aria-describedby="lms-gpu-offload-help">
+                        <option value="max" {% if wizard_state.get('gpu_offload', 'max') == 'max' %}selected{% endif %}>Max (recommended)</option>
+                        <option value="off" {% if wizard_state.get('gpu_offload', '') == 'off' %}selected{% endif %}>Off</option>
+                    </select>
+                </div>
+                <small id="lms-gpu-offload-help" class="help-text">
+                    "max" uses Apple Metal GPU acceleration. "off" for CPU-only inference.
+                </small>
+            </div>
+
+            <div class="field-group">
+                <label for="lms-ttl">Auto-unload idle timeout (seconds)</label>
+                <div class="field-row">
+                    <input id="lms-ttl" name="ttl_seconds" type="number"
+                           min="0" step="1"
+                           value="{{ wizard_state.get('ttl_seconds', 1800) }}"
+                           aria-describedby="lms-ttl-help" />
+                </div>
+                <small id="lms-ttl-help" class="help-text">
+                    Unload the model after this many seconds of inactivity. Recommended: 1800 (30 min).
+                </small>
             </div>
         </details>
 
@@ -131,5 +186,115 @@
 </footer>
 
 <script src="{{ url_for('static', filename='wizard.js') }}"></script>
+<script>
+// ── LM Studio Model Dropdown ──────────────────────────────────────────
+(function() {
+    'use strict';
+    var modelSelect = document.getElementById('lms-model');
+    if (!modelSelect) return;
+
+    var presetInput = document.getElementById('lms-preset');
+    var tempInput = document.getElementById('lms-temperature');
+    var ctxInput = document.getElementById('lms-context-length');
+
+    // Per-model-family presets
+    var PRESETS = {
+        gemma4: { temp: 1.0, ctx: 8192, top_p: 0.95, top_k: 64 },
+        qwen36: { temp: 0.7, ctx: 16384, top_p: 0.8, top_k: 20 }
+    };
+
+    function detectPreset(modelId) {
+        var lower = modelId.toLowerCase();
+        if (lower.indexOf('gemma') !== -1 && (lower.indexOf('4') !== -1)) return 'gemma4';
+        if (lower.indexOf('qwen') !== -1 && (lower.indexOf('3.6') !== -1 || lower.indexOf('3-6') !== -1)) return 'qwen36';
+        if (lower.indexOf('qwen3') !== -1 || lower.indexOf('qwen-3') !== -1) return 'qwen36';
+        return '';
+    }
+
+    function applyPreset(presetName) {
+        var p = PRESETS[presetName];
+        if (!p) return;
+        if (tempInput && !tempInput.dataset.userChanged) tempInput.value = p.temp;
+        if (ctxInput && !ctxInput.dataset.userChanged) ctxInput.value = p.ctx;
+        if (presetInput) presetInput.value = presetName;
+    }
+
+    // Track manual changes so we don't overwrite user edits
+    if (tempInput) {
+        tempInput.addEventListener('input', function() { tempInput.dataset.userChanged = '1'; });
+    }
+    if (ctxInput) {
+        ctxInput.addEventListener('input', function() { ctxInput.dataset.userChanged = '1'; });
+    }
+
+    // Load models from LM Studio API
+    function loadModels() {
+        var currentValue = modelSelect.dataset.prefill || '';
+        fetch('/api/models')
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                var models = data.models || [];
+                modelSelect.innerHTML = '';
+
+                if (models.length === 0) {
+                    var opt = document.createElement('option');
+                    opt.value = currentValue;
+                    opt.textContent = currentValue + ' (offline — type manually)';
+                    modelSelect.appendChild(opt);
+                    return;
+                }
+
+                models.forEach(function(m) {
+                    var opt = document.createElement('option');
+                    opt.value = m.id;
+                    opt.textContent = m.id;
+                    if (m.id === currentValue) opt.selected = true;
+                    modelSelect.appendChild(opt);
+                });
+
+                // Apply preset for selected model
+                var selected = modelSelect.value;
+                var preset = detectPreset(selected);
+                applyPreset(preset);
+
+                // Update field hints based on selected model
+                updateRecommendations();
+            })
+            .catch(function() {
+                while (modelSelect.firstChild) {
+                    modelSelect.removeChild(modelSelect.firstChild);
+                }
+                var opt = document.createElement('option');
+                opt.value = currentValue;
+                opt.textContent = currentValue + ' (offline)';
+                modelSelect.appendChild(opt);
+            });
+    }
+
+    function updateRecommendations() {
+        var selected = modelSelect.value;
+        var preset = detectPreset(selected);
+        var p = PRESETS[preset];
+        var recEls = document.querySelectorAll('.recommended');
+        if (p) {
+            recEls.forEach(function(el) {
+                el.textContent = 'Recommended for ' + preset + ': temp=' + p.temp + ', context=' + p.ctx + '.';
+            });
+        } else {
+            recEls.forEach(function(el) {
+                el.textContent = 'Recommended: 1.0 temp, 8192 context for Gemma 4. 0.7 temp, 16384 context for Qwen 3.6.';
+            });
+        }
+    }
+
+    modelSelect.addEventListener('change', function() {
+        var preset = detectPreset(this.value);
+        applyPreset(preset);
+        updateRecommendations();
+    });
+
+    loadModels();
+})();
+</script>
 </body>
 </html>

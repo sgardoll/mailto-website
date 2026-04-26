@@ -295,7 +295,11 @@
                     lms_max_tokens: parseInt(document.getElementById('lms-max-tokens').value, 10),
                     lms_cli_path: document.getElementById('lms-cli-path').value.trim(),
                     autostart: document.getElementById('lms-autostart').checked,
-                    request_timeout_s: parseInt(document.getElementById('lms-request-timeout').value, 10)
+                    request_timeout_s: parseInt(document.getElementById('lms-request-timeout').value, 10),
+                    context_length: parseInt(document.getElementById('lms-context-length').value, 10) || 8192,
+                    gpu_offload: (document.getElementById('lms-gpu-offload') || {}).value || 'max',
+                    ttl_seconds: parseInt(document.getElementById('lms-ttl').value, 10) || 1800,
+                    preset: (document.getElementById('lms-preset') || {}).value || '',
                 };
             }
 

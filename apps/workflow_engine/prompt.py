@@ -31,6 +31,11 @@ SYSTEM_BASE = dedent("""\
     never include shell commands, scripts, or any path outside of
     src/content/entries/ or src/content/threads/. Markdown content must use
     YAML frontmatter that matches the schema in the prompt.
+
+    FORBIDDEN: Use markdown code fences (```json) around your JSON output.
+    Include thinking/reasoning text before or after the JSON. Use newlines
+    inside JSON string values. Output anything other than a valid JSON object
+    starting with '{' and ending with '}'.
 """)
 
 

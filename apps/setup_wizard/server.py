@@ -258,7 +258,9 @@ def api_services():
 
 @app.route('/step/lmstudio')
 def step_lmstudio():
-    return render_template('lmstudio.html', port=_port, active_step='lmstudio', completed_steps=['gmail'])
+    _try_prefill()
+    return render_template('lmstudio.html', port=_port, active_step='lmstudio',
+                           completed_steps=['gmail'], wizard_state=_wizard_state)
 
 
 @app.route('/step/hosting')
@@ -451,6 +453,45 @@ def deploy_status():
             "inboxes": [dict(row) for row in _deploy_state["inboxes"]],
             "error": _deploy_state["error"],
         })
+
+
+@app.route('/api/models')
+def api_models():
+    """Return chat-capable models — loaded (from API) or downloaded (from lms ls)."""
+    import json as _json
+    import shutil
+    import subprocess
+    import urllib.error as _url_error
+    import urllib.request as _url_request
+    models = []
+
+    # First try the running server's /v1/models endpoint
+    try:
+        req = _url_request.Request('http://localhost:1234/v1/models', method='GET')
+        with _url_request.urlopen(req, timeout=3) as resp:
+            data = _json.loads(resp.read().decode('utf-8'))
+        for m in data.get('data', []):
+            mid = m.get('id', '')
+            if mid and 'embed' not in mid.lower():
+                models.append(mid)
+    except (_url_error.URLError, OSError, ValueError):
+        pass
+
+    # Fallback: query downloaded models via lms CLI (not just loaded ones)
+    if not models and shutil.which('lms'):
+        try:
+            r = subprocess.run(['lms', 'ls', '--json'], capture_output=True, text=True, timeout=10)
+            if r.returncode == 0:
+                data = _json.loads(r.stdout or '[]')
+                for m in data:
+                    mid = m.get('modelKey', '')
+                    mtype = (m.get('type') or '').lower()
+                    if mid and mtype != 'embedding' and 'embed' not in mid.lower():
+                        models.append(mid)
+        except (subprocess.TimeoutExpired, OSError, ValueError):
+            pass
+
+    return jsonify({'models': [{'id': m, 'object': 'model'} for m in models]})
 
 
 @app.route('/validate-form', methods=['POST'])

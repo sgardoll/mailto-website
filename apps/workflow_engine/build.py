@@ -42,6 +42,71 @@ _EXEMPLARS: dict[str, str] = {
     "generator": GENERATOR_EXEMPLAR,
 }
 
+
+def _extract_inner_div(html: str) -> str:
+    """Extract the root x-data div from a full-page exemplar for the multi-step path.
+
+    Uses html.parser to track div nesting so the matching closing tag is found
+    even when nested <div>s appear between the root and </body>. A regex with
+    a non-greedy .*? would stop at the first </div> followed by </body>, which
+    fails for any exemplar that has content (scripts, siblings) between the
+    x-data div and </body>.
+    """
+    from html.parser import HTMLParser
+
+    class _XDataDivExtractor(HTMLParser):
+        def __init__(self, source: str) -> None:
+            super().__init__(convert_charrefs=False)
+            self._source = source
+            self._line_starts = [0]
+            for i, ch in enumerate(source):
+                if ch == "\n":
+                    self._line_starts.append(i + 1)
+            self.start_offset: int | None = None
+            self.end_offset: int | None = None
+            self._depth = 0
+
+        def _offset(self) -> int:
+            line, col = self.getpos()
+            return self._line_starts[line - 1] + col
+
+        def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+            if tag != "div" or self.end_offset is not None:
+                return
+            if self.start_offset is None:
+                if any(name == "x-data" for name, _ in attrs):
+                    self.start_offset = self._offset()
+                    self._depth = 1
+            else:
+                self._depth += 1
+
+        def handle_endtag(self, tag: str) -> None:
+            if tag != "div" or self.start_offset is None or self.end_offset is not None:
+                return
+            self._depth -= 1
+            if self._depth == 0:
+                start = self._offset()
+                close = self._source.find(">", start)
+                if close != -1:
+                    self.end_offset = close + 1
+
+    parser = _XDataDivExtractor(html)
+    parser.feed(html)
+    parser.close()
+
+    if parser.start_offset is not None and parser.end_offset is not None:
+        return html[parser.start_offset : parser.end_offset].strip()
+    return html
+
+
+_EXEMPLAR_REGIONS: dict[str, str] = {
+    "calculator": _extract_inner_div(CALCULATOR_EXEMPLAR),
+    "wizard": _extract_inner_div(WIZARD_EXEMPLAR),
+    "drill": _extract_inner_div(DRILL_EXEMPLAR),
+    "scorer": _extract_inner_div(SCORER_EXEMPLAR),
+    "generator": _extract_inner_div(GENERATOR_EXEMPLAR),
+}
+
 MAX_RETRIES = 3
 
 # Multi-step pipeline regions. Order is the order they appear in the skeleton.
@@ -156,8 +221,8 @@ def _build_multi(spec: MechanicSpec, lm_cfg) -> dict[str, Any]:
     # ceiling is fine — but we still bump if the caller pinned an absurdly
     # tight budget that wouldn't fit even one region.
     max_tokens = getattr(lm_cfg, "max_tokens", 4096)
-    if isinstance(max_tokens, int) and max_tokens < 2048:
-        lm_cfg = dataclasses.replace(lm_cfg, max_tokens=2048)
+    if isinstance(max_tokens, int) and max_tokens < 4096:
+        lm_cfg = dataclasses.replace(lm_cfg, max_tokens=4096)
 
     skeleton = _render_skeleton(spec)
     snippets: dict[str, str] = {r: f"<!-- {r} -->" for r in _REGIONS}
@@ -282,7 +347,7 @@ def _fill_region(
 
 def _fill_system_prompt(spec: MechanicSpec, region: str) -> str:
     kind_str = spec.kind.value
-    exemplar = _EXEMPLARS[kind_str]
+    exemplar = _EXEMPLAR_REGIONS[kind_str]
     return (
         "You generate one fragment of a self-contained Alpine.js v3 + Tailwind"
         " CSS interactive module. The surrounding skeleton (DOCTYPE, head with"
@@ -295,7 +360,18 @@ def _fill_system_prompt(spec: MechanicSpec, region: str) -> str:
         "- Use <template x-if> NEVER <div x-if>.\n"
         "- No TODO, FIXME, placeholder, or stub code.\n"
         "- No fetch() or XHR to external domains. No ellipsis (...) in script.\n"
-        "- No x-html directive. Use x-text for inserted content.\n\n"
+        "- No x-html directive. Use x-text for inserted content.\n"
+        "\n"
+        "Visual quality rules:\n"
+        "- Use a single accent color family (e.g. blue+slate, emerald+teal,"
+        " amber+stone, rose+warm-gray). Apply consistently.\n"
+        "- NEVER use purple (#8b5cf6/#7c3aed), fuchsia (#d946ef), or combinations"
+        " of cyan+magenta+pink — they signal low-quality generated output.\n"
+        "- NEVER use gradient text (bg-clip-to-text). NEVER use animated glowing"
+        " box-shadows. NEVER use emoji in visible text.\n"
+        "- Ensure visual hierarchy: the title should be most prominent, then"
+        " inputs, then action, then results. Vary sizes and weights.\n"
+        "\n"
         f"For reference, here is a complete Alpine/Tailwind {kind_str}:\n\n"
         f"{exemplar}\n\n"
         f'Return a single JSON object: {{"snippet": "<your HTML fragment>"}}.'
@@ -386,7 +462,14 @@ def _build_system_prompt(spec: MechanicSpec) -> str:
         "- Include at least one @click or x-on: event handler\n"
         "- Use <template x-if> NOT <div x-if>\n"
         "- No TODO, FIXME, placeholder, or stub code\n"
-        "- No fetch() or XHR to external domains\n\n"
+        "- No fetch() or XHR to external domains\n"
+        "\n"
+        "Visual quality rules:\n"
+        "- Pick one accent color family and apply consistently (blue+slate, emerald+teal, amber+stone, rose+warm-gray).\n"
+        "- NEVER use purple (#8b5cf6/#7c3aed), fuchsia (#d946ef), or cyan+magenta+pink combinations.\n"
+        "- NEVER use gradient text, animated glowing shadows, or emoji in visible text.\n"
+        "- Establish visual hierarchy: title most prominent, then inputs, then action, then results.\n"
+        "\n"
         f"Here is a reference Alpine/Tailwind module for {kind_str}:\n\n"
         f"{exemplar}\n\n"
         'Return a single JSON object with one field: "html" containing the complete HTML as a string.'

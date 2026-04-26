@@ -97,6 +97,73 @@ class SmtpConfig:
     use_starttls: bool = True
 
 
+# ── Model Presets ─────────────────────────────────────────────────────────────
+# Each preset maps to a lm_studio.task_overrides dict tuned for a specific model
+# family. Active when config.yaml sets lm_studio.preset: "gemma4" or "qwen36".
+_MODEL_PRESETS: dict[str, dict[str, dict[str, Any]]] = {
+    "gemma4": {
+        "topic_curation": {
+            "temperature": 1.0,
+            "top_p": 0.95,
+            "top_k": 64,
+            "enable_thinking": False,
+        },
+        "build": {
+            "temperature": 1.0,
+            "top_p": 0.95,
+            "top_k": 64,
+            "enable_thinking": False,
+        },
+        "distill": {
+            "temperature": 1.0,
+            "top_p": 0.95,
+            "top_k": 64,
+            "enable_thinking": False,
+        },
+        "plan": {
+            "temperature": 1.0,
+            "top_p": 0.95,
+            "top_k": 64,
+            "enable_thinking": True,
+        },
+    },
+    "qwen36": {
+        "topic_curation": {
+            "temperature": 0.7,
+            "top_p": 0.8,
+            "top_k": 20,
+            "presence_penalty": 1.5,
+            "enable_thinking": False,
+        },
+        "distill": {
+            "temperature": 0.6,
+            "top_p": 0.95,
+            "top_k": 20,
+            "enable_thinking": False,
+        },
+        "build": {
+            "temperature": 0.6,
+            "top_p": 0.95,
+            "top_k": 20,
+            "enable_thinking": False,
+        },
+        "plan": {
+            "temperature": 1.0,
+            "top_p": 0.95,
+            "top_k": 20,
+            "enable_thinking": True,
+        },
+    },
+}
+
+# Default context lengths per-model-family. When config.yaml doesn't specify
+# lm_studio.context_length, the preset fills in a safe value.
+_MODEL_DEFAULT_CONTEXTS: dict[str, int] = {
+    "gemma4": 8192,
+    "qwen36": 16384,
+}
+
+
 @dataclass
 class LmStudioConfig:
     base_url: str = "http://localhost:1234/v1"
@@ -104,7 +171,7 @@ class LmStudioConfig:
     model: str = "google/gemma-4-26b-a4b"
     lms_cli_path: str = "lms"
     autostart: bool = True
-    temperature: float = 0.4
+    temperature: float = 0.7
     max_tokens: int = 4096
     request_timeout_s: int = 600
     # Optional sampling knobs. Passed through to the OpenAI-compatible server
@@ -143,6 +210,10 @@ class LmStudioConfig:
     #   "single": legacy one-shot build with validator-feedback retries. Faster
     #     when the active model can reliably emit the full module in one call.
     build_strategy: str = "multi"
+    # Model preset name. When set ("gemma4" or "qwen36"), auto-populates
+    # task_overrides and fills missing context_length from _MODEL_PRESETS and
+    # _MODEL_DEFAULT_CONTEXTS. Set explicitly in config.yaml lm_studio.preset.
+    preset: str | None = None
 
 
 @dataclass
@@ -188,6 +259,11 @@ class InboxConfig:
     remote_path: str = ""
     hosting_provider: str = ""
     allowed_senders: list[str] = field(default_factory=list)
+    # Override the global lm_studio.model for this inbox.
+    # When set, the orchestrator uses this model instead of cfg.lm_studio.model.
+    # Allows different inboxes to use different models (e.g. bigger for research,
+    # smaller for quick tasks). null/empty = inherit global config.
+    model: str | None = None
 
     def __post_init__(self):
         if not self.slug:
@@ -316,6 +392,17 @@ def load_config(raw: dict) -> Config:
     # Snapshot the user-configured model before any runtime mutation.
     if lm_studio_cfg.preferred_model is None:
         lm_studio_cfg.preferred_model = lm_studio_cfg.model
+    # Resolve model preset: auto-populate task_overrides and fill missing
+    # context_length from _MODEL_PRESETS / _MODEL_DEFAULT_CONTEXTS.
+    if lm_studio_cfg.preset:
+        preset = _MODEL_PRESETS.get(lm_studio_cfg.preset.lower())
+        if preset:
+            if not lm_studio_cfg.task_overrides:
+                lm_studio_cfg.task_overrides = dict(preset)
+            if lm_studio_cfg.context_length is None:
+                lm_studio_cfg.context_length = _MODEL_DEFAULT_CONTEXTS.get(
+                    lm_studio_cfg.preset.lower()
+                )
     return Config(
         imap=ImapConfig(**raw["imap"]),
         smtp=SmtpConfig(**raw["smtp"]),

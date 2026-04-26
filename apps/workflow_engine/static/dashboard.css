@@ -111,6 +111,18 @@ header .sub {
     font-family: ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas, monospace;
     font-size: 12px;
 }
+.model-select {
+    font-family: ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas, monospace;
+    font-size: 11px;
+    padding: 2px 6px;
+    border: 1px solid #d1d5db;
+    border-radius: 4px;
+    background-color: #ffffff;
+    color: #111827;
+    cursor: pointer;
+    max-width: 280px;
+    width: 100%;
+}
 .slug-meta a {
     color: #111827;
     text-decoration: underline;

@@ -26,18 +26,22 @@ def _candidates(headers: dict[str, str]) -> Iterable[str]:
 
 
 def _matches_alias(candidate: str, configured: str) -> bool:
-    """Match plus-aliases: foo+guitar@gmail.com matches foo+guitar@gmail.com,
-    or matches base foo@gmail.com if the configured address uses '+'."""
+    """Match configured inbox aliases without collapsing plus tags.
+
+    A message to foo@gmail.com must not match foo+guitar@gmail.com; otherwise
+    ordinary unread mail in the base inbox is routed into every plus-alias site.
+    """
     if candidate == configured:
         return True
-    # If configured is foo+guitar@gmail.com, allow Gmail's canonical form too.
     cand_local, _, cand_domain = candidate.partition("@")
     conf_local, _, conf_domain = configured.partition("@")
     if cand_domain != conf_domain:
         return False
-    cand_base = cand_local.split("+", 1)[0]
-    conf_base = conf_local.split("+", 1)[0]
-    return cand_base == conf_base and "+" in conf_local and conf_local.endswith(cand_local.split("+", 1)[-1] if "+" in cand_local else "")
+    if "+" not in cand_local or "+" not in conf_local:
+        return False
+    cand_base, cand_tag = cand_local.split("+", 1)
+    conf_base, conf_tag = conf_local.split("+", 1)
+    return cand_base == conf_base and cand_tag == conf_tag
 
 
 def route(cfg: Config, headers: dict[str, str]) -> InboxConfig | None:
