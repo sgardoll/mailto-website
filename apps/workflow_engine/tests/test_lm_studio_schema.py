@@ -123,3 +123,30 @@ def test_log_includes_schema_false(monkeypatch, caplog):
     with caplog.at_level(logging.INFO, logger="workflow.lm_studio"):
         lm_studio.chat_json(_cfg(), system="s", user="u")
     assert any("schema=False" in r.getMessage() for r in caplog.records)
+
+
+def test_reasoning_content_fallback_when_empty(monkeypatch):
+    fake_client = MagicMock()
+    message = MagicMock(content="", reasoning_content='{"snippet": "<button>OK</button>"}')
+    fake_client.chat.completions.create.return_value.choices = [
+        MagicMock(message=message, finish_reason="stop")
+    ]
+    monkeypatch.setattr(lm_studio, "make_client", lambda cfg: fake_client)
+    monkeypatch.setattr(lm_studio, "ensure_running", lambda cfg: None)
+
+    result = lm_studio.chat_json(_cfg(), system="s", user="u", schema={"type": "object"})
+    assert result == {"snippet": "<button>OK</button>"}
+
+
+def test_reasoning_non_json_is_rejected(monkeypatch):
+    """When content is empty and reasoning_content is prose, reject."""
+    fake_client = MagicMock()
+    message = MagicMock(content="", reasoning_content="Let me think about this...")
+    fake_client.chat.completions.create.return_value.choices = [
+        MagicMock(message=message, finish_reason="stop")
+    ]
+    monkeypatch.setattr(lm_studio, "make_client", lambda cfg: fake_client)
+    monkeypatch.setattr(lm_studio, "ensure_running", lambda cfg: None)
+
+    with pytest.raises(ValueError, match="non-JSON text in reasoning_content"):
+        lm_studio.chat_json(_cfg(), system="s", user="u", schema={"type": "object"})

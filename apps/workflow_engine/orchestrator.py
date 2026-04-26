@@ -1,24 +1,40 @@
 """End-to-end processing for one inbound email."""
 from __future__ import annotations
+import copy
 import time
 from pathlib import Path
 from typing import Any
+from email.utils import parseaddr
 
 from . import build, build_and_deploy, distill, ingest, integrate, notify, plan as _plan_stage, site_bootstrap
-from .config import Config, InboxConfig
+from .config import Config, InboxConfig, LmStudioConfig
 from .logging_setup import get
 from .state import ProcessedLog, file_lock
 
 log = get("orchestrator")
 
 
+def _lm_for_inbox(cfg: Config, inbox: InboxConfig) -> LmStudioConfig:
+    """Return the LmStudioConfig to use for an inbox — inbox.model overrides global."""
+    lm = copy.copy(cfg.lm_studio)
+    if inbox.model:
+        lm.model = inbox.model
+        lm.preferred_model = inbox.model
+    return lm
+
+
 def is_allowed(cfg: Config, inbox: InboxConfig, sender: str) -> bool:
-    s = sender.strip().lower()
-    if any(s == a.lower() for a in inbox.allowed_senders):
+    s = _normalise_sender(sender)
+    if any(s == _normalise_sender(a) for a in inbox.allowed_senders):
         return True
-    if any(s == a.lower() for a in cfg.global_allowed_senders):
+    if any(s == _normalise_sender(a) for a in cfg.global_allowed_senders):
         return True
     return False
+
+
+def _normalise_sender(value: str) -> str:
+    parsed = parseaddr(value)[1]
+    return (parsed or value).strip().lower()
 
 
 def process(cfg: Config, inbox: InboxConfig, email: dict[str, Any], processed: ProcessedLog) -> None:
@@ -50,26 +66,25 @@ def _process_locked(
         log.info("ingest source_type=%s source_url=%s",
                  normalized_input["source_type"], normalized_input["source_url"])
 
-        # DISTILL stage
+        lm_cfg = _lm_for_inbox(cfg, inbox)
+
         try:
-            spec = distill.distill(normalized_input, cfg.lm_studio)
+            spec = distill.distill(normalized_input, lm_cfg)
         except distill.DistillFailed as e:
             log.error("DISTILL failed for %s: %s", mid, e)
             _reply_failure(cfg, inbox, email, f"DISTILL failed: {e}")
             processed.record(mid, inbox.slug, outcome="distill_failed", error=str(e))
             return
 
-        # PLAN stage
-        routing = _plan_stage.plan(spec, site_dir, cfg.lm_studio)
+        routing = _plan_stage.plan(spec, site_dir, lm_cfg)
         log.info("PLAN routing=%s for %s (kind=%s module_id=%s)", routing, mid, spec.kind, spec.module_id)
 
         if routing == "upgrade_state_only":
             processed.record(mid, inbox.slug, outcome="upgrade_state_only", module_id=spec.module_id)
             return
 
-        # BUILD stage
         try:
-            build_result = build.build(spec, cfg.lm_studio)
+            build_result = build.build(spec, lm_cfg)
         except build.BuildFailed as e:
             log.error("BUILD failed for %s: %s", mid, e)
             _reply_failure(cfg, inbox, email, f"BUILD failed: {e}")

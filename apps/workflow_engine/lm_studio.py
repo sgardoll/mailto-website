@@ -355,7 +355,24 @@ def _sampling_for(cfg: LmStudioConfig, task: str | None) -> tuple[dict[str, Any]
     }
     if enable_thinking is not None:
         extra_body.setdefault("chat_template_kwargs", {})["enable_thinking"] = enable_thinking
+    # Strip empty chat_template_kwargs so we don't send a key the server may
+    # reject (some local model servers don't recognise this parameter).
+    if "chat_template_kwargs" in extra_body and not extra_body["chat_template_kwargs"]:
+        del extra_body["chat_template_kwargs"]
     return openai_kwargs, extra_body
+
+
+def _json_instruction(schema_hint: str | None) -> str:
+    """Return a concise JSON-output instruction appended to the system prompt."""
+    base = (
+        "\n\nOUTPUT FORMAT: Respond with a single valid JSON object and nothing else."
+        " No markdown code fences (```json), no thinking text, no explanation before"
+        " or after the JSON. The first character of your response MUST be '{' and"
+        " the last MUST be '}'."
+    )
+    if schema_hint:
+        base += f"\nJSON shape: {schema_hint}"
+    return base
 
 
 def chat_json(
@@ -370,10 +387,11 @@ def chat_json(
     """Run a chat completion expected to return JSON. Robustly extracts the JSON object."""
     ensure_running(cfg)
     client = make_client(cfg)
-    messages = [{"role": "system", "content": system}]
-    if schema_hint:
-        messages.append({"role": "system", "content": f"Respond with a single JSON object matching:\n{schema_hint}"})
-    messages.append({"role": "user", "content": user})
+    combined_system = system + _json_instruction(schema_hint)
+    messages = [
+        {"role": "system", "content": combined_system},
+        {"role": "user", "content": user},
+    ]
 
     if schema is not None:
         response_format = {
@@ -392,7 +410,7 @@ def chat_json(
         cfg.model, task, sampling, extra_body, schema is not None,
     )
     completion = _call_with_fallbacks(cfg, client, messages, response_format, sampling, extra_body)
-    text = completion.choices[0].message.content or "{}"
+    text = _message_content_for_json(completion.choices[0].message)
     return _parse_json_lenient(text)
 
 
@@ -408,10 +426,11 @@ def chat_json_with_meta(
     """Like chat_json but also returns finish_reason as the second tuple element."""
     ensure_running(cfg)
     client = make_client(cfg)
-    messages = [{"role": "system", "content": system}]
-    if schema_hint:
-        messages.append({"role": "system", "content": f"Respond with a single JSON object matching:\n{schema_hint}"})
-    messages.append({"role": "user", "content": user})
+    combined_system = system + _json_instruction(schema_hint)
+    messages = [
+        {"role": "system", "content": combined_system},
+        {"role": "user", "content": user},
+    ]
 
     if schema is not None:
         response_format = {
@@ -431,8 +450,45 @@ def chat_json_with_meta(
     )
     completion = _call_with_fallbacks(cfg, client, messages, response_format, sampling, extra_body)
     finish_reason = completion.choices[0].finish_reason or "stop"
-    text = completion.choices[0].message.content or "{}"
+    text = _message_content_for_json(completion.choices[0].message)
     return _parse_json_lenient(text), finish_reason
+
+
+def _message_content_for_json(message: Any) -> str:
+    """Return assistant content for JSON parsing, with reasoning fallback.
+
+    Qwen 3.6 can place structured JSON in `reasoning_content` even when
+    `enable_thinking` is False. Rather than rejecting this outright, attempt
+    to parse reasoning_content as JSON — if it succeeds, treat it as the
+    intended response. Only reject if both fields are empty/unparseable.
+    """
+    content = getattr(message, "content", None)
+    if isinstance(content, str) and content.strip():
+        return content
+    reasoning = getattr(message, "reasoning_content", None)
+    if isinstance(reasoning, str) and reasoning.strip():
+        # Try to extract a JSON object from reasoning_content. If it parses,
+        # the model produced usable structured output — use it.
+        stripped = reasoning.strip()
+        try:
+            json.loads(stripped)
+            return stripped
+        except (json.JSONDecodeError, ValueError):
+            pass
+        # Fallback: try to find a JSON object within reasoning text
+        start = stripped.find("{")
+        end = stripped.rfind("}")
+        if start >= 0 and end > start:
+            try:
+                json.loads(stripped[start : end + 1])
+                return stripped[start : end + 1]
+            except (json.JSONDecodeError, ValueError):
+                pass
+        raise ValueError(
+            "model returned non-JSON text in reasoning_content with empty content; "
+            "disable thinking for structured JSON calls"
+        )
+    return "{}"
 
 
 def _call_with_fallbacks(
@@ -450,10 +506,10 @@ def _call_with_fallbacks(
     2. If the model can't be loaded (e.g. memory pressure), switch to whatever
        LM Studio has already loaded and retry.
     """
-    def _do(model: str, rf: dict | None):
+    def _do(model: str, rf: dict | None, msgs: list | None = None):
         kwargs: dict[str, Any] = dict(
             model=model,
-            messages=messages,
+            messages=msgs if msgs is not None else messages,
             max_tokens=cfg.max_tokens,
             **sampling,
         )
@@ -469,7 +525,12 @@ def _call_with_fallbacks(
     except Exception as e:
         if "response_format" in str(e) and not _is_model_load_failure(e):
             log.info("Model rejected json_object response_format; retrying as text")
-            return _do(cfg.model, None)
+            text_system = messages[0]["content"] + (
+                "\n\nCRITICAL: You MUST output ONLY a valid JSON object as plain text."
+                " No code fences, no explanation. First char = '{', last char = '}'."
+            )
+            text_msgs = [{"role": "system", "content": text_system}, messages[1]]
+            return _do(cfg.model, None, msgs=text_msgs)
         if not _is_model_load_failure(e):
             raise
 
@@ -496,18 +557,29 @@ def _call_with_fallbacks(
 
 def _parse_json_lenient(text: str) -> dict[str, Any]:
     text = text.strip()
-    # Strip ```json fences if the model added them despite response_format.
     if text.startswith("```"):
         text = text.strip("`")
         if text.lower().startswith("json"):
             text = text[4:]
         text = text.strip()
     try:
-        return json.loads(text)
+        result = json.loads(text)
+        if isinstance(result, dict):
+            return result
+        if isinstance(result, list):
+            return {"items": result}
+        return {"value": result}
     except json.JSONDecodeError:
-        # Try to find the outermost {...}.
-        start = text.find("{")
-        end = text.rfind("}")
-        if start >= 0 and end > start:
-            return json.loads(text[start : end + 1])
+        for open_char, close_char in (("{", "}"), ("[", "]")):
+            start = text.find(open_char)
+            end = text.rfind(close_char)
+            if start >= 0 and end > start:
+                try:
+                    result = json.loads(text[start : end + 1])
+                    if isinstance(result, dict):
+                        return result
+                    if isinstance(result, list):
+                        return {"items": result}
+                except json.JSONDecodeError:
+                    continue
         raise

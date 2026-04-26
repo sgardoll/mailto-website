@@ -17,6 +17,7 @@ from werkzeug.serving import make_server
 from flask import Flask, jsonify, render_template, request
 
 from . import config as cfg_mod
+from . import lm_studio as _lm_mod
 from . import slug_ops
 from .logging_setup import get
 
@@ -78,6 +79,7 @@ def _slug_row(cfg: cfg_mod.Config, ib, health: dict) -> dict:
         "in_flight": _lock_is_held(lock),
         "last_event": None,
         "last_outcome": None,
+        "model": ib.model or cfg.lm_studio.model,
     }
     processed = cfg.state_dir / "processed.jsonl"
     if processed.exists():
@@ -139,6 +141,28 @@ def create_app(cfg: cfg_mod.Config, health: dict, config_reload: Callable[[], cf
     @app.route("/api/slugs/<slug>", methods=["DELETE"])
     def api_delete(slug):
         return jsonify(_result_to_dict(slug_ops.delete(_cfg(), slug)))
+
+    @app.route("/api/models")
+    def list_models():
+        downloaded = _lm_mod._list_downloaded_models("lms")
+        loaded = _lm_mod._loaded_models("lms")
+        return jsonify({
+            "downloaded": [{"key": k, "size_gb": round(s / 1e9, 2)} for k, s in downloaded],
+            "loaded": loaded,
+        })
+
+    @app.route("/api/slugs/<slug>/model", methods=["PATCH"])
+    def api_set_model(slug):
+        c = _cfg()
+        inbox = next((ib for ib in c.inboxes if ib.slug == slug), None)
+        if not inbox:
+            return jsonify({"error": f"slug {slug!r} not found"}), 404
+        data = request.get_json()
+        model = data.get("model") if isinstance(data, dict) else None
+        if model is not None:
+            inbox.model = model or None
+            cfg_mod.save_inbox_model(slug, inbox.model)
+        return jsonify({"slug": slug, "model": inbox.model or c.lm_studio.model})
 
     return app
 

@@ -50,36 +50,28 @@ def test_happy_path_returns_mechanic_spec(monkeypatch):
     assert result.kind.value == "calculator"
 
 
-def test_informational_email_returns_none(monkeypatch):
+def test_informational_email_falls_back_to_generator(monkeypatch):
     monkeypatch.setattr(
         lm_studio,
         "chat_json",
         MagicMock(return_value={"mechanic": None, "skip_reason": "announcement"}),
     )
     result = distill.distill(NI, MagicMock())
-    assert result is None
+    assert isinstance(result, MechanicSpec)
+    assert result.kind.value == "generator"
 
 
-def test_retry_success_calls_chat_json_twice(monkeypatch):
-    invalid = {"mechanic": {"kind": "calculator"}}  # missing required fields
-    mock_chat = MagicMock(side_effect=[invalid, VALID_CALCULATOR_ENVELOPE])
+def test_retry_failure_falls_back_to_generator(monkeypatch):
+    invalid = {"mechanic": {"kind": "calculator"}}
+    mock_chat = MagicMock(side_effect=[invalid] * 6)
     monkeypatch.setattr(lm_studio, "chat_json", mock_chat)
     result = distill.distill(NI, MagicMock())
-    assert mock_chat.call_count == 2
     assert isinstance(result, MechanicSpec)
+    assert result.kind.value == "generator"
+    assert mock_chat.call_count == 6
 
 
-def test_retry_failure_raises_distill_failed(monkeypatch):
-    invalid = {"mechanic": {"kind": "calculator"}}  # missing required fields
-    mock_chat = MagicMock(side_effect=[invalid, invalid])
-    monkeypatch.setattr(lm_studio, "chat_json", mock_chat)
-    with pytest.raises(distill.DistillFailed):
-        distill.distill(NI, MagicMock())
-    assert mock_chat.call_count == 2
-
-
-def test_kind_content_mismatch_triggers_retry_then_fails(monkeypatch):
-    # kind=wizard but content.kind=calculator — jsonschema passes but Pydantic raises ValueError
+def test_kind_content_mismatch_falls_back_to_generator(monkeypatch):
     mismatch = {
         "mechanic": {
             "kind": "wizard",
@@ -95,11 +87,36 @@ def test_kind_content_mismatch_triggers_retry_then_fails(monkeypatch):
             },
         }
     }
-    mock_chat = MagicMock(side_effect=[mismatch, mismatch])
+    mock_chat = MagicMock(side_effect=[mismatch] * 6)
     monkeypatch.setattr(lm_studio, "chat_json", mock_chat)
-    with pytest.raises(distill.DistillFailed):
-        distill.distill(NI, MagicMock())
-    assert mock_chat.call_count == 2
+    result = distill.distill(NI, MagicMock())
+    assert isinstance(result, MechanicSpec)
+    assert result.kind.value == "generator"
+    assert mock_chat.call_count == 6
+
+
+def test_kind_content_mismatch_triggers_retry_then_falls_back(monkeypatch):
+    mismatch = {
+        "mechanic": {
+            "kind": "wizard",
+            "title": "BMI",
+            "intent": "test",
+            "inputs": ["x"],
+            "outputs": ["y"],
+            "content": {
+                "kind": "calculator",
+                "formula_description": "f",
+                "variables": [{"name": "v", "unit": "u", "default": 1}],
+                "unit": "u",
+            },
+        }
+    }
+    mock_chat = MagicMock(side_effect=[mismatch] * 6)
+    monkeypatch.setattr(lm_studio, "chat_json", mock_chat)
+    result = distill.distill(NI, MagicMock())
+    assert isinstance(result, MechanicSpec)
+    assert result.kind.value == "generator"
+    assert mock_chat.call_count == 6
 
 
 def test_source_url_preserved_from_normalized_input(monkeypatch):

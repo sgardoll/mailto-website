@@ -6,7 +6,7 @@ import threading
 from pathlib import Path
 from typing import Any
 
-from imap_tools import MailBox, AND, OR, MailMessage
+from imap_tools import MailBox, AND, MailMessage
 
 from . import config as cfg_mod
 from . import dashboard as dashboard_mod
@@ -75,17 +75,13 @@ def _flat_headers(msg: MailMessage) -> dict[str, str]:
 
 
 def _inbox_criteria(cfg: cfg_mod.Config):
-    """Server-side IMAP filter: unseen AND addressed to one of our configured inboxes.
+    """Server-side IMAP filter for new mail.
 
-    Without the TO filter, a backlog of unrelated unread mail stalls the listener
-    (Gmail can easily have tens of thousands of unread items).
+    Gmail's IMAP `TO` search can miss plus-addressed messages even when the
+    literal To header contains the plus alias. Fetch unseen messages broadly and
+    let the local dispatcher route from To/Delivered-To/X-Original-To headers.
     """
-    addrs = [ib.address for ib in cfg.inboxes if ib.address]
-    if not addrs:
-        return AND(seen=False)
-    if len(addrs) == 1:
-        return AND(seen=False, to=addrs[0])
-    return AND(OR(*[AND(to=a) for a in addrs]), seen=False)
+    return AND(seen=False)
 
 
 def run_once(cfg: cfg_mod.Config) -> int:
@@ -98,12 +94,10 @@ def run_once(cfg: cfg_mod.Config) -> int:
             email = _email_dict(msg)
             mid = email["message_id"]
             if processed.seen(mid):
-                mb.flag(msg.uid, ["\\Seen"], True)
                 continue
             ib = dispatcher.route(cfg, _flat_headers(msg))
             if not ib:
                 processed.record(mid, "(none)", outcome="no_inbox_match")
-                mb.flag(msg.uid, ["\\Seen"], True)
                 continue
             if slug_ops.is_paused(cfg, ib.slug):
                 log.info("slug '%s' paused; leaving message unseen for later", ib.slug)

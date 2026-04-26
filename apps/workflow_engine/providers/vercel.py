@@ -35,7 +35,11 @@ class VercelProvider:
     def build(self, site_dir: Path, site_url: str, site_name: str, site_base: str = "/") -> BuildResult:
         npm = shutil.which("npm")
         if not npm:
-            raise BuildFailed("npm not on PATH")
+            brew_npm = Path("/opt/homebrew/bin/npm")
+            if brew_npm.exists():
+                npm = str(brew_npm)
+            else:
+                raise BuildFailed("npm not on PATH")
         node_modules = site_dir / "node_modules"
         if not node_modules.exists():
             log.info("Installing site deps in %s ...", site_dir)

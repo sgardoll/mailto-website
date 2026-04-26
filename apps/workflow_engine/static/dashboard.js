@@ -9,6 +9,8 @@ const dlg = $('#confirm');
 const portHint = $('#port-hint');
 if (portHint) portHint.textContent = window.location.port || '(default)';
 
+let modelsCache = {downloaded: [], loaded: []};
+
 function el(tag, attrs = {}, text) {
     const e = document.createElement(tag);
     for (const [k, v] of Object.entries(attrs)) {
@@ -118,6 +120,33 @@ function urlLink(href) {
     return a;
 }
 
+function modelSelect(slug, currentModel) {
+    const sel = el('select', {class: 'model-select', dataset: {slug}});
+    sel.appendChild(el('option', {value: ''}, `Global (${currentModel})`));
+    for (const m of modelsCache.downloaded) {
+        const opt = el('option', {value: m.key}, `${m.key} (${m.size_gb} GB)`);
+        if (m.key === currentModel) opt.selected = true;
+        sel.appendChild(opt);
+    }
+    sel.addEventListener('change', async () => {
+        const model = sel.value;
+        try {
+            const resp = await fetch(`/api/slugs/${encodeURIComponent(slug)}/model`, {
+                method: 'PATCH',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({model}),
+            });
+            const r = await resp.json();
+            if (!resp.ok) throw new Error(r.error || resp.statusText);
+            logMsg({ok: true, slug, action: 'model', steps: [`set to ${r.model}`], warnings: []});
+        } catch (e) {
+            logMsg({ok: false, slug, action: 'model', error: String(e), steps: [], warnings: []});
+        }
+        await refresh();
+    });
+    return sel;
+}
+
 function buildSlugCard(s) {
     const card = el('div', {class: 'slug-card'});
 
@@ -134,6 +163,7 @@ function buildSlugCard(s) {
     const meta = el('dl', {class: 'slug-meta'});
     metaRow('Address', el('span', {class: 'mono'}, s.address)).forEach(n => meta.appendChild(n));
     metaRow('URL', urlLink(s.site_url)).forEach(n => meta.appendChild(n));
+    metaRow('Model', modelSelect(s.slug, s.model)).forEach(n => meta.appendChild(n));
     metaRow('Provider', s.provider).forEach(n => meta.appendChild(n));
     const lastText = s.last_event
         ? `${fmtTime(s.last_event)}${s.last_outcome ? ` · ${s.last_outcome}` : ''}`
@@ -177,8 +207,15 @@ function render(data) {
 
 async function refresh() {
     try {
-        const resp = await fetch('/api/slugs');
-        const data = await resp.json();
+        const [slugsResp, modelsResp] = await Promise.all([
+            fetch('/api/slugs'),
+            fetch('/api/models'),
+        ]);
+        const data = await slugsResp.json();
+        try {
+            const mdata = await modelsResp.json();
+            modelsCache = mdata;
+        } catch {}
         render(data);
         lastRefresh.textContent = `refreshed ${new Date().toLocaleTimeString()}`;
     } catch (e) {
