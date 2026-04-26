@@ -44,13 +44,58 @@ _EXEMPLARS: dict[str, str] = {
 
 
 def _extract_inner_div(html: str) -> str:
-    """Extract the root x-data div from a full-page exemplar for the multi-step path."""
-    import re
-    m = re.search(r'(<div\s[^>]*x-data="[^"]*"[^>]*>.*?</div>\s*</body>)', html, re.DOTALL)
-    if m:
-        inner = m.group(1)
-        inner = re.sub(r'\s*</body>\s*$', '', inner)
-        return inner.strip()
+    """Extract the root x-data div from a full-page exemplar for the multi-step path.
+
+    Uses html.parser to track div nesting so the matching closing tag is found
+    even when nested <div>s appear between the root and </body>. A regex with
+    a non-greedy .*? would stop at the first </div> followed by </body>, which
+    fails for any exemplar that has content (scripts, siblings) between the
+    x-data div and </body>.
+    """
+    from html.parser import HTMLParser
+
+    class _XDataDivExtractor(HTMLParser):
+        def __init__(self, source: str) -> None:
+            super().__init__(convert_charrefs=False)
+            self._source = source
+            self._line_starts = [0]
+            for i, ch in enumerate(source):
+                if ch == "\n":
+                    self._line_starts.append(i + 1)
+            self.start_offset: int | None = None
+            self.end_offset: int | None = None
+            self._depth = 0
+
+        def _offset(self) -> int:
+            line, col = self.getpos()
+            return self._line_starts[line - 1] + col
+
+        def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+            if tag != "div" or self.end_offset is not None:
+                return
+            if self.start_offset is None:
+                if any(name == "x-data" for name, _ in attrs):
+                    self.start_offset = self._offset()
+                    self._depth = 1
+            else:
+                self._depth += 1
+
+        def handle_endtag(self, tag: str) -> None:
+            if tag != "div" or self.start_offset is None or self.end_offset is not None:
+                return
+            self._depth -= 1
+            if self._depth == 0:
+                start = self._offset()
+                close = self._source.find(">", start)
+                if close != -1:
+                    self.end_offset = close + 1
+
+    parser = _XDataDivExtractor(html)
+    parser.feed(html)
+    parser.close()
+
+    if parser.start_offset is not None and parser.end_offset is not None:
+        return html[parser.start_offset : parser.end_offset].strip()
     return html
 
 
