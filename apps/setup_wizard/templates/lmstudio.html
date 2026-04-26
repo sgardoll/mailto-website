@@ -37,6 +37,7 @@
             <label for="lms-model">Model</label>
             <div class="field-row">
                 <select id="lms-model" name="lms_model"
+                        data-prefill="{{ wizard_state.get('lms_model', 'google/gemma-4-26b-a4b') }}"
                         aria-describedby="lms-model-help lms-model-error">
                     <option value="">Loading models…</option>
                 </select>
@@ -228,11 +229,11 @@
 
     // Load models from LM Studio API
     function loadModels() {
+        var currentValue = modelSelect.dataset.prefill || '';
         fetch('/api/models')
             .then(function(r) { return r.json(); })
             .then(function(data) {
                 var models = data.models || [];
-                var currentValue = modelSelect.getAttribute('data-prefill') || '{{ wizard_state.get("lms_model", "google/gemma-4-26b-a4b") }}';
                 modelSelect.innerHTML = '';
 
                 if (models.length === 0) {
@@ -260,8 +261,13 @@
                 updateRecommendations();
             })
             .catch(function() {
-                var currentValue = modelSelect.getAttribute('data-prefill') || '{{ wizard_state.get("lms_model", "google/gemma-4-26b-a4b") }}';
-                modelSelect.innerHTML = '<option value="' + currentValue + '">' + currentValue + ' (offline)</option>';
+                while (modelSelect.firstChild) {
+                    modelSelect.removeChild(modelSelect.firstChild);
+                }
+                var opt = document.createElement('option');
+                opt.value = currentValue;
+                opt.textContent = currentValue + ' (offline)';
+                modelSelect.appendChild(opt);
             });
     }
 
@@ -287,8 +293,6 @@
         updateRecommendations();
     });
 
-    // Store prefill value and load
-    modelSelect.setAttribute('data-prefill', '{{ wizard_state.get("lms_model", "google/gemma-4-26b-a4b") }}');
     loadModels();
 })();
 </script>
