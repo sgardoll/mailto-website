@@ -97,7 +97,7 @@ The pipeline is deliberately split into stages because local LLMs are powerful b
 ## Quick start
 
 ```bash
-git clone <repo>
+git clone https://github.com/sgardoll/mailto-website.git
 cd mailto-website
 ./scripts/dev.sh
 ```
