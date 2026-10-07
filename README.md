@@ -449,3 +449,4 @@ The repo is at its best when it leans into the disciplined version of the idea: 
 ---
 
 MIT License · [GitHub](.) · [docs/SETUP.md](docs/SETUP.md)
+
