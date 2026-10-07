@@ -97,7 +97,7 @@ The pipeline is deliberately split into stages because local LLMs are powerful b
 ## Quick start
 
 ```bash
-git clone <repo>
+git clone https://github.com/sgardoll/mailto-website.git
 cd mailto-website
 ./scripts/dev.sh
 ```
@@ -449,4 +449,3 @@ The repo is at its best when it leans into the disciplined version of the idea: 
 ---
 
 MIT License · [GitHub](.) · [docs/SETUP.md](docs/SETUP.md)
-
